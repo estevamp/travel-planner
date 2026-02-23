@@ -22,7 +22,6 @@ db.exec(`
     location TEXT,
     start_time TEXT,
     end_time TEXT,
-    amount REAL DEFAULT 0,
     photo_url TEXT,
     FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
   );
@@ -52,12 +51,6 @@ db.exec(`
 
 try {
   db.exec("ALTER TABLE itinerary ADD COLUMN photo_url TEXT;");
-} catch (e) {
-  // Column might already exist
-}
-
-try {
-  db.exec("ALTER TABLE itinerary ADD COLUMN amount REAL DEFAULT 0;");
 } catch (e) {
   // Column might already exist
 }
