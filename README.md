@@ -1,6 +1,6 @@
 # Voyage - Vercel + Supabase
 
-Aplicativo de planejamento de viagens com colaboração em tempo real usando React + Vite + Supabase.
+Aplicativo de planejamento de viagens com autenticação Google, convites por link e privacidade por usuário/cônjuge.
 
 ## Requisitos
 
@@ -10,10 +10,11 @@ Aplicativo de planejamento de viagens com colaboração em tempo real usando Rea
 ## 1) Configurar Supabase
 
 1. Crie um projeto no Supabase.
-2. Abra `SQL Editor` e execute o conteúdo de `supabase/schema.sql`.
-3. Em `Settings > API`, copie:
-   - `Project URL`
-   - `anon public key`
+2. Em `Authentication > Providers`, ative `Google` e configure o OAuth client.
+3. Em `Authentication > URL Configuration`, adicione:
+   - Site URL: URL do app (ex: `http://localhost:5173`)
+   - Redirect URLs: localhost e URL de produção
+4. Execute `supabase/schema.sql` no `SQL Editor`.
 
 ## 2) Variáveis de ambiente
 
@@ -39,9 +40,17 @@ npm run dev
    - `VITE_SUPABASE_ANON_KEY`
 3. Faça `Redeploy`.
 
-O arquivo `vercel.json` já está configurado para SPA routing.
+## Fluxo implementado
 
-## Observação de segurança
+- Login obrigatório com Google.
+- Usuário cria viagem e vira admin único.
+- Admin gera convite por email e compartilha link `/invite/{token}`.
+- Convite só é aceito se o email da conta Google bater com o email convidado.
+- Admin vincula cônjuges dentro da viagem.
+- Todos os membros veem conteúdo público da viagem.
+- Despesas e atividades privadas: apenas autor + cônjuge.
+- Documentos: sempre privados (autor + cônjuge) via bucket `travel-documents`.
 
-O schema atual cria políticas RLS públicas (leitura/escrita total) para facilitar o setup inicial.
-Para produção, troque por políticas com autenticação por usuário/grupo.
+## Observação sobre dados legados
+
+Viagens antigas sem ownership não entram no fluxo do app com RLS novo.
