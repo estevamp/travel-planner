@@ -59,9 +59,41 @@ async function startServer() {
         switch (type) {
           case "ADD_ITINERARY": {
             const id = uuidv4();
-            db.prepare("INSERT INTO itinerary (id, trip_id, type, title, description, location, start_time, end_time, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .run(id, tripId, payload.type || 'activity', payload.title || 'Untitled', payload.description || '', payload.location || '', payload.start_time || new Date().toISOString(), payload.end_time || new Date().toISOString(), payload.photo_url || null);
-            broadcast(tripId, { type: "ITINERARY_ADDED", payload: { ...payload, id } });
+            const amount = Number(payload.amount) || 0;
+            const startTime = payload.start_time || new Date().toISOString();
+            const endTime = payload.end_time || new Date().toISOString();
+            db.prepare("INSERT INTO itinerary (id, trip_id, type, title, description, location, start_time, end_time, amount, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .run(id, tripId, payload.type || 'activity', payload.title || 'Untitled', payload.description || '', payload.location || '', startTime, endTime, amount, payload.photo_url || null);
+
+            if (amount > 0) {
+              const expenseId = uuidv4();
+              const expensePayload = {
+                id: expenseId,
+                description: payload.title || "Item do itinerário",
+                amount,
+                currency: "BRL",
+                category: "itinerary",
+                date: new Date().toISOString().split("T")[0],
+              };
+              db.prepare("INSERT INTO expenses (id, trip_id, description, amount, currency, category, date) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                .run(expenseId, tripId, expensePayload.description, expensePayload.amount, expensePayload.currency, expensePayload.category, expensePayload.date);
+              broadcast(tripId, { type: "EXPENSE_ADDED", payload: expensePayload });
+            }
+
+            broadcast(tripId, {
+              type: "ITINERARY_ADDED",
+              payload: {
+                id,
+                type: payload.type || "activity",
+                title: payload.title || "Untitled",
+                description: payload.description || "",
+                location: payload.location || "",
+                start_time: startTime,
+                end_time: endTime,
+                amount,
+                photo_url: payload.photo_url || null,
+              },
+            });
             break;
           }
           case "UPDATE_ITINERARY_PHOTO": {
@@ -84,6 +116,23 @@ async function startServer() {
           case "DELETE_EXPENSE": {
             db.prepare("DELETE FROM expenses WHERE id = ?").run(payload.id);
             broadcast(tripId, { type: "EXPENSE_DELETED", payload: { id: payload.id } });
+            break;
+          }
+          case "ADD_DOCUMENT": {
+            const id = uuidv4();
+            const documentPayload = {
+              id,
+              name: payload.name || "Documento",
+              url: payload.url || "",
+            };
+            db.prepare("INSERT INTO documents (id, trip_id, name, url) VALUES (?, ?, ?, ?)")
+              .run(id, tripId, documentPayload.name, documentPayload.url);
+            broadcast(tripId, { type: "DOCUMENT_ADDED", payload: documentPayload });
+            break;
+          }
+          case "DELETE_DOCUMENT": {
+            db.prepare("DELETE FROM documents WHERE id = ?").run(payload.id);
+            broadcast(tripId, { type: "DOCUMENT_DELETED", payload: { id: payload.id } });
             break;
           }
         }
