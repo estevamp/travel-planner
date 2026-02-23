@@ -206,40 +206,70 @@ function TripDashboard() {
   const theme = THEMES[themeKey];
 
   useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+
+    const connect = () => {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${protocol}//${window.location.host}?tripId=${id}`);
+      socket.current = ws;
+
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+      };
+
+      ws.onmessage = (event) => {
+        const { type, payload } = JSON.parse(event.data);
+        setTrip(prev => {
+          if (!prev) return null;
+          switch (type) {
+            case "ITINERARY_ADDED":
+              if (prev.itinerary.some(item => item.id === payload.id)) return prev;
+              return { ...prev, itinerary: [...prev.itinerary, payload].sort((a, b) => a.start_time.localeCompare(b.start_time)) };
+            case "ITINERARY_PHOTO_UPDATED":
+              return { ...prev, itinerary: prev.itinerary.map(item => item.id === payload.id ? { ...item, photo_url: payload.photo_url } : item) };
+            case "ITINERARY_DELETED":
+              return { ...prev, itinerary: prev.itinerary.filter(item => item.id !== payload.id) };
+            case "EXPENSE_ADDED":
+              if (prev.expenses.some(item => item.id === payload.id)) return prev;
+              return { ...prev, expenses: [...prev.expenses, payload] };
+            case "EXPENSE_DELETED":
+              return { ...prev, expenses: prev.expenses.filter(item => item.id !== payload.id) };
+            default:
+              return prev;
+          }
+        });
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket disconnected, retrying...");
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket error", err);
+        ws?.close();
+      };
+    };
+
     const fetchTrip = async () => {
-      const res = await fetch(`/api/trips/${id}`);
-      const data = await res.json();
-      setTrip(data);
+      try {
+        const res = await fetch(`/api/trips/${id}`);
+        if (!res.ok) throw new Error("Failed to fetch trip");
+        const data = await res.json();
+        setTrip(data);
+      } catch (err) {
+        console.error(err);
+      }
     };
+
     fetchTrip();
+    connect();
 
-    // Setup WebSocket
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}?tripId=${id}`);
-    socket.current = ws;
-
-    ws.onmessage = (event) => {
-      const { type, payload } = JSON.parse(event.data);
-      setTrip(prev => {
-        if (!prev) return null;
-        switch (type) {
-          case "ITINERARY_ADDED":
-            return { ...prev, itinerary: [...prev.itinerary, payload].sort((a, b) => a.start_time.localeCompare(b.start_time)) };
-          case "ITINERARY_PHOTO_UPDATED":
-            return { ...prev, itinerary: prev.itinerary.map(item => item.id === payload.id ? { ...item, photo_url: payload.photo_url } : item) };
-          case "ITINERARY_DELETED":
-            return { ...prev, itinerary: prev.itinerary.filter(item => item.id !== payload.id) };
-          case "EXPENSE_ADDED":
-            return { ...prev, expenses: [...prev.expenses, payload] };
-          case "EXPENSE_DELETED":
-            return { ...prev, expenses: prev.expenses.filter(item => item.id !== payload.id) };
-          default:
-            return prev;
-        }
-      });
+    return () => {
+      ws?.close();
+      clearTimeout(reconnectTimeout);
     };
-
-    return () => ws.close();
   }, [id]);
 
   if (!trip) return <div className="flex items-center justify-center h-screen">Carregando...</div>;
@@ -248,6 +278,10 @@ function TripDashboard() {
 
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
+    if (socket.current?.readyState !== WebSocket.OPEN) {
+      alert("Conexão perdida. Tentando reconectar...");
+      return;
+    }
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const payload = {
       description: formData.get('description'),
@@ -492,6 +526,10 @@ function TripDashboard() {
                     <h3 className="font-bold text-zinc-900 mb-4">Adicionar ao Itinerário</h3>
                     <form className="space-y-4" onSubmit={(e) => {
                       e.preventDefault();
+                      if (socket.current?.readyState !== WebSocket.OPEN) {
+                        alert("Conexão perdida. Tentando reconectar...");
+                        return;
+                      }
                       const formData = new FormData(e.currentTarget);
                       const payload = {
                         type: formData.get('type'),

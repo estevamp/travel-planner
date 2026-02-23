@@ -51,16 +51,16 @@ async function startServer() {
     rooms.get(tripId)!.add(ws);
 
     ws.on("message", (data) => {
-      const message = JSON.parse(data.toString());
-      const { type, payload } = message;
-
-      // Handle updates and broadcast
       try {
+        const message = JSON.parse(data.toString());
+        const { type, payload } = message;
+        console.log(`Received message: ${type} for trip: ${tripId}`);
+
         switch (type) {
           case "ADD_ITINERARY": {
             const id = uuidv4();
             db.prepare("INSERT INTO itinerary (id, trip_id, type, title, description, location, start_time, end_time, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .run(id, tripId, payload.type, payload.title, payload.description, payload.location, payload.start_time, payload.end_time, payload.photo_url);
+              .run(id, tripId, payload.type || 'activity', payload.title || 'Untitled', payload.description || '', payload.location || '', payload.start_time || new Date().toISOString(), payload.end_time || new Date().toISOString(), payload.photo_url || null);
             broadcast(tripId, { type: "ITINERARY_ADDED", payload: { ...payload, id } });
             break;
           }
@@ -77,7 +77,7 @@ async function startServer() {
           case "ADD_EXPENSE": {
             const id = uuidv4();
             db.prepare("INSERT INTO expenses (id, trip_id, description, amount, currency, category, date) VALUES (?, ?, ?, ?, ?, ?, ?)")
-              .run(id, tripId, payload.description, payload.amount, payload.currency, payload.category, payload.date);
+              .run(id, tripId, payload.description || 'Expense', payload.amount || 0, payload.currency || 'BRL', payload.category || 'other', payload.date || new Date().toISOString().split('T')[0]);
             broadcast(tripId, { type: "EXPENSE_ADDED", payload: { ...payload, id } });
             break;
           }
@@ -88,7 +88,7 @@ async function startServer() {
           }
         }
       } catch (err) {
-        console.error("DB Error:", err);
+        console.error("WebSocket Message Error:", err);
       }
     });
 

@@ -44,6 +44,15 @@ db.exec(`
     url TEXT NOT NULL,
     FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
   );
+
+  -- Ensure photo_url column exists (migration)
+  PRAGMA table_info(itinerary);
 `);
+
+try {
+  db.exec("ALTER TABLE itinerary ADD COLUMN photo_url TEXT;");
+} catch (e) {
+  // Column might already exist
+}
 
 export default db;
