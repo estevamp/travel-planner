@@ -1,0 +1,5 @@
+{
+  "name": "Travel Planner",
+  "description": "A collaborative travel planning app to organize itineraries, expenses, flights, and documents with friends.",
+  "requestFramePermissions": []
+}
