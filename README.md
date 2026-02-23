@@ -1,20 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Voyage - Vercel + Supabase
 
-# Run and deploy your AI Studio app
+Aplicativo de planejamento de viagens com colaboração em tempo real usando React + Vite + Supabase.
 
-This contains everything you need to run your app locally.
+## Requisitos
 
-View your app in AI Studio: https://ai.studio/apps/0db4d293-ef36-4970-892c-c3752728e5cd
+- Node.js 20+
+- Projeto Supabase
 
-## Run Locally
+## 1) Configurar Supabase
 
-**Prerequisites:**  Node.js
+1. Crie um projeto no Supabase.
+2. Abra `SQL Editor` e execute o conteúdo de `supabase/schema.sql`.
+3. Em `Settings > API`, copie:
+   - `Project URL`
+   - `anon public key`
 
+## 2) Variáveis de ambiente
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Copie `.env.example` para `.env.local` e preencha:
+
+```bash
+VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
+VITE_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+```
+
+## 3) Rodar localmente
+
+```bash
+npm install
+npm run dev
+```
+
+## 4) Deploy no Vercel
+
+1. Importe o repositório no Vercel.
+2. Em `Project Settings > Environment Variables`, adicione:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Faça `Redeploy`.
+
+O arquivo `vercel.json` já está configurado para SPA routing.
+
+## Observação de segurança
+
+O schema atual cria políticas RLS públicas (leitura/escrita total) para facilitar o setup inicial.
+Para produção, troque por políticas com autenticação por usuário/grupo.

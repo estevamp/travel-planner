@@ -1,22 +1,23 @@
-import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { BrowserRouter, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import {
-  Plane,
   Bus,
-  Hotel,
   Calendar,
   DollarSign,
   FileText,
-  Plus,
-  MapPin,
-  Trash2,
+  Hotel,
   LayoutDashboard,
-  Users
+  MapPin,
+  Plane,
+  Plus,
+  Trash2,
+  Users,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format } from "date-fns";
+import { supabase } from "./supabase";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -25,65 +26,46 @@ function cn(...inputs: ClassValue[]) {
 const THEMES = {
   default: {
     primary: "bg-black",
-    primaryText: "text-white",
     accent: "bg-zinc-100",
-    border: "border-zinc-100",
-    sidebarActive: "bg-black text-white",
-    hover: "hover:bg-zinc-100",
-    button: "bg-black hover:bg-zinc-800"
+    button: "bg-black hover:bg-zinc-800",
   },
   ocean: {
     primary: "bg-blue-600",
-    primaryText: "text-white",
     accent: "bg-blue-50",
-    border: "border-blue-100",
-    sidebarActive: "bg-blue-600 text-white",
-    hover: "hover:bg-blue-50",
-    button: "bg-blue-600 hover:bg-blue-700"
+    button: "bg-blue-600 hover:bg-blue-700",
   },
   emerald: {
     primary: "bg-emerald-600",
-    primaryText: "text-white",
     accent: "bg-emerald-50",
-    border: "border-emerald-100",
-    sidebarActive: "bg-emerald-600 text-white",
-    hover: "hover:bg-emerald-50",
-    button: "bg-emerald-600 hover:bg-emerald-700"
+    button: "bg-emerald-600 hover:bg-emerald-700",
   },
   sunset: {
     primary: "bg-orange-600",
-    primaryText: "text-white",
     accent: "bg-orange-50",
-    border: "border-orange-100",
-    sidebarActive: "bg-orange-600 text-white",
-    hover: "hover:bg-orange-50",
-    button: "bg-orange-600 hover:bg-orange-700"
-  }
+    button: "bg-orange-600 hover:bg-orange-700",
+  },
 };
 
 type ThemeKey = keyof typeof THEMES;
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
+type ItineraryType = "flight" | "bus" | "hotel" | "activity";
 
 interface ItineraryItem {
   id: string;
-  type: "flight" | "bus" | "hotel" | "activity";
+  trip_id: string;
+  type: ItineraryType;
   title: string;
   description: string;
   location: string;
   start_time: string;
   end_time: string;
   amount: number;
-  photo_url?: string;
+  photo_url?: string | null;
 }
 
 interface Expense {
   id: string;
+  trip_id: string;
   description: string;
   amount: number;
   currency: string;
@@ -93,6 +75,7 @@ interface Expense {
 
 interface DocumentItem {
   id: string;
+  trip_id: string;
   name: string;
   url: string;
 }
@@ -108,14 +91,19 @@ interface Trip {
   documents: DocumentItem[];
 }
 
-const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active?: boolean, onClick: () => void }) => (
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any; label: string; active?: boolean; onClick: () => void }) => (
   <button
     onClick={onClick}
     className={cn(
       "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-      active
-        ? "bg-black text-white shadow-lg shadow-black/10"
-        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+      active ? "bg-black text-white shadow-lg shadow-black/10" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
     )}
   >
     <Icon size={20} />
@@ -123,7 +111,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any, label:
   </button>
 );
 
-const Card = ({ children, className, onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) => (
+const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
   <div className={cn("bg-white rounded-2xl border border-zinc-100 shadow-sm p-6", className)} onClick={onClick}>
     {children}
   </div>
@@ -133,25 +121,33 @@ function LandingPage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch("/api/trips", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, destination, start_date: new Date().toISOString(), end_date: new Date().toISOString() })
-    });
-    const data = await res.json();
+    setLoading(true);
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("trips")
+      .insert({ name, destination, start_date: now, end_date: now })
+      .select("id")
+      .single();
+
+    setLoading(false);
+
+    if (error || !data) {
+      alert("Não foi possível criar a viagem.");
+      console.error(error);
+      return;
+    }
+
     navigate(`/trip/${data.id}`);
   };
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full text-center space-y-8"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full text-center space-y-8">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Voyage</h1>
           <p className="text-zinc-500">Planeje sua próxima aventura com amigos.</p>
@@ -164,7 +160,7 @@ function LandingPage() {
               <input
                 required
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Eurotrip 2026"
                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all"
               />
@@ -174,16 +170,17 @@ function LandingPage() {
               <input
                 required
                 value={destination}
-                onChange={e => setDestination(e.target.value)}
+                onChange={(e) => setDestination(e.target.value)}
                 placeholder="Ex: Paris, França"
                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all"
               />
             </div>
             <button
+              disabled={loading}
               type="submit"
-              className="w-full bg-black text-white py-4 rounded-xl font-semibold hover:bg-zinc-800 transition-colors shadow-xl shadow-black/10"
+              className="w-full bg-black text-white py-4 rounded-xl font-semibold hover:bg-zinc-800 transition-colors shadow-xl shadow-black/10 disabled:opacity-60"
             >
-              Começar Planejamento
+              {loading ? "Criando..." : "Começar Planejamento"}
             </button>
           </form>
         </Card>
@@ -196,90 +193,61 @@ function TripDashboard() {
   const { id } = useParams();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "documents">("itinerary");
-  const [themeKey, setThemeKey] = useState<ThemeKey>("default");
-  const socket = useRef<WebSocket | null>(null);
+  const [themeKey] = useState<ThemeKey>("default");
+  const [loading, setLoading] = useState(true);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const theme = THEMES[themeKey];
 
+  const loadTrip = async (tripId: string) => {
+    const [{ data: tripData, error: tripError }, { data: itineraryData, error: itineraryError }, { data: expensesData, error: expensesError }, { data: documentsData, error: documentsError }] =
+      await Promise.all([
+        supabase.from("trips").select("*").eq("id", tripId).single(),
+        supabase.from("itinerary").select("*").eq("trip_id", tripId).order("start_time", { ascending: true }),
+        supabase.from("expenses").select("*").eq("trip_id", tripId).order("date", { ascending: true }),
+        supabase.from("documents").select("*").eq("trip_id", tripId),
+      ]);
+
+    if (tripError || itineraryError || expensesError || documentsError || !tripData) {
+      console.error(tripError || itineraryError || expensesError || documentsError);
+      setTrip(null);
+      setLoading(false);
+      return;
+    }
+
+    setTrip({
+      ...tripData,
+      itinerary: (itineraryData || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })),
+      expenses: (expensesData || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })),
+      documents: documentsData || [],
+    });
+    setLoading(false);
+  };
+
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimeout: any = null;
+    if (!id) return;
 
-    const connect = () => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      ws = new WebSocket(`${protocol}//${window.location.host}?tripId=${id}`);
-      socket.current = ws;
+    setLoading(true);
+    void loadTrip(id);
 
-      ws.onmessage = (event) => {
-        const { type, payload } = JSON.parse(event.data);
-        setTrip(prev => {
-          if (!prev) return null;
-          switch (type) {
-            case "ITINERARY_ADDED":
-              if (prev.itinerary.some(item => item.id === payload.id)) return prev;
-              return {
-                ...prev,
-                itinerary: [...prev.itinerary, { ...payload, amount: Number(payload.amount) || 0 }].sort((a, b) => a.start_time.localeCompare(b.start_time))
-              };
-            case "ITINERARY_PHOTO_UPDATED":
-              return { ...prev, itinerary: prev.itinerary.map(item => item.id === payload.id ? { ...item, photo_url: payload.photo_url } : item) };
-            case "ITINERARY_DELETED":
-              return { ...prev, itinerary: prev.itinerary.filter(item => item.id !== payload.id) };
-            case "EXPENSE_ADDED":
-              if (prev.expenses.some(item => item.id === payload.id)) return prev;
-              return { ...prev, expenses: [...prev.expenses, payload] };
-            case "EXPENSE_DELETED":
-              return { ...prev, expenses: prev.expenses.filter(item => item.id !== payload.id) };
-            case "DOCUMENT_ADDED":
-              if (prev.documents.some(item => item.id === payload.id)) return prev;
-              return { ...prev, documents: [...prev.documents, payload] };
-            case "DOCUMENT_DELETED":
-              return { ...prev, documents: prev.documents.filter(item => item.id !== payload.id) };
-            default:
-              return prev;
-          }
-        });
-      };
-
-      ws.onclose = () => {
-        reconnectTimeout = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = () => {
-        ws?.close();
-      };
-    };
-
-    const fetchTrip = async () => {
-      try {
-        const res = await fetch(`/api/trips/${id}`);
-        if (!res.ok) throw new Error("Failed to fetch trip");
-        const data = await res.json();
-        setTrip({
-          ...data,
-          itinerary: (data.itinerary || []).map((item: ItineraryItem) => ({ ...item, amount: Number(item.amount) || 0 })),
-          expenses: data.expenses || [],
-          documents: data.documents || [],
-        });
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchTrip();
-    connect();
+    const channel = supabase
+      .channel(`trip-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${id}` }, () => {
+        void loadTrip(id);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${id}` }, () => {
+        void loadTrip(id);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `trip_id=eq.${id}` }, () => {
+        void loadTrip(id);
+      })
+      .subscribe();
 
     return () => {
-      ws?.close();
-      clearTimeout(reconnectTimeout);
+      void supabase.removeChannel(channel);
     };
   }, [id]);
-
-  if (!trip) return <div className="flex items-center justify-center h-screen">Carregando...</div>;
-
-  const totalExpenses = trip.expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -289,39 +257,83 @@ function TripDashboard() {
       reader.readAsDataURL(file);
     });
 
-  const handlePhotoSelected = async (itemId: string, file?: File) => {
-    if (!file) return;
-    if (socket.current?.readyState !== WebSocket.OPEN) {
-      alert("Conexão perdida. Tentando reconectar...");
+  const createItinerary = async (form: FormData) => {
+    if (!id) return;
+
+    const amount = parseFloat(form.get("amount") as string) || 0;
+    const now = new Date().toISOString();
+
+    const { error } = await supabase.from("itinerary").insert({
+      id: crypto.randomUUID(),
+      trip_id: id,
+      type: form.get("type") as ItineraryType,
+      title: form.get("title") as string,
+      description: (form.get("description") as string) || "",
+      location: (form.get("location") as string) || "",
+      start_time: now,
+      end_time: now,
+      amount,
+      photo_url: null,
+    });
+
+    if (error) {
+      alert("Não foi possível adicionar item no itinerário.");
+      console.error(error);
       return;
     }
+
+    if (amount > 0) {
+      const { error: expenseError } = await supabase.from("expenses").insert({
+        id: crypto.randomUUID(),
+        trip_id: id,
+        description: (form.get("title") as string) || "Item do itinerário",
+        amount,
+        currency: "BRL",
+        category: "itinerary",
+        date: new Date().toISOString().split("T")[0],
+      });
+
+      if (expenseError) {
+        console.error(expenseError);
+      }
+    }
+  };
+
+  const handlePhotoSelected = async (itemId: string, file?: File) => {
+    if (!file) return;
+
     try {
       const photoUrl = await fileToDataUrl(file);
-      socket.current?.send(JSON.stringify({
-        type: "UPDATE_ITINERARY_PHOTO",
-        payload: { id: itemId, photo_url: photoUrl }
-      }));
-    } catch {
+      const { error } = await supabase.from("itinerary").update({ photo_url: photoUrl }).eq("id", itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
       alert("Não foi possível adicionar a foto.");
     }
   };
 
   const handleDocumentSelected = async (file?: File) => {
-    if (!file) return;
-    if (socket.current?.readyState !== WebSocket.OPEN) {
-      alert("Conexão perdida. Tentando reconectar...");
-      return;
-    }
+    if (!file || !id) return;
+
     try {
       const fileUrl = await fileToDataUrl(file);
-      socket.current?.send(JSON.stringify({
-        type: "ADD_DOCUMENT",
-        payload: { name: file.name, url: fileUrl }
-      }));
-    } catch {
+      const { error } = await supabase.from("documents").insert({
+        id: crypto.randomUUID(),
+        trip_id: id,
+        name: file.name,
+        url: fileUrl,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
       alert("Não foi possível adicionar o documento.");
     }
   };
+
+  if (loading) return <div className="flex items-center justify-center h-screen">Carregando...</div>;
+  if (!trip) return <div className="flex items-center justify-center h-screen">Viagem não encontrada.</div>;
+
+  const totalExpenses = trip.expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex">
@@ -383,13 +395,15 @@ function TripDashboard() {
                         </div>
                       )}
                       <div className="p-6 flex items-start gap-4">
-                        <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
-                          item.type === "flight" && "bg-blue-50 text-blue-600",
-                          item.type === "bus" && "bg-orange-50 text-orange-600",
-                          item.type === "hotel" && "bg-purple-50 text-purple-600",
-                          item.type === "activity" && "bg-emerald-50 text-emerald-600"
-                        )}>
+                        <div
+                          className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
+                            item.type === "flight" && "bg-blue-50 text-blue-600",
+                            item.type === "bus" && "bg-orange-50 text-orange-600",
+                            item.type === "hotel" && "bg-purple-50 text-purple-600",
+                            item.type === "activity" && "bg-emerald-50 text-emerald-600",
+                          )}
+                        >
                           {item.type === "flight" && <Plane size={24} />}
                           {item.type === "bus" && <Bus size={24} />}
                           {item.type === "hotel" && <Hotel size={24} />}
@@ -420,17 +434,25 @@ function TripDashboard() {
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              ref={(el) => { photoInputRefs.current[item.id] = el; }}
+                              ref={(el) => {
+                                photoInputRefs.current[item.id] = el;
+                              }}
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                handlePhotoSelected(item.id, file);
+                                void handlePhotoSelected(item.id, file);
                                 e.target.value = "";
                               }}
                             />
                           </div>
                         </div>
                         <button
-                          onClick={() => socket.current?.send(JSON.stringify({ type: "DELETE_ITINERARY", payload: { id: item.id } }))}
+                          onClick={async () => {
+                            const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
+                            if (error) {
+                              console.error(error);
+                              alert("Não foi possível remover item do itinerário.");
+                            }
+                          }}
                           className="opacity-0 group-hover:opacity-100 p-2 text-zinc-400 hover:text-red-500 transition-all"
                         >
                           <Trash2 size={18} />
@@ -441,25 +463,15 @@ function TripDashboard() {
                 </div>
                 <Card>
                   <h3 className="font-bold text-zinc-900 mb-4">Adicionar ao Itinerário</h3>
-                  <form className="space-y-4" onSubmit={(e) => {
-                    e.preventDefault();
-                    if (socket.current?.readyState !== WebSocket.OPEN) {
-                      alert("Conexão perdida. Tentando reconectar...");
-                      return;
-                    }
-                    const formData = new FormData(e.currentTarget);
-                    const payload = {
-                      type: formData.get("type"),
-                      title: formData.get("title"),
-                      description: formData.get("description"),
-                      location: formData.get("location"),
-                      amount: parseFloat(formData.get("amount") as string) || 0,
-                      start_time: new Date().toISOString(),
-                      end_time: new Date().toISOString(),
-                    };
-                    socket.current?.send(JSON.stringify({ type: "ADD_ITINERARY", payload }));
-                    (e.target as HTMLFormElement).reset();
-                  }}>
+                  <form
+                    className="space-y-4"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      await createItinerary(formData);
+                      (e.target as HTMLFormElement).reset();
+                    }}
+                  >
                     <select name="type" className="w-full px-4 py-2 rounded-xl border border-zinc-200 text-sm">
                       <option value="activity">Atividade</option>
                       <option value="flight">Voo</option>
@@ -470,7 +482,9 @@ function TripDashboard() {
                     <input name="location" placeholder="Localização" className="w-full px-4 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="amount" type="number" min="0" step="0.01" placeholder="Valor (R$)" required className="w-full px-4 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <textarea name="description" placeholder="Notas" className="w-full px-4 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
-                    <button type="submit" className={cn("w-full text-white py-2 rounded-xl text-sm font-bold transition-colors", theme.button)}>Adicionar</button>
+                    <button type="submit" className={cn("w-full text-white py-2 rounded-xl text-sm font-bold transition-colors", theme.button)}>
+                      Adicionar
+                    </button>
                   </form>
                 </Card>
               </div>
@@ -501,7 +515,16 @@ function TripDashboard() {
                         </td>
                         <td className="px-6 py-4 font-bold text-zinc-900">{formatCurrency(exp.amount)}</td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => socket.current?.send(JSON.stringify({ type: "DELETE_EXPENSE", payload: { id: exp.id } }))} className="text-zinc-300 hover:text-red-500 transition-colors">
+                          <button
+                            onClick={async () => {
+                              const { error } = await supabase.from("expenses").delete().eq("id", exp.id);
+                              if (error) {
+                                console.error(error);
+                                alert("Não foi possível remover despesa.");
+                              }
+                            }}
+                            className="text-zinc-300 hover:text-red-500 transition-colors"
+                          >
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -514,8 +537,17 @@ function TripDashboard() {
           )}
 
           {activeTab === "documents" && (
-            <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-200 bg-transparent cursor-pointer hover:border-zinc-400 transition-colors" onClick={() => documentInputRef.current?.click()}>
+            <motion.div
+              key="documents"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              <Card
+                className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-200 bg-transparent cursor-pointer hover:border-zinc-400 transition-colors"
+                onClick={() => documentInputRef.current?.click()}
+              >
                 <Plus className="text-zinc-300 mb-2" size={32} />
                 <p className="text-sm font-medium text-zinc-400">Adicionar Documento</p>
                 <p className="text-xs text-zinc-300 mt-1">PDF, PNG ou JPG</p>
@@ -527,7 +559,7 @@ function TripDashboard() {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  handleDocumentSelected(file);
+                  void handleDocumentSelected(file);
                   e.target.value = "";
                 }}
               />
@@ -542,7 +574,17 @@ function TripDashboard() {
                       Abrir documento
                     </button>
                   </div>
-                  <button type="button" onClick={() => socket.current?.send(JSON.stringify({ type: "DELETE_DOCUMENT", payload: { id: doc.id } }))} className="text-zinc-300 hover:text-red-500 transition-colors">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const { error } = await supabase.from("documents").delete().eq("id", doc.id);
+                      if (error) {
+                        console.error(error);
+                        alert("Não foi possível remover documento.");
+                      }
+                    }}
+                    className="text-zinc-300 hover:text-red-500 transition-colors"
+                  >
                     <Trash2 size={16} />
                   </button>
                 </Card>
