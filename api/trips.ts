@@ -7,6 +7,7 @@ type CreateTripInput = {
   endDate?: string;
 };
 
+
 const json = (res: any, status: number, body: unknown) => {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
   res.send(JSON.stringify(body));
