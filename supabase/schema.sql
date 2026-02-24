@@ -415,6 +415,46 @@ begin
 end;
 $$;
 
+create or replace function public.cancel_trip_invite(
+  p_trip_id uuid,
+  p_invite_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_accepted_at timestamptz;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if not public.is_trip_admin(p_trip_id) then
+    raise exception 'Only admin can cancel invites';
+  end if;
+
+  select accepted_at into v_accepted_at
+  from public.trip_invites
+  where id = p_invite_id
+    and trip_id = p_trip_id
+  limit 1;
+
+  if not found then
+    raise exception 'Invite not found';
+  end if;
+
+  if v_accepted_at is not null then
+    raise exception 'Invite already accepted';
+  end if;
+
+  delete from public.trip_invites
+  where id = p_invite_id
+    and trip_id = p_trip_id;
+end;
+$$;
+
 create or replace function public.set_trip_spouse(
   p_trip_id uuid,
   p_member_id uuid,
@@ -426,6 +466,9 @@ security definer
 set search_path = public
 as $$
 declare
+  v_target_member_id uuid;
+  v_actor_member_id uuid;
+  v_is_admin boolean;
   v_old_spouse uuid;
   v_old_other_spouse uuid;
 begin
@@ -433,20 +476,28 @@ begin
     raise exception 'Authentication required';
   end if;
 
-  if not public.is_trip_admin(p_trip_id) then
-    raise exception 'Only admin can change spouse settings';
+  v_actor_member_id := public.current_member_id(p_trip_id);
+  if v_actor_member_id is null then
+    raise exception 'Trip membership not found';
+  end if;
+
+  v_is_admin := public.is_trip_admin(p_trip_id);
+  v_target_member_id := coalesce(p_member_id, v_actor_member_id);
+
+  if not v_is_admin and v_target_member_id <> v_actor_member_id then
+    raise exception 'Only admin can change spouse settings for other members';
   end if;
 
   if not exists (
     select 1
     from public.trip_members tm
-    where tm.id = p_member_id
+    where tm.id = v_target_member_id
       and tm.trip_id = p_trip_id
   ) then
     raise exception 'Member not found in trip';
   end if;
 
-  if p_spouse_member_id is not null and p_spouse_member_id = p_member_id then
+  if p_spouse_member_id is not null and p_spouse_member_id = v_target_member_id then
     raise exception 'A member cannot be spouse of itself';
   end if;
 
@@ -461,7 +512,7 @@ begin
 
   select spouse_member_id into v_old_spouse
   from public.trip_members
-  where id = p_member_id;
+  where id = v_target_member_id;
 
   if v_old_spouse is not null then
     update public.trip_members
@@ -471,7 +522,7 @@ begin
 
   update public.trip_members
   set spouse_member_id = null
-  where id = p_member_id;
+  where id = v_target_member_id;
 
   if p_spouse_member_id is null then
     return;
@@ -489,10 +540,10 @@ begin
 
   update public.trip_members
   set spouse_member_id = p_spouse_member_id
-  where id = p_member_id;
+  where id = v_target_member_id;
 
   update public.trip_members
-  set spouse_member_id = p_member_id
+  set spouse_member_id = v_target_member_id
   where id = p_spouse_member_id;
 end;
 $$;
@@ -676,6 +727,7 @@ revoke all on function public.can_view_scoped_data(uuid, uuid, text) from public
 revoke all on function public.create_trip_with_admin(text, text, timestamptz, timestamptz) from public;
 revoke all on function public.create_trip_invite(uuid, text) from public;
 revoke all on function public.accept_trip_invite(text) from public;
+revoke all on function public.cancel_trip_invite(uuid, uuid) from public;
 revoke all on function public.set_trip_spouse(uuid, uuid, uuid) from public;
 
 grant execute on function public.sync_my_profile() to authenticated;
@@ -687,6 +739,7 @@ grant execute on function public.can_view_scoped_data(uuid, uuid, text) to authe
 grant execute on function public.create_trip_with_admin(text, text, timestamptz, timestamptz) to authenticated;
 grant execute on function public.create_trip_invite(uuid, text) to authenticated;
 grant execute on function public.accept_trip_invite(text) to authenticated;
+grant execute on function public.cancel_trip_invite(uuid, uuid) to authenticated;
 grant execute on function public.set_trip_spouse(uuid, uuid, uuid) to authenticated;
 
 do $$

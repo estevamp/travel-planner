@@ -308,6 +308,7 @@ function TripDashboard({ session }: { session: Session }) {
   const [generatedLink, setGeneratedLink] = useState("");
   const [pairMemberId, setPairMemberId] = useState("");
   const [pairSpouseId, setPairSpouseId] = useState("");
+  const [selfSpouseId, setSelfSpouseId] = useState("");
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
@@ -430,6 +431,10 @@ function TripDashboard({ session }: { session: Session }) {
     setEditTripName(trip?.name || "");
     setEditTripDestination(trip?.destination || "");
   }, [trip?.id, trip?.name, trip?.destination]);
+
+  useEffect(() => {
+    setSelfSpouseId(currentMember?.spouse_member_id || "");
+  }, [currentMember?.id, currentMember?.spouse_member_id]);
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -611,6 +616,19 @@ function TripDashboard({ session }: { session: Session }) {
       p_trip_id: id,
       p_member_id: memberId,
       p_spouse_member_id: spouseMemberId,
+    });
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+    await loadTrip(id);
+  };
+
+  const cancelInvite = async (inviteId: string) => {
+    if (!id) return;
+    const { error } = await supabase.rpc("cancel_trip_invite", {
+      p_trip_id: id,
+      p_invite_id: inviteId,
     });
     if (error) {
       alert(getErrorMessage(error));
@@ -1090,6 +1108,32 @@ function TripDashboard({ session }: { session: Session }) {
 
           {activeTab === "people" && (
             <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              {currentMember && (
+                <Card>
+                  <h3 className="font-bold mb-4">Seu conjuge</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select
+                      value={selfSpouseId}
+                      onChange={(e) => setSelfSpouseId(e.target.value)}
+                      className="md:col-span-2 px-4 py-2 rounded-xl border border-zinc-200 text-sm"
+                    >
+                      <option value="">Sem conjuge</option>
+                      {members
+                        .filter((m) => m.id !== currentMember.id)
+                        .map((m) => <option key={m.id} value={m.id}>{m.display_name || m.user_id}</option>)}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        await setSpouse(currentMember.id, selfSpouseId || null);
+                      }}
+                      className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold"
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                </Card>
+              )}
+
               {isAdmin && (
                 <Card>
                   <h3 className="font-bold mb-4">Convidar pessoa</h3>
@@ -1144,7 +1188,18 @@ function TripDashboard({ session }: { session: Session }) {
                     {invites.map((invite) => (
                       <div key={invite.id} className="p-3 rounded-xl border border-zinc-200 text-sm flex items-center justify-between gap-2">
                         <span>{invite.email}</span>
-                        <span className={cn("text-xs font-bold uppercase", invite.accepted_at ? "text-emerald-600" : "text-orange-600")}>{invite.accepted_at ? "Aceito" : "Pendente"}</span>
+                        <div className="flex items-center gap-3">
+                          <span className={cn("text-xs font-bold uppercase", invite.accepted_at ? "text-emerald-600" : "text-orange-600")}>{invite.accepted_at ? "Aceito" : "Pendente"}</span>
+                          {!invite.accepted_at && (
+                            <button
+                              type="button"
+                              onClick={() => void cancelInvite(invite.id)}
+                              className="text-xs text-red-500"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
