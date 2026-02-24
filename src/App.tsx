@@ -235,9 +235,17 @@ function InvitePage({ session }: { session: Session | null }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tripId, setTripId] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
-    if (!session || !token || loading || tripId) return;
+    setAttempted(false);
+    setError(null);
+    setTripId(null);
+  }, [token]);
+
+  useEffect(() => {
+    if (!session || !token || attempted || tripId) return;
+    setAttempted(true);
     setLoading(true);
     setError(null);
     supabase
@@ -250,7 +258,7 @@ function InvitePage({ session }: { session: Session | null }) {
         setTripId(data as string);
       })
       .finally(() => setLoading(false));
-  }, [session, token, loading, tripId]);
+  }, [session, token, attempted, tripId]);
 
   if (!token) return <div className="min-h-screen flex items-center justify-center">Convite invalido.</div>;
 

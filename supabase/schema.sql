@@ -339,7 +339,7 @@ begin
     raise exception 'Trip membership not found';
   end if;
 
-  v_token := encode(gen_random_bytes(24), 'hex');
+  v_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 
   insert into public.trip_invites (trip_id, email, token, invited_by_member_id)
   values (p_trip_id, v_email, v_token, v_member_id);
