@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboard, LogOut, MapPin, Plane, Plus, Shield, Trash2, UserPlus, Users } from "lucide-react";
+import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboard, LogOut, MapPin, Moon, Palette, Plane, Plus, Settings, Shield, Sun, Trash2, UserPlus, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -15,6 +15,14 @@ function cn(...inputs: ClassValue[]) {
 const DOCS_BUCKET = "travel-documents";
 type ItineraryType = "flight" | "bus" | "hotel" | "activity";
 type Visibility = "public" | "private";
+type ThemePalette = "default" | "ocean" | "forest" | "sunset";
+
+interface UserSettings {
+  theme_palette: ThemePalette;
+  dark_mode: boolean;
+  default_currency: string;
+  budget_limit: number;
+}
 
 interface ItineraryItem {
   id: string;
@@ -87,8 +95,71 @@ interface TripSummary {
   created_at: string;
 }
 
+const DEFAULT_SETTINGS: UserSettings = {
+  theme_palette: "default",
+  dark_mode: false,
+  default_currency: "BRL",
+  budget_limit: 0,
+};
+
+const THEME_PALETTES: Record<ThemePalette, { lightBg: string; lightCard: string; lightAccent: string; darkBg: string; darkCard: string; darkAccent: string }> = {
+  default: {
+    lightBg: "#F8F9FA",
+    lightCard: "#FFFFFF",
+    lightAccent: "#111111",
+    darkBg: "#111827",
+    darkCard: "#1F2937",
+    darkAccent: "#E5E7EB",
+  },
+  ocean: {
+    lightBg: "#EEF6FF",
+    lightCard: "#FFFFFF",
+    lightAccent: "#0B5FFF",
+    darkBg: "#0B132B",
+    darkCard: "#1C2541",
+    darkAccent: "#5BC0BE",
+  },
+  forest: {
+    lightBg: "#EFFAF3",
+    lightCard: "#FFFFFF",
+    lightAccent: "#116149",
+    darkBg: "#10251B",
+    darkCard: "#1B3A2A",
+    darkAccent: "#8FD694",
+  },
+  sunset: {
+    lightBg: "#FFF4EE",
+    lightCard: "#FFFFFF",
+    lightAccent: "#D9480F",
+    darkBg: "#2B1A14",
+    darkCard: "#3A251D",
+    darkAccent: "#FFB37A",
+  },
+};
+
+function getThemeStyles(settings: UserSettings): React.CSSProperties {
+  const palette = THEME_PALETTES[settings.theme_palette] || THEME_PALETTES.default;
+  if (settings.dark_mode) {
+    return {
+      backgroundColor: palette.darkBg,
+      color: "#F3F4F6",
+      ["--card-bg" as string]: palette.darkCard,
+      ["--card-border" as string]: "#374151",
+      ["--accent-color" as string]: palette.darkAccent,
+    };
+  }
+
+  return {
+    backgroundColor: palette.lightBg,
+    color: "#111827",
+    ["--card-bg" as string]: palette.lightCard,
+    ["--card-border" as string]: "#E5E7EB",
+    ["--accent-color" as string]: palette.lightAccent,
+  };
+}
+
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-  <div className={cn("bg-white rounded-2xl border border-zinc-100 shadow-sm p-6", className)} onClick={onClick}>{children}</div>
+  <div className={cn("rounded-2xl border shadow-sm p-6 bg-[var(--card-bg,#fff)] border-[var(--card-border,#e4e4e7)]", className)} onClick={onClick}>{children}</div>
 );
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any; label: string; active?: boolean; onClick: () => void }) => (
@@ -109,8 +180,8 @@ function getErrorMessage(error: unknown) {
   return "Erro inesperado";
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+function formatCurrency(value: number, currency = "BRL") {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
 }
 
 async function signInWithGoogle(redirectTo?: string) {
@@ -146,7 +217,7 @@ function AuthLanding() {
   );
 }
 
-function LandingPage({ session }: { session: Session }) {
+function LandingPage({ session, settings }: { session: Session; settings: UserSettings }) {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
@@ -189,7 +260,7 @@ function LandingPage({ session }: { session: Session }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-6 md:p-10">
+    <div className="min-h-screen p-6 md:p-10" style={getThemeStyles(settings)}>
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -204,15 +275,6 @@ function LandingPage({ session }: { session: Session }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <h2 className="font-bold mb-4">Criar viagem</h2>
-            <form onSubmit={createTrip} className="space-y-3">
-              <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da viagem" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
-              <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Destino" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
-              <button disabled={creating} className="w-full bg-black text-white py-2 rounded-xl font-semibold">{creating ? "Criando..." : "Criar"}</button>
-            </form>
-          </Card>
-
-          <Card>
             <h2 className="font-bold mb-4">Minhas viagens</h2>
             <div className="space-y-2 max-h-[420px] overflow-auto">
               {loadingTrips && <p className="text-sm text-zinc-500">Carregando...</p>}
@@ -224,6 +286,15 @@ function LandingPage({ session }: { session: Session }) {
                 </button>
               ))}
             </div>
+          </Card>
+
+          <Card>
+            <h2 className="font-bold mb-4">Criar viagem</h2>
+            <form onSubmit={createTrip} className="space-y-3">
+              <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da viagem" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
+              <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Destino" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
+              <button disabled={creating} className="w-full bg-black text-white py-2 rounded-xl font-semibold">{creating ? "Criando..." : "Criar"}</button>
+            </form>
           </Card>
         </div>
       </div>
@@ -293,14 +364,14 @@ function InvitePage({ session }: { session: Session | null }) {
   );
 }
 
-function TripDashboard({ session }: { session: Session }) {
+function TripDashboard({ session, settings, onSettingsChange }: { session: Session; settings: UserSettings; onSettingsChange: (next: UserSettings) => void }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [tripOptions, setTripOptions] = useState<TripSummary[]>([]);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [invites, setInvites] = useState<TripInvite[]>([]);
-  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "documents" | "people">("itinerary");
+  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "documents" | "people" | "settings">("itinerary");
   const [loading, setLoading] = useState(true);
   const [updatingTrip, setUpdatingTrip] = useState(false);
   const [editTripName, setEditTripName] = useState("");
@@ -314,6 +385,8 @@ function TripDashboard({ session }: { session: Session }) {
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [savingExpense, setSavingExpense] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsDraft, setSettingsDraft] = useState<UserSettings>(settings);
   const [itineraryDraft, setItineraryDraft] = useState<{
     type: ItineraryType;
     title: string;
@@ -346,6 +419,7 @@ function TripDashboard({ session }: { session: Session }) {
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
   const isAdmin = currentMember?.role === "admin";
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+  const themedStyles = useMemo(() => getThemeStyles(settings), [settings]);
 
   const loadTripOptions = async () => {
     const { data, error } = await supabase.from("trips").select("id,name,destination,created_at").order("created_at", { ascending: false });
@@ -437,6 +511,10 @@ function TripDashboard({ session }: { session: Session }) {
     setSelfSpouseId(currentMember?.spouse_member_id || "");
   }, [currentMember?.id, currentMember?.spouse_member_id]);
 
+  useEffect(() => {
+    setSettingsDraft(settings);
+  }, [settings]);
+
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -502,7 +580,7 @@ function TripDashboard({ session }: { session: Session }) {
       itinerary_item_id: itemId,
       description: nextData.title,
       amount: nextData.amount,
-      currency: "BRL",
+      currency: settings.default_currency,
       category: "itinerary",
       visibility: nextData.visibility,
       date: new Date().toISOString().split("T")[0],
@@ -561,7 +639,7 @@ function TripDashboard({ session }: { session: Session }) {
         itinerary_item_id: itineraryId,
         description: title,
         amount,
-        currency: "BRL",
+        currency: settings.default_currency,
         category: "itinerary",
         visibility,
         date: new Date().toISOString().split("T")[0],
@@ -580,7 +658,7 @@ function TripDashboard({ session }: { session: Session }) {
       created_by_member_id: currentMember.id,
       description: (form.get("description") as string) || "Despesa",
       amount,
-      currency: "BRL",
+      currency: settings.default_currency,
       category: (form.get("category") as string) || "general",
       visibility,
       date: new Date().toISOString().split("T")[0],
@@ -745,6 +823,30 @@ function TripDashboard({ session }: { session: Session }) {
     await loadTrip(id);
   };
 
+  const saveUserSettings = async () => {
+    if (savingSettings) return;
+    const safeBudget = Math.max(0, Number(settingsDraft.budget_limit) || 0);
+    setSavingSettings(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        theme_palette: settingsDraft.theme_palette,
+        dark_mode: settingsDraft.dark_mode,
+        default_currency: settingsDraft.default_currency,
+        budget_limit: safeBudget,
+      })
+      .eq("user_id", session.user.id);
+    setSavingSettings(false);
+
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+
+    onSettingsChange({ ...settingsDraft, budget_limit: safeBudget });
+    alert("Configuracoes salvas.");
+  };
+
   const updateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !trip || !isAdmin || updatingTrip) return;
@@ -786,12 +888,16 @@ function TripDashboard({ session }: { session: Session }) {
     () => (trip ? trip.expenses.reduce((total, expense) => total + (Number(expense.amount) || 0), 0) : 0),
     [trip],
   );
+  const budgetLimit = Math.max(0, Number(settings.budget_limit) || 0);
+  const budgetProgress = budgetLimit > 0 ? Math.min((expensesTotal / budgetLimit) * 100, 100) : 0;
+  const budgetRemaining = budgetLimit - expensesTotal;
+  const isOverBudget = budgetLimit > 0 && expensesTotal > budgetLimit;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem nao encontrada ou sem permissao.</div>;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex">
+    <div className="min-h-screen flex" style={themedStyles}>
       <aside className="w-64 border-r border-zinc-200 bg-white p-6 hidden md:flex flex-col gap-8">
         <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 px-2 text-left">
           <Plane size={18} />
@@ -803,6 +909,7 @@ function TripDashboard({ session }: { session: Session }) {
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
           <SidebarItem icon={Users} label="Pessoas" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
+          <SidebarItem icon={Settings} label="Configuracoes" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
         <div className="flex-1 flex flex-col min-h-0">
           <p className="text-xs uppercase font-bold text-zinc-400 mb-2 px-1">Viagens</p>
@@ -869,7 +976,6 @@ function TripDashboard({ session }: { session: Session }) {
           </div>
           <div className="flex items-center gap-2">
             {isAdmin && <div className="px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold uppercase flex items-center gap-1"><Shield size={12} />Admin</div>}
-            <button onClick={() => void navigator.clipboard.writeText(window.location.href)} className="px-3 py-2 rounded-xl border border-zinc-200">Copiar link</button>
           </div>
         </header>
 
@@ -959,7 +1065,7 @@ function TripDashboard({ session }: { session: Session }) {
                               <p className="text-sm text-zinc-500">{item.description}</p>
                               <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500">
                                 <span>{item.location || "Sem local"}</span>
-                                <span>{formatCurrency(item.amount)}</span>
+                                <span>{formatCurrency(item.amount, settings.default_currency)}</span>
                                 {item.visibility === "private" && <span className="font-bold uppercase text-orange-600">Privado</span>}
                               </div>
                             </>
@@ -1040,7 +1146,36 @@ function TripDashboard({ session }: { session: Session }) {
                   <p className="text-xs uppercase font-bold text-zinc-400">Total de despesas</p>
                   <p className="text-sm text-zinc-500">Soma das despesas visiveis para voce.</p>
                 </div>
-                <p className="text-2xl font-bold">{formatCurrency(expensesTotal)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(expensesTotal, settings.default_currency)}</p>
+              </Card>
+
+              <Card className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold">Orcamento da viagem</p>
+                  {budgetLimit > 0 && <p className={cn("text-sm font-semibold", isOverBudget ? "text-red-600" : "text-emerald-600")}>{Math.round(budgetProgress)}%</p>}
+                </div>
+                {budgetLimit <= 0 ? (
+                  <p className="text-sm text-zinc-500">Defina um limite em Configuracoes para acompanhar o orcamento.</p>
+                ) : (
+                  <>
+                    <div className="w-full h-3 rounded-full bg-zinc-200 overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all", isOverBudget ? "bg-red-500" : "bg-emerald-500")}
+                        style={{ width: `${budgetProgress}%` }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                      <p><span className="text-zinc-500">Total:</span> {formatCurrency(expensesTotal, settings.default_currency)}</p>
+                      <p><span className="text-zinc-500">Limite:</span> {formatCurrency(budgetLimit, settings.default_currency)}</p>
+                      <p>
+                        <span className="text-zinc-500">{isOverBudget ? "Excesso:" : "Restante:"}</span>{" "}
+                        <span className={isOverBudget ? "text-red-600 font-semibold" : "text-emerald-600 font-semibold"}>
+                          {formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
+                        </span>
+                      </p>
+                    </div>
+                  </>
+                )}
               </Card>
 
               <Card>
@@ -1132,7 +1267,7 @@ function TripDashboard({ session }: { session: Session }) {
                           <>
                             <td className="px-4 py-3"><p className="font-medium">{exp.description}</p><p className="text-xs text-zinc-400">{exp.date}</p></td>
                             <td className="px-4 py-3 text-xs uppercase">{exp.category}</td>
-                            <td className="px-4 py-3 font-bold">{formatCurrency(exp.amount)}</td>
+                            <td className="px-4 py-3 font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</td>
                             <td className="px-4 py-3 text-xs uppercase">{exp.visibility}</td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-2">
@@ -1331,11 +1466,110 @@ function TripDashboard({ session }: { session: Session }) {
               )}
             </motion.div>
           )}
+
+          {activeTab === "settings" && (
+            <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <Card className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Palette size={16} />
+                  <h3 className="font-bold">Aparencia</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <span className="block mb-1 text-zinc-500">Paleta</span>
+                    <select
+                      value={settingsDraft.theme_palette}
+                      onChange={(e) => setSettingsDraft((current) => ({ ...current, theme_palette: e.target.value as ThemePalette }))}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    >
+                      <option value="default">Default</option>
+                      <option value="ocean">Ocean</option>
+                      <option value="forest">Forest</option>
+                      <option value="sunset">Sunset</option>
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <span className="block mb-1 text-zinc-500">Dark mode</span>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
+                      className={cn("w-full px-3 py-2 rounded-xl border text-sm flex items-center justify-center gap-2", settingsDraft.dark_mode ? "border-zinc-700 bg-zinc-800 text-white" : "border-zinc-200")}
+                    >
+                      {settingsDraft.dark_mode ? <Moon size={14} /> : <Sun size={14} />}
+                      {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
+                    </button>
+                  </label>
+                </div>
+              </Card>
+
+              <Card className="space-y-4">
+                <h3 className="font-bold">Financeiro</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <span className="block mb-1 text-zinc-500">Moeda padrao</span>
+                    <select
+                      value={settingsDraft.default_currency}
+                      onChange={(e) => setSettingsDraft((current) => ({ ...current, default_currency: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    >
+                      <option value="BRL">BRL</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <span className="block mb-1 text-zinc-500">Limite de orcamento</span>
+                    <input
+                      value={String(settingsDraft.budget_limit)}
+                      onChange={(e) => setSettingsDraft((current) => ({ ...current, budget_limit: Number(e.target.value) || 0 }))}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    />
+                  </label>
+                </div>
+              </Card>
+
+              {currentMember && (
+                <Card className="space-y-4">
+                  <h3 className="font-bold">Conjuge (viagem atual)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select
+                      value={selfSpouseId}
+                      onChange={(e) => setSelfSpouseId(e.target.value)}
+                      className="md:col-span-2 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    >
+                      <option value="">Sem conjuge</option>
+                      {members.filter((m) => m.id !== currentMember.id).map((m) => (
+                        <option key={m.id} value={m.id}>{m.display_name || m.user_id}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await setSpouse(currentMember.id, selfSpouseId || null);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-black text-white text-sm font-bold"
+                    >
+                      Atualizar conjuge
+                    </button>
+                  </div>
+                </Card>
+              )}
+
+              <div className="flex justify-end">
+                <button type="button" onClick={() => void saveUserSettings()} disabled={savingSettings} className="px-4 py-2 rounded-xl bg-black text-white text-sm font-bold">
+                  {savingSettings ? "Salvando..." : "Salvar configuracoes"}
+                </button>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           <button type="button" onClick={() => navigate("/")} className="flex flex-col items-center justify-center gap-1 py-2 text-zinc-500">
             <Plane size={16} />
             <span className="text-[11px] font-medium">Viagens</span>
@@ -1356,6 +1590,10 @@ function TripDashboard({ session }: { session: Session }) {
             <Users size={16} />
             <span className="text-[11px] font-medium">Pessoas</span>
           </button>
+          <button type="button" onClick={() => setActiveTab("settings")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "settings" ? "text-black" : "text-zinc-500")}>
+            <Settings size={16} />
+            <span className="text-[11px] font-medium">Config</span>
+          </button>
         </div>
       </nav>
     </div>
@@ -1370,13 +1608,39 @@ function ProtectedRoute({ session, children }: { session: Session | null; childr
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [userSettings, setUserSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+
+  const loadUserSettings = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("theme_palette,dark_mode,default_currency,budget_limit")
+      .eq("user_id", userId)
+      .single();
+
+    if (error || !data) {
+      setUserSettings(DEFAULT_SETTINGS);
+      return;
+    }
+
+    setUserSettings({
+      theme_palette: (data.theme_palette as ThemePalette) || DEFAULT_SETTINGS.theme_palette,
+      dark_mode: Boolean(data.dark_mode),
+      default_currency: (data.default_currency as string) || DEFAULT_SETTINGS.default_currency,
+      budget_limit: Number(data.budget_limit) || 0,
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       setSession(data.session || null);
-      if (data.session) await supabase.rpc("sync_my_profile");
+      if (data.session) {
+        await supabase.rpc("sync_my_profile");
+        await loadUserSettings(data.session.user.id);
+      } else {
+        setUserSettings(DEFAULT_SETTINGS);
+      }
       setLoadingAuth(false);
     });
 
@@ -1384,7 +1648,12 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (nextSession) void supabase.rpc("sync_my_profile");
+      if (nextSession) {
+        void supabase.rpc("sync_my_profile");
+        void loadUserSettings(nextSession.user.id);
+      } else {
+        setUserSettings(DEFAULT_SETTINGS);
+      }
     });
 
     return () => {
@@ -1398,8 +1667,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={session ? <LandingPage session={session} /> : <AuthLanding />} />
-        <Route path="/trip/:id" element={<ProtectedRoute session={session}>{<TripDashboard session={session as Session} />}</ProtectedRoute>} />
+        <Route path="/" element={session ? <LandingPage session={session} settings={userSettings} /> : <AuthLanding />} />
+        <Route
+          path="/trip/:id"
+          element={
+            <ProtectedRoute session={session}>
+              {<TripDashboard session={session as Session} settings={userSettings} onSettingsChange={setUserSettings} />}
+            </ProtectedRoute>
+          }
+        />
         <Route path="/invite/:token" element={<InvitePage session={session} />} />
       </Routes>
     </BrowserRouter>

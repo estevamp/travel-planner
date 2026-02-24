@@ -79,6 +79,10 @@ create table if not exists public.documents (
 );
 
 alter table public.trips add column if not exists created_by_user_id uuid references auth.users(id);
+alter table public.profiles add column if not exists theme_palette text not null default 'default';
+alter table public.profiles add column if not exists dark_mode boolean not null default false;
+alter table public.profiles add column if not exists default_currency text not null default 'BRL';
+alter table public.profiles add column if not exists budget_limit numeric(12,2) not null default 0;
 alter table public.itinerary add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
 alter table public.itinerary add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
 alter table public.expenses add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
@@ -92,6 +96,20 @@ alter table public.trip_members
   foreign key (spouse_member_id)
   references public.trip_members(id)
   on delete set null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_default_currency_len_chk'
+  ) then
+    alter table public.profiles
+      add constraint profiles_default_currency_len_chk
+      check (char_length(default_currency) = 3);
+  end if;
+end
+$$;
 
 create unique index if not exists idx_trip_invites_unique_trip_email
   on public.trip_invites (trip_id, lower(email));
