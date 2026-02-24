@@ -705,6 +705,27 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       return;
     }
 
+    // Update local state immediately to reflect changes
+    setTrip((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        itinerary: prev.itinerary.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                type: itineraryDraft.type,
+                title,
+                description: itineraryDraft.description.trim(),
+                location: itineraryDraft.location.trim(),
+                amount: nextAmount,
+                visibility: itineraryDraft.visibility,
+              }
+            : item
+        ),
+      };
+    });
+
     if (nextAmount > 0) {
       await upsertItineraryExpense(itemId, sourceItem, {
         title,
