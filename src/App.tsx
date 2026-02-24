@@ -21,6 +21,13 @@ interface UserSettings {
   theme_palette: ThemePalette;
   dark_mode: boolean;
   default_currency: string;
+  spouse_user_id: string | null;
+}
+
+interface TripBudget {
+  id: string;
+  trip_id: string;
+  owner_user_id: string;
   budget_limit: number;
 }
 
@@ -66,7 +73,6 @@ interface TripMember {
   user_id: string;
   role: "admin" | "member";
   display_name: string | null;
-  spouse_member_id: string | null;
 }
 
 interface TripInvite {
@@ -99,41 +105,111 @@ const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
   dark_mode: false,
   default_currency: "BRL",
-  budget_limit: 0,
+  spouse_user_id: null,
 };
 
-const THEME_PALETTES: Record<ThemePalette, { lightBg: string; lightCard: string; lightAccent: string; darkBg: string; darkCard: string; darkAccent: string }> = {
+const THEME_PALETTES: Record<
+  ThemePalette,
+  {
+    lightBg: string;
+    lightCard: string;
+    lightAccent: string;
+    lightSidebarBg: string;
+    lightSidebarBorder: string;
+    lightSidebarText: string;
+    lightSidebarHover: string;
+    lightSidebarActiveBg: string;
+    lightSidebarActiveText: string;
+    darkBg: string;
+    darkCard: string;
+    darkAccent: string;
+    darkSidebarBg: string;
+    darkSidebarBorder: string;
+    darkSidebarText: string;
+    darkSidebarHover: string;
+    darkSidebarActiveBg: string;
+    darkSidebarActiveText: string;
+  }
+> = {
   default: {
     lightBg: "#F8F9FA",
     lightCard: "#FFFFFF",
     lightAccent: "#111111",
+    lightSidebarBg: "#FFFFFF",
+    lightSidebarBorder: "#E5E7EB",
+    lightSidebarText: "#52525B",
+    lightSidebarHover: "#F4F4F5",
+    lightSidebarActiveBg: "#111111",
+    lightSidebarActiveText: "#FFFFFF",
     darkBg: "#111827",
     darkCard: "#1F2937",
     darkAccent: "#E5E7EB",
+    darkSidebarBg: "#111827",
+    darkSidebarBorder: "#374151",
+    darkSidebarText: "#D1D5DB",
+    darkSidebarHover: "#1F2937",
+    darkSidebarActiveBg: "#F3F4F6",
+    darkSidebarActiveText: "#111827",
   },
   ocean: {
     lightBg: "#EEF6FF",
     lightCard: "#FFFFFF",
     lightAccent: "#0B5FFF",
+    lightSidebarBg: "#FFFFFF",
+    lightSidebarBorder: "#D6E4FF",
+    lightSidebarText: "#31538A",
+    lightSidebarHover: "#EAF2FF",
+    lightSidebarActiveBg: "#0B5FFF",
+    lightSidebarActiveText: "#FFFFFF",
     darkBg: "#0B132B",
     darkCard: "#1C2541",
     darkAccent: "#5BC0BE",
+    darkSidebarBg: "#0F1A34",
+    darkSidebarBorder: "#22365E",
+    darkSidebarText: "#C2D5FF",
+    darkSidebarHover: "#1A2A4D",
+    darkSidebarActiveBg: "#5BC0BE",
+    darkSidebarActiveText: "#06212A",
   },
   forest: {
     lightBg: "#EFFAF3",
     lightCard: "#FFFFFF",
     lightAccent: "#116149",
+    lightSidebarBg: "#FFFFFF",
+    lightSidebarBorder: "#D5E8DC",
+    lightSidebarText: "#2F5A47",
+    lightSidebarHover: "#E6F4EB",
+    lightSidebarActiveBg: "#116149",
+    lightSidebarActiveText: "#FFFFFF",
     darkBg: "#10251B",
     darkCard: "#1B3A2A",
     darkAccent: "#8FD694",
+    darkSidebarBg: "#132D21",
+    darkSidebarBorder: "#2B4B3A",
+    darkSidebarText: "#CDE7D3",
+    darkSidebarHover: "#1E3E2D",
+    darkSidebarActiveBg: "#8FD694",
+    darkSidebarActiveText: "#10251B",
   },
   sunset: {
     lightBg: "#FFF4EE",
     lightCard: "#FFFFFF",
     lightAccent: "#D9480F",
+    lightSidebarBg: "#FFFFFF",
+    lightSidebarBorder: "#F3D8CA",
+    lightSidebarText: "#7A3B24",
+    lightSidebarHover: "#FFE9DE",
+    lightSidebarActiveBg: "#D9480F",
+    lightSidebarActiveText: "#FFFFFF",
     darkBg: "#2B1A14",
     darkCard: "#3A251D",
     darkAccent: "#FFB37A",
+    darkSidebarBg: "#321E17",
+    darkSidebarBorder: "#5C382A",
+    darkSidebarText: "#FFD9BF",
+    darkSidebarHover: "#4A2C21",
+    darkSidebarActiveBg: "#FFB37A",
+    darkSidebarActiveText: "#2B1A14",
   },
 };
 
@@ -146,6 +222,12 @@ function getThemeStyles(settings: UserSettings): React.CSSProperties {
       ["--card-bg" as string]: palette.darkCard,
       ["--card-border" as string]: "#374151",
       ["--accent-color" as string]: palette.darkAccent,
+      ["--sidebar-bg" as string]: palette.darkSidebarBg,
+      ["--sidebar-border" as string]: palette.darkSidebarBorder,
+      ["--sidebar-text" as string]: palette.darkSidebarText,
+      ["--sidebar-hover" as string]: palette.darkSidebarHover,
+      ["--sidebar-active-bg" as string]: palette.darkSidebarActiveBg,
+      ["--sidebar-active-text" as string]: palette.darkSidebarActiveText,
     };
   }
 
@@ -155,6 +237,12 @@ function getThemeStyles(settings: UserSettings): React.CSSProperties {
     ["--card-bg" as string]: palette.lightCard,
     ["--card-border" as string]: "#E5E7EB",
     ["--accent-color" as string]: palette.lightAccent,
+    ["--sidebar-bg" as string]: palette.lightSidebarBg,
+    ["--sidebar-border" as string]: palette.lightSidebarBorder,
+    ["--sidebar-text" as string]: palette.lightSidebarText,
+    ["--sidebar-hover" as string]: palette.lightSidebarHover,
+    ["--sidebar-active-bg" as string]: palette.lightSidebarActiveBg,
+    ["--sidebar-active-text" as string]: palette.lightSidebarActiveText,
   };
 }
 
@@ -165,7 +253,10 @@ const Card = ({ children, className, onClick }: { children: React.ReactNode; cla
 const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any; label: string; active?: boolean; onClick: () => void }) => (
   <button
     onClick={onClick}
-    className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl", active ? "bg-black text-white" : "text-zinc-500 hover:bg-zinc-100")}
+    className={cn(
+      "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
+      active ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]" : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]",
+    )}
   >
     <Icon size={20} />
     <span className="font-medium text-sm">{label}</span>
@@ -378,14 +469,15 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const [editTripDestination, setEditTripDestination] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
-  const [pairMemberId, setPairMemberId] = useState("");
-  const [pairSpouseId, setPairSpouseId] = useState("");
-  const [selfSpouseId, setSelfSpouseId] = useState("");
+  const [selfSpouseUserId, setSelfSpouseUserId] = useState("");
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [savingExpense, setSavingExpense] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [tripBudget, setTripBudget] = useState<TripBudget | null>(null);
+  const [budgetOwnerUserId, setBudgetOwnerUserId] = useState<string>("");
+  const [spouseByUserId, setSpouseByUserId] = useState<Map<string, string | null>>(new Map());
   const [settingsDraft, setSettingsDraft] = useState<UserSettings>(settings);
   const [itineraryDraft, setItineraryDraft] = useState<{
     type: ItineraryType;
@@ -418,7 +510,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
   const isAdmin = currentMember?.role === "admin";
-  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+  const memberByUserId = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const themedStyles = useMemo(() => getThemeStyles(settings), [settings]);
 
   const loadTripOptions = async () => {
@@ -434,7 +526,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     setLoading(true);
     const [tripRes, membersRes, itineraryRes, expensesRes, docsRes] = await Promise.all([
       supabase.from("trips").select("*").eq("id", tripId).single(),
-      supabase.from("trip_members").select("id,trip_id,user_id,role,display_name,spouse_member_id").eq("trip_id", tripId),
+      supabase.from("trip_members").select("id,trip_id,user_id,role,display_name").eq("trip_id", tripId),
       supabase.from("itinerary").select("*").eq("trip_id", tripId).order("start_time", { ascending: true }),
       supabase.from("expenses").select("*").eq("trip_id", tripId).order("date", { ascending: true }),
       supabase.from("documents").select("*").eq("trip_id", tripId),
@@ -451,6 +543,20 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
     const nextMembers = (membersRes.data || []) as TripMember[];
     setMembers(nextMembers);
+    const userIds = nextMembers.map((member) => member.user_id);
+    if (userIds.length > 0) {
+      const { data: profileRows, error: profileError } = await supabase.from("profiles").select("user_id,spouse_user_id").in("user_id", userIds);
+      if (profileError) {
+        console.error(profileError);
+        setSpouseByUserId(new Map());
+      } else {
+        const entries = new Map<string, string | null>();
+        (profileRows || []).forEach((row) => entries.set(row.user_id as string, (row.spouse_user_id as string | null) || null));
+        setSpouseByUserId(entries);
+      }
+    } else {
+      setSpouseByUserId(new Map());
+    }
 
     const me = nextMembers.find((member) => member.user_id === session.user.id);
     if (!me) {
@@ -488,6 +594,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   useEffect(() => {
     if (!id) return;
     void loadTrip(id);
+    void loadTripBudget(id);
     const channel = supabase
       .channel(`trip-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
@@ -495,6 +602,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_invites", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
+      .on("postgres_changes", { event: "*", schema: "public", table: "trip_budgets", filter: `trip_id=eq.${id}` }, () => void loadTripBudget(id))
       .subscribe();
 
     return () => {
@@ -508,8 +616,8 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   }, [trip?.id, trip?.name, trip?.destination]);
 
   useEffect(() => {
-    setSelfSpouseId(currentMember?.spouse_member_id || "");
-  }, [currentMember?.id, currentMember?.spouse_member_id]);
+    setSelfSpouseUserId(settings.spouse_user_id || "");
+  }, [settings.spouse_user_id]);
 
   useEffect(() => {
     setSettingsDraft(settings);
@@ -796,18 +904,75 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     alert("Link copiado.");
   };
 
-  const setSpouse = async (memberId: string, spouseMemberId: string | null) => {
-    if (!id) return;
-    const { error } = await supabase.rpc("set_trip_spouse", {
-      p_trip_id: id,
-      p_member_id: memberId,
-      p_spouse_member_id: spouseMemberId,
+  const setGlobalSpouse = async (spouseUserId: string | null) => {
+    const { error } = await supabase.rpc("set_global_spouse", {
+      p_spouse_user_id: spouseUserId,
     });
     if (error) {
       alert(getErrorMessage(error));
       return;
     }
-    await loadTrip(id);
+    onSettingsChange({ ...settings, spouse_user_id: spouseUserId });
+    setSelfSpouseUserId(spouseUserId || "");
+    setSpouseByUserId((current) => {
+      const next = new Map(current);
+      next.set(session.user.id, spouseUserId || null);
+      return next;
+    });
+  };
+
+  const loadTripBudget = async (tripId: string) => {
+    const ownerRes = await supabase.rpc("budget_owner_user_id", { p_trip_id: tripId, p_user_id: session.user.id });
+    const owner = (ownerRes.data as string | null) || session.user.id;
+    if (ownerRes.error) {
+      console.error(ownerRes.error);
+      setBudgetOwnerUserId(session.user.id);
+      setTripBudget(null);
+      return;
+    }
+    setBudgetOwnerUserId(owner);
+
+    const { data, error } = await supabase
+      .from("trip_budgets")
+      .select("id,trip_id,owner_user_id,budget_limit")
+      .eq("trip_id", tripId)
+      .eq("owner_user_id", owner)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      setTripBudget(null);
+      return;
+    }
+
+    if (!data) {
+      setTripBudget(null);
+      return;
+    }
+
+    setTripBudget({ ...(data as TripBudget), budget_limit: Number((data as TripBudget).budget_limit) || 0 });
+  };
+
+  const saveTripBudget = async () => {
+    if (!id || savingSettings) return;
+    const safeBudget = Math.max(0, Number((tripBudget?.budget_limit ?? 0)) || 0);
+    setSavingSettings(true);
+    const { data, error } = await supabase.rpc("upsert_trip_budget", {
+      p_trip_id: id,
+      p_budget_limit: safeBudget,
+    });
+    setSavingSettings(false);
+
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+
+    if (data) {
+      const budget = data as TripBudget;
+      setTripBudget({ ...budget, budget_limit: Number(budget.budget_limit) || 0 });
+      setBudgetOwnerUserId(budget.owner_user_id);
+    }
   };
 
   const cancelInvite = async (inviteId: string) => {
@@ -825,7 +990,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
   const saveUserSettings = async () => {
     if (savingSettings) return;
-    const safeBudget = Math.max(0, Number(settingsDraft.budget_limit) || 0);
     setSavingSettings(true);
     const { error } = await supabase
       .from("profiles")
@@ -833,7 +997,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         theme_palette: settingsDraft.theme_palette,
         dark_mode: settingsDraft.dark_mode,
         default_currency: settingsDraft.default_currency,
-        budget_limit: safeBudget,
       })
       .eq("user_id", session.user.id);
     setSavingSettings(false);
@@ -843,7 +1006,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       return;
     }
 
-    onSettingsChange({ ...settingsDraft, budget_limit: safeBudget });
+    onSettingsChange({ ...settingsDraft });
     alert("Configuracoes salvas.");
   };
 
@@ -888,7 +1051,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     () => (trip ? trip.expenses.reduce((total, expense) => total + (Number(expense.amount) || 0), 0) : 0),
     [trip],
   );
-  const budgetLimit = Math.max(0, Number(settings.budget_limit) || 0);
+  const budgetLimit = Math.max(0, Number(tripBudget?.budget_limit) || 0);
   const budgetProgress = budgetLimit > 0 ? Math.min((expensesTotal / budgetLimit) * 100, 100) : 0;
   const budgetRemaining = budgetLimit - expensesTotal;
   const isOverBudget = budgetLimit > 0 && expensesTotal > budgetLimit;
@@ -898,7 +1061,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
   return (
     <div className="min-h-screen flex" style={themedStyles}>
-      <aside className="w-64 border-r border-zinc-200 bg-white p-6 hidden md:flex flex-col gap-8">
+      <aside className="w-64 border-r p-6 hidden md:flex flex-col gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 px-2 text-left">
           <Plane size={18} />
           <span className="font-bold text-xl">Voyage</span>
@@ -912,27 +1075,24 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           <SidebarItem icon={Settings} label="Configuracoes" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
         <div className="flex-1 flex flex-col min-h-0">
-          <p className="text-xs uppercase font-bold text-zinc-400 mb-2 px-1">Viagens</p>
+          <p className="text-xs uppercase font-bold opacity-70 mb-2 px-1">Viagens</p>
           <div className="space-y-2 overflow-y-auto pr-1">
             {tripOptions.map((option) => (
               <button
                 key={option.id}
                 onClick={() => navigate(`/trip/${option.id}`)}
-                className={cn(
-                  "w-full text-left rounded-xl border px-3 py-2",
-                  option.id === id ? "border-black bg-zinc-100" : "border-zinc-200 hover:border-zinc-400",
-                )}
+                className={cn("w-full text-left rounded-xl border px-3 py-2", option.id === id ? "bg-[var(--sidebar-hover)] border-[var(--sidebar-active-bg)]" : "border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)]")}
               >
                 <p className="text-sm font-semibold truncate">{option.name}</p>
-                <p className="text-xs text-zinc-500 truncate">{option.destination || "Sem destino"}</p>
+                <p className="text-xs opacity-80 truncate">{option.destination || "Sem destino"}</p>
               </button>
             ))}
-            {tripOptions.length === 0 && <p className="text-xs text-zinc-400 px-1">Nenhuma viagem.</p>}
+            {tripOptions.length === 0 && <p className="text-xs opacity-70 px-1">Nenhuma viagem.</p>}
           </div>
         </div>
         {isAdmin && trip && (
           <form onSubmit={updateTrip} className="space-y-2 border-t border-zinc-200 pt-4">
-            <p className="text-xs uppercase font-bold text-zinc-400 px-1">Editar viagem</p>
+            <p className="text-xs uppercase font-bold opacity-70 px-1">Editar viagem</p>
             <input
               value={editTripName}
               onChange={(e) => setEditTripName(e.target.value)}
@@ -949,7 +1109,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
             />
             <button
               disabled={updatingTrip}
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-zinc-700 flex items-center justify-center gap-2 text-sm"
+              className="w-full px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center justify-center gap-2 text-sm hover:bg-[var(--sidebar-hover)]"
             >
               <FilePenLine size={16} />
               {updatingTrip ? "Salvando..." : "Salvar edicao"}
@@ -965,7 +1125,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
             </button>
           </form>
         )}
-        <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 justify-center"><LogOut size={16} />Sair</button>
+        <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center gap-2 justify-center hover:bg-[var(--sidebar-hover)]"><LogOut size={16} />Sair</button>
       </aside>
 
       <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-10">
@@ -1369,21 +1529,21 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
             <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               {currentMember && (
                 <Card>
-                  <h3 className="font-bold mb-4">Seu conjuge</h3>
+                  <h3 className="font-bold mb-4">Seu conjuge (global)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <select
-                      value={selfSpouseId}
-                      onChange={(e) => setSelfSpouseId(e.target.value)}
+                      value={selfSpouseUserId}
+                      onChange={(e) => setSelfSpouseUserId(e.target.value)}
                       className="md:col-span-2 px-4 py-2 rounded-xl border border-zinc-200 text-sm"
                     >
                       <option value="">Sem conjuge</option>
                       {members
-                        .filter((m) => m.id !== currentMember.id)
-                        .map((m) => <option key={m.id} value={m.id}>{m.display_name || m.user_id}</option>)}
+                        .filter((m) => m.user_id !== currentMember.user_id)
+                        .map((m) => <option key={m.id} value={m.user_id}>{m.display_name || m.user_id}</option>)}
                     </select>
                     <button
                       onClick={async () => {
-                        await setSpouse(currentMember.id, selfSpouseId || null);
+                        await setGlobalSpouse(selfSpouseUserId || null);
                       }}
                       className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold"
                     >
@@ -1404,34 +1564,19 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 </Card>
               )}
 
-              {isAdmin && (
-                <Card>
-                  <h3 className="font-bold mb-4">Vinculo de conjuge</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <select value={pairMemberId} onChange={(e) => setPairMemberId(e.target.value)} className="px-4 py-2 rounded-xl border border-zinc-200 text-sm"><option value="">Pessoa 1</option>{members.map((m) => <option key={m.id} value={m.id}>{m.display_name || m.user_id}</option>)}</select>
-                    <select value={pairSpouseId} onChange={(e) => setPairSpouseId(e.target.value)} className="px-4 py-2 rounded-xl border border-zinc-200 text-sm"><option value="">Pessoa 2</option>{members.filter((m) => m.id !== pairMemberId).map((m) => <option key={m.id} value={m.id}>{m.display_name || m.user_id}</option>)}</select>
-                    <button onClick={async () => {
-                      if (!pairMemberId || !pairSpouseId) return;
-                      await setSpouse(pairMemberId, pairSpouseId);
-                      setPairMemberId("");
-                      setPairSpouseId("");
-                    }} className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Vincular</button>
-                  </div>
-                </Card>
-              )}
-
               <Card className="p-0 overflow-hidden">
                 <table className="w-full text-left border-collapse">
                   <thead><tr className="bg-zinc-50"><th className="px-4 py-3 text-xs uppercase">Pessoa</th><th className="px-4 py-3 text-xs uppercase">Papel</th><th className="px-4 py-3 text-xs uppercase">Conjuge</th>{isAdmin && <th className="px-4 py-3 text-xs uppercase text-right">Acao</th>}</tr></thead>
                   <tbody className="divide-y divide-zinc-100">
                     {members.map((member) => {
-                      const spouse = member.spouse_member_id ? memberById.get(member.spouse_member_id) : null;
+                      const spouseUserId = spouseByUserId.get(member.user_id) || null;
+                      const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
                       return (
                         <tr key={member.id}>
                           <td className="px-4 py-3">{member.display_name || member.user_id}</td>
                           <td className="px-4 py-3 text-xs uppercase">{member.role}</td>
                           <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
-                          {isAdmin && <td className="px-4 py-3 text-right">{member.spouse_member_id && <button onClick={() => void setSpouse(member.id, null)} className="text-xs text-red-500">Desvincular</button>}</td>}
+                          {isAdmin && <td className="px-4 py-3 text-right">-</td>}
                         </tr>
                       );
                     })}
@@ -1517,38 +1662,48 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                       <option value="EUR">EUR</option>
                     </select>
                   </label>
+                </div>
+              </Card>
+
+              <Card className="space-y-4">
+                <h3 className="font-bold">Orcamento da viagem</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className="text-sm">
-                    <span className="block mb-1 text-zinc-500">Limite de orcamento</span>
+                    <span className="block mb-1 text-zinc-500">Limite desta viagem (individual ou casal)</span>
                     <input
-                      value={String(settingsDraft.budget_limit)}
-                      onChange={(e) => setSettingsDraft((current) => ({ ...current, budget_limit: Number(e.target.value) || 0 }))}
+                      value={String(tripBudget?.budget_limit || 0)}
+                      onChange={(e) => setTripBudget((current) => ({ id: current?.id || "", trip_id: id || "", owner_user_id: budgetOwnerUserId || session.user.id, budget_limit: Number(e.target.value) || 0 }))}
                       type="number"
                       min="0"
                       step="0.01"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                     />
                   </label>
+                  <div className="text-sm text-zinc-500 flex items-end">
+                    {budgetOwnerUserId === session.user.id ? "Orcamento individual nesta viagem." : "Orcamento compartilhado com conjuge nesta viagem."}
+                  </div>
                 </div>
               </Card>
 
               {currentMember && (
                 <Card className="space-y-4">
-                  <h3 className="font-bold">Conjuge (viagem atual)</h3>
+                  <h3 className="font-bold">Conjuge (global)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <select
-                      value={selfSpouseId}
-                      onChange={(e) => setSelfSpouseId(e.target.value)}
+                      value={selfSpouseUserId}
+                      onChange={(e) => setSelfSpouseUserId(e.target.value)}
                       className="md:col-span-2 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                     >
                       <option value="">Sem conjuge</option>
-                      {members.filter((m) => m.id !== currentMember.id).map((m) => (
-                        <option key={m.id} value={m.id}>{m.display_name || m.user_id}</option>
+                      {members.filter((m) => m.user_id !== currentMember.user_id).map((m) => (
+                        <option key={m.id} value={m.user_id}>{m.display_name || m.user_id}</option>
                       ))}
                     </select>
                     <button
                       type="button"
                       onClick={async () => {
-                        await setSpouse(currentMember.id, selfSpouseId || null);
+                        await setGlobalSpouse(selfSpouseUserId || null);
+                        if (id) await loadTripBudget(id);
                       }}
                       className="px-4 py-2 rounded-xl bg-black text-white text-sm font-bold"
                     >
@@ -1558,7 +1713,10 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 </Card>
               )}
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => void saveTripBudget()} disabled={savingSettings} className="px-4 py-2 rounded-xl border border-zinc-200 text-sm font-bold">
+                  {savingSettings ? "Salvando..." : "Salvar orcamento"}
+                </button>
                 <button type="button" onClick={() => void saveUserSettings()} disabled={savingSettings} className="px-4 py-2 rounded-xl bg-black text-white text-sm font-bold">
                   {savingSettings ? "Salvando..." : "Salvar configuracoes"}
                 </button>
@@ -1568,29 +1726,29 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         </AnimatePresence>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
         <div className="grid grid-cols-6">
-          <button type="button" onClick={() => navigate("/")} className="flex flex-col items-center justify-center gap-1 py-2 text-zinc-500">
+          <button type="button" onClick={() => navigate("/")} className="flex flex-col items-center justify-center gap-1 py-2 text-[var(--sidebar-text)]">
             <Plane size={16} />
             <span className="text-[11px] font-medium">Viagens</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-black" : "text-zinc-500")}>
+          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <LayoutDashboard size={16} />
             <span className="text-[11px] font-medium">Itinerario</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-black" : "text-zinc-500")}>
+          <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <DollarSign size={16} />
             <span className="text-[11px] font-medium">Despesas</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "documents" ? "text-black" : "text-zinc-500")}>
+          <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "documents" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <FileText size={16} />
             <span className="text-[11px] font-medium">Docs</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("people")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "people" ? "text-black" : "text-zinc-500")}>
+          <button type="button" onClick={() => setActiveTab("people")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "people" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <Users size={16} />
             <span className="text-[11px] font-medium">Pessoas</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("settings")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "settings" ? "text-black" : "text-zinc-500")}>
+          <button type="button" onClick={() => setActiveTab("settings")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "settings" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <Settings size={16} />
             <span className="text-[11px] font-medium">Config</span>
           </button>
@@ -1613,7 +1771,7 @@ export default function App() {
   const loadUserSettings = async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("theme_palette,dark_mode,default_currency,budget_limit")
+      .select("theme_palette,dark_mode,default_currency,spouse_user_id")
       .eq("user_id", userId)
       .single();
 
@@ -1626,7 +1784,7 @@ export default function App() {
       theme_palette: (data.theme_palette as ThemePalette) || DEFAULT_SETTINGS.theme_palette,
       dark_mode: Boolean(data.dark_mode),
       default_currency: (data.default_currency as string) || DEFAULT_SETTINGS.default_currency,
-      budget_limit: Number(data.budget_limit) || 0,
+      spouse_user_id: (data.spouse_user_id as string | null) || null,
     });
   };
 

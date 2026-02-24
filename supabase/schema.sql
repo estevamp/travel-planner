@@ -78,11 +78,22 @@ create table if not exists public.documents (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.trip_budgets (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references public.trips(id) on delete cascade,
+  owner_user_id uuid not null references auth.users(id) on delete cascade,
+  budget_limit numeric(12,2) not null default 0 check (budget_limit >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (trip_id, owner_user_id)
+);
+
 alter table public.trips add column if not exists created_by_user_id uuid references auth.users(id);
 alter table public.profiles add column if not exists theme_palette text not null default 'default';
 alter table public.profiles add column if not exists dark_mode boolean not null default false;
 alter table public.profiles add column if not exists default_currency text not null default 'BRL';
 alter table public.profiles add column if not exists budget_limit numeric(12,2) not null default 0;
+alter table public.profiles add column if not exists spouse_user_id uuid references auth.users(id) on delete set null;
 alter table public.itinerary add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
 alter table public.itinerary add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
 alter table public.expenses add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
@@ -120,6 +131,23 @@ create index if not exists idx_itinerary_trip_id on public.itinerary(trip_id);
 create index if not exists idx_expenses_trip_id on public.expenses(trip_id);
 create index if not exists idx_expenses_itinerary_item_id on public.expenses(itinerary_item_id);
 create index if not exists idx_documents_trip_id on public.documents(trip_id);
+create index if not exists idx_trip_budgets_trip_id on public.trip_budgets(trip_id);
+create index if not exists idx_trip_budgets_owner_user_id on public.trip_budgets(owner_user_id);
+
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trip_budgets_touch_updated_at on public.trip_budgets;
+create trigger trip_budgets_touch_updated_at
+before update on public.trip_budgets
+for each row execute procedure public.touch_updated_at();
 
 create or replace function public.handle_new_user_profile()
 returns trigger
@@ -226,28 +254,40 @@ set search_path = public
 as $$
 declare
   v_current_member uuid;
+  v_current_user uuid;
+  v_owner_user uuid;
 begin
   v_current_member := public.current_member_id(p_trip_id);
   if v_current_member is null then
     return false;
   end if;
 
-  if v_current_member = p_owner_member_id then
+  select tm.user_id into v_current_user
+  from public.trip_members tm
+  where tm.id = v_current_member
+  limit 1;
+
+  select tm.user_id into v_owner_user
+  from public.trip_members tm
+  where tm.id = p_owner_member_id
+    and tm.trip_id = p_trip_id
+  limit 1;
+
+  if v_current_user is null or v_owner_user is null then
+    return false;
+  end if;
+
+  if v_current_user = v_owner_user then
     return true;
   end if;
 
   return exists (
     select 1
-    from public.trip_members me
-    join public.trip_members owner_member
-      on owner_member.id = p_owner_member_id
-     and owner_member.trip_id = p_trip_id
-    where me.id = v_current_member
-      and me.trip_id = p_trip_id
-      and (
-        me.spouse_member_id = p_owner_member_id
-        or owner_member.spouse_member_id = v_current_member
-      )
+    from public.profiles current_profile
+    join public.profiles owner_profile on owner_profile.user_id = v_owner_user
+    where current_profile.user_id = v_current_user
+      and current_profile.spouse_user_id = v_owner_user
+      and owner_profile.spouse_user_id = v_current_user
   );
 end;
 $$;
@@ -475,6 +515,172 @@ begin
 end;
 $$;
 
+create or replace function public.set_global_spouse(
+  p_spouse_user_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_old_spouse uuid;
+  v_old_other_spouse uuid;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if p_spouse_user_id is not null and p_spouse_user_id = v_uid then
+    raise exception 'A user cannot be spouse of itself';
+  end if;
+
+  if p_spouse_user_id is not null and not exists (
+    select 1 from public.profiles p where p.user_id = p_spouse_user_id
+  ) then
+    raise exception 'Spouse user not found';
+  end if;
+
+  select spouse_user_id into v_old_spouse
+  from public.profiles
+  where user_id = v_uid;
+
+  if v_old_spouse is not null then
+    update public.profiles
+    set spouse_user_id = null
+    where user_id = v_old_spouse
+      and spouse_user_id = v_uid;
+  end if;
+
+  update public.profiles
+  set spouse_user_id = null
+  where user_id = v_uid;
+
+  if p_spouse_user_id is null then
+    return;
+  end if;
+
+  select spouse_user_id into v_old_other_spouse
+  from public.profiles
+  where user_id = p_spouse_user_id;
+
+  if v_old_other_spouse is not null then
+    update public.profiles
+    set spouse_user_id = null
+    where user_id = v_old_other_spouse
+      and spouse_user_id = p_spouse_user_id;
+  end if;
+
+  update public.profiles
+  set spouse_user_id = p_spouse_user_id
+  where user_id = v_uid;
+
+  update public.profiles
+  set spouse_user_id = v_uid
+  where user_id = p_spouse_user_id;
+end;
+$$;
+
+create or replace function public.budget_owner_user_id(
+  p_trip_id uuid,
+  p_user_id uuid default auth.uid()
+)
+returns uuid
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_spouse_user_id uuid;
+begin
+  v_user_id := coalesce(p_user_id, auth.uid());
+  if v_user_id is null then
+    return null;
+  end if;
+
+  if not exists (
+    select 1 from public.trip_members tm
+    where tm.trip_id = p_trip_id
+      and tm.user_id = v_user_id
+  ) then
+    return null;
+  end if;
+
+  select p.spouse_user_id into v_spouse_user_id
+  from public.profiles p
+  where p.user_id = v_user_id;
+
+  if v_spouse_user_id is null then
+    return v_user_id;
+  end if;
+
+  if not exists (
+    select 1 from public.profiles sp
+    where sp.user_id = v_spouse_user_id
+      and sp.spouse_user_id = v_user_id
+  ) then
+    return v_user_id;
+  end if;
+
+  if not exists (
+    select 1 from public.trip_members tm
+    where tm.trip_id = p_trip_id
+      and tm.user_id = v_spouse_user_id
+  ) then
+    return v_user_id;
+  end if;
+
+  return least(v_user_id, v_spouse_user_id);
+end;
+$$;
+
+create or replace function public.upsert_trip_budget(
+  p_trip_id uuid,
+  p_budget_limit numeric
+)
+returns public.trip_budgets
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_owner_user_id uuid;
+  v_budget public.trip_budgets;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if not public.is_trip_member(p_trip_id) then
+    raise exception 'Trip membership not found';
+  end if;
+
+  if p_budget_limit < 0 then
+    raise exception 'Budget limit must be >= 0';
+  end if;
+
+  v_owner_user_id := public.budget_owner_user_id(p_trip_id, v_uid);
+  if v_owner_user_id is null then
+    raise exception 'Budget owner resolution failed';
+  end if;
+
+  insert into public.trip_budgets (trip_id, owner_user_id, budget_limit)
+  values (p_trip_id, v_owner_user_id, p_budget_limit)
+  on conflict (trip_id, owner_user_id) do update
+    set budget_limit = excluded.budget_limit,
+        updated_at = now()
+  returning * into v_budget;
+
+  return v_budget;
+end;
+$$;
+
 create or replace function public.set_trip_spouse(
   p_trip_id uuid,
   p_member_id uuid,
@@ -575,6 +781,7 @@ alter table public.trip_invites enable row level security;
 alter table public.itinerary enable row level security;
 alter table public.expenses enable row level security;
 alter table public.documents enable row level security;
+alter table public.trip_budgets enable row level security;
 
 drop policy if exists trips_public_rw on public.trips;
 drop policy if exists itinerary_public_rw on public.itinerary;
@@ -688,6 +895,35 @@ for delete using (
   or public.is_trip_admin(trip_id)
 );
 
+drop policy if exists trip_budgets_select_member on public.trip_budgets;
+drop policy if exists trip_budgets_insert_member on public.trip_budgets;
+drop policy if exists trip_budgets_update_member on public.trip_budgets;
+drop policy if exists trip_budgets_delete_member on public.trip_budgets;
+create policy trip_budgets_select_member on public.trip_budgets
+for select using (
+  public.is_trip_member(trip_id)
+  and owner_user_id = public.budget_owner_user_id(trip_id, auth.uid())
+);
+create policy trip_budgets_insert_member on public.trip_budgets
+for insert with check (
+  public.is_trip_member(trip_id)
+  and owner_user_id = public.budget_owner_user_id(trip_id, auth.uid())
+);
+create policy trip_budgets_update_member on public.trip_budgets
+for update using (
+  public.is_trip_member(trip_id)
+  and owner_user_id = public.budget_owner_user_id(trip_id, auth.uid())
+)
+with check (
+  public.is_trip_member(trip_id)
+  and owner_user_id = public.budget_owner_user_id(trip_id, auth.uid())
+);
+create policy trip_budgets_delete_member on public.trip_budgets
+for delete using (
+  public.is_trip_member(trip_id)
+  and owner_user_id = public.budget_owner_user_id(trip_id, auth.uid())
+);
+
 insert into storage.buckets (id, name, public)
 values ('travel-documents', 'travel-documents', false)
 on conflict (id) do update set public = excluded.public;
@@ -749,6 +985,9 @@ revoke all on function public.create_trip_invite(uuid, text) from public;
 revoke all on function public.accept_trip_invite(text) from public;
 revoke all on function public.cancel_trip_invite(uuid, uuid) from public;
 revoke all on function public.set_trip_spouse(uuid, uuid, uuid) from public;
+revoke all on function public.set_global_spouse(uuid) from public;
+revoke all on function public.budget_owner_user_id(uuid, uuid) from public;
+revoke all on function public.upsert_trip_budget(uuid, numeric) from public;
 
 grant execute on function public.sync_my_profile() to authenticated;
 grant execute on function public.current_member_id(uuid) to authenticated;
@@ -761,6 +1000,9 @@ grant execute on function public.create_trip_invite(uuid, text) to authenticated
 grant execute on function public.accept_trip_invite(text) to authenticated;
 grant execute on function public.cancel_trip_invite(uuid, uuid) to authenticated;
 grant execute on function public.set_trip_spouse(uuid, uuid, uuid) to authenticated;
+grant execute on function public.set_global_spouse(uuid) to authenticated;
+grant execute on function public.budget_owner_user_id(uuid, uuid) to authenticated;
+grant execute on function public.upsert_trip_budget(uuid, numeric) to authenticated;
 
 do $$
 begin
@@ -797,5 +1039,12 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'trip_invites'
   ) then
     alter publication supabase_realtime add table public.trip_invites;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'trip_budgets'
+  ) then
+    alter publication supabase_realtime add table public.trip_budgets;
   end if;
 end $$;
