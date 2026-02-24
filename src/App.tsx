@@ -1757,9 +1757,13 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                       const form = new FormData(e.currentTarget);
                       const name = (form.get("name") as string).trim();
                       if (!name) return;
-                      const { error } = await supabase.from("expense_categories").insert({ name });
-                      if (error) alert(getErrorMessage(error));
-                      else (e.target as HTMLFormElement).reset();
+                      const { data, error } = await supabase.from("expense_categories").insert({ name }).select().single();
+                      if (error) {
+                        alert(getErrorMessage(error));
+                      } else {
+                        if (data) setCategories(prev => [...prev, data as ExpenseCategory].sort((a, b) => a.name.localeCompare(b.name)));
+                        (e.target as HTMLFormElement).reset();
+                      }
                     }}
                   >
                     <input name="name" required placeholder="Nova categoria" className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
