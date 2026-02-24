@@ -1524,9 +1524,14 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                               <span className="font-bold text-base">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2">
-                            <button type="button" onClick={() => startEditExpense(exp)} className="p-2 text-zinc-400 hover:text-zinc-700">
-                              <FilePenLine size={18} />
+                          <div className="flex flex-col gap-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => startEditExpense(exp)}
+                              className="p-2 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 active:bg-zinc-300 transition-colors"
+                              aria-label="Editar despesa"
+                            >
+                              <FilePenLine size={20} />
                             </button>
                             <button
                               onClick={async () => {
@@ -1535,9 +1540,10 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                 const { error } = await supabase.from("expenses").delete().eq("id", exp.id);
                                 if (error) alert(getErrorMessage(error));
                               }}
-                              className="p-2 text-zinc-400 hover:text-red-500"
+                              className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
+                              aria-label="Excluir despesa"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={20} />
                             </button>
                           </div>
                         </div>
