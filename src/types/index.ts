@@ -1,0 +1,118 @@
+export type ItineraryType = "flight" | "bus" | "hotel" | "activity";
+export type Visibility = "public" | "private";
+export type ThemePalette = "default" | "ocean" | "forest" | "sunset";
+
+export interface UserSettings {
+  theme_palette: ThemePalette;
+  dark_mode: boolean;
+  default_currency: string;
+  spouse_user_id: string | null;
+}
+
+export interface TripBudget {
+  id: string;
+  trip_id: string;
+  owner_user_id: string;
+  budget_limit: number;
+}
+
+export interface ItineraryItem {
+  id: string;
+  trip_id: string;
+  created_by_member_id: string;
+  type: ItineraryType;
+  title: string;
+  description: string;
+  location: string;
+  start_time: string;
+  end_time: string;
+  amount: number;
+  visibility: Visibility;
+  photo_url?: string | null;
+}
+
+export interface Expense {
+  id: string;
+  trip_id: string;
+  created_by_member_id: string;
+  itinerary_item_id?: string | null;
+  description: string;
+  amount: number;
+  currency: string;
+  category: string;
+  date: string;
+  visibility: Visibility;
+}
+
+export interface DocumentItem {
+  id: string;
+  trip_id: string;
+  created_by_member_id: string;
+  name: string;
+  url: string;
+}
+
+export interface Idea {
+  id: string;
+  trip_id: string;
+  created_by_member_id: string;
+  title: string;
+  maps_url: string | null;
+  estimated_amount: number;
+  visibility: Visibility;
+  created_at: string;
+}
+
+export interface IdeaLink {
+  id: string;
+  idea_id: string;
+  label: string | null;
+  url: string;
+  created_at: string;
+}
+
+export interface IdeaAsset {
+  id: string;
+  idea_id: string;
+  name: string;
+  url: string;
+  asset_type: "attachment" | "photo";
+  created_at: string;
+}
+
+export interface TripMember {
+  id: string;
+  trip_id: string;
+  user_id: string;
+  role: "admin" | "member";
+  display_name: string | null;
+}
+
+export interface TripInvite {
+  id: string;
+  email: string;
+  token: string;
+  accepted_at: string | null;
+  created_at: string;
+}
+
+export interface Trip {
+  id: string;
+  name: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  itinerary: ItineraryItem[];
+  expenses: Expense[];
+  documents: DocumentItem[];
+  ideas: Idea[];
+  idea_links: IdeaLink[];
+  idea_assets: IdeaAsset[];
+}
+
+export interface TripSummary {
+  id: string;
+  name: string;
+  destination: string;
+  created_at: string;
+}

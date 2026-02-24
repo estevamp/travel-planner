@@ -3,134 +3,33 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "
 import type { Session } from "@supabase/supabase-js";
 import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboard, Lightbulb, Link as LinkIcon, Lock, LogOut, MapPin, Moon, Palette, Paperclip, Plane, Plus, Settings, Shield, Sun, Trash2, UserPlus, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import { format } from "date-fns";
 import { supabase } from "./supabase";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-const DOCS_BUCKET = "travel-documents";
-type ItineraryType = "flight" | "bus" | "hotel" | "activity";
-type Visibility = "public" | "private";
-type ThemePalette = "default" | "ocean" | "forest" | "sunset";
-
-interface UserSettings {
-  theme_palette: ThemePalette;
-  dark_mode: boolean;
-  default_currency: string;
-  spouse_user_id: string | null;
-}
-
-interface TripBudget {
-  id: string;
-  trip_id: string;
-  owner_user_id: string;
-  budget_limit: number;
-}
-
-interface ItineraryItem {
-  id: string;
-  trip_id: string;
-  created_by_member_id: string;
-  type: ItineraryType;
-  title: string;
-  description: string;
-  location: string;
-  start_time: string;
-  end_time: string;
-  amount: number;
-  visibility: Visibility;
-  photo_url?: string | null;
-}
-
-interface Expense {
-  id: string;
-  trip_id: string;
-  created_by_member_id: string;
-  itinerary_item_id?: string | null;
-  description: string;
-  amount: number;
-  currency: string;
-  category: string;
-  date: string;
-  visibility: Visibility;
-}
-
-interface DocumentItem {
-  id: string;
-  trip_id: string;
-  created_by_member_id: string;
-  name: string;
-  url: string;
-}
-
-interface Idea {
-  id: string;
-  trip_id: string;
-  created_by_member_id: string;
-  title: string;
-  maps_url: string | null;
-  estimated_amount: number;
-  visibility: Visibility;
-  created_at: string;
-}
-
-interface IdeaLink {
-  id: string;
-  idea_id: string;
-  label: string | null;
-  url: string;
-  created_at: string;
-}
-
-interface IdeaAsset {
-  id: string;
-  idea_id: string;
-  name: string;
-  url: string;
-  asset_type: "attachment" | "photo";
-  created_at: string;
-}
-
-interface TripMember {
-  id: string;
-  trip_id: string;
-  user_id: string;
-  role: "admin" | "member";
-  display_name: string | null;
-}
-
-interface TripInvite {
-  id: string;
-  email: string;
-  token: string;
-  accepted_at: string | null;
-  created_at: string;
-}
-
-interface Trip {
-  id: string;
-  name: string;
-  destination: string;
-  start_date: string;
-  end_date: string;
-  itinerary: ItineraryItem[];
-  expenses: Expense[];
-  documents: DocumentItem[];
-  ideas: Idea[];
-  idea_links: IdeaLink[];
-  idea_assets: IdeaAsset[];
-}
-
-interface TripSummary {
-  id: string;
-  name: string;
-  destination: string;
-  created_at: string;
-}
+import { cn, getErrorMessage, formatCurrency, fileToDataUrl } from "./utils";
+import { getThemeStyles } from "./utils/theme";
+import { DOCS_BUCKET } from "./constants";
+import type {
+  UserSettings,
+  TripBudget,
+  ItineraryItem,
+  Expense,
+  DocumentItem,
+  Idea,
+  IdeaLink,
+  IdeaAsset,
+  TripMember,
+  TripInvite,
+  Trip,
+  TripSummary,
+  ItineraryType,
+  Visibility,
+} from "./types";
+import { Card } from "./components/Card";
+import { SidebarItem } from "./components/SidebarItem";
+import { AuthLanding } from "./components/AuthLanding";
+import { LandingPage } from "./components/LandingPage";
+import { InvitePage } from "./components/InvitePage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
@@ -138,353 +37,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   default_currency: "BRL",
   spouse_user_id: null,
 };
-
-const THEME_PALETTES: Record<
-  ThemePalette,
-  {
-    lightBg: string;
-    lightCard: string;
-    lightAccent: string;
-    lightSidebarBg: string;
-    lightSidebarBorder: string;
-    lightSidebarText: string;
-    lightSidebarHover: string;
-    lightSidebarActiveBg: string;
-    lightSidebarActiveText: string;
-    darkBg: string;
-    darkCard: string;
-    darkAccent: string;
-    darkSidebarBg: string;
-    darkSidebarBorder: string;
-    darkSidebarText: string;
-    darkSidebarHover: string;
-    darkSidebarActiveBg: string;
-    darkSidebarActiveText: string;
-  }
-> = {
-  default: {
-    lightBg: "#F8F9FA",
-    lightCard: "#FFFFFF",
-    lightAccent: "#111111",
-    lightSidebarBg: "#FFFFFF",
-    lightSidebarBorder: "#E5E7EB",
-    lightSidebarText: "#52525B",
-    lightSidebarHover: "#F4F4F5",
-    lightSidebarActiveBg: "#111111",
-    lightSidebarActiveText: "#FFFFFF",
-    darkBg: "#111827",
-    darkCard: "#1F2937",
-    darkAccent: "#E5E7EB",
-    darkSidebarBg: "#111827",
-    darkSidebarBorder: "#374151",
-    darkSidebarText: "#D1D5DB",
-    darkSidebarHover: "#1F2937",
-    darkSidebarActiveBg: "#F3F4F6",
-    darkSidebarActiveText: "#111827",
-  },
-  ocean: {
-    lightBg: "#EEF6FF",
-    lightCard: "#FFFFFF",
-    lightAccent: "#0B5FFF",
-    lightSidebarBg: "#FFFFFF",
-    lightSidebarBorder: "#D6E4FF",
-    lightSidebarText: "#31538A",
-    lightSidebarHover: "#EAF2FF",
-    lightSidebarActiveBg: "#0B5FFF",
-    lightSidebarActiveText: "#FFFFFF",
-    darkBg: "#0B132B",
-    darkCard: "#1C2541",
-    darkAccent: "#5BC0BE",
-    darkSidebarBg: "#0F1A34",
-    darkSidebarBorder: "#22365E",
-    darkSidebarText: "#C2D5FF",
-    darkSidebarHover: "#1A2A4D",
-    darkSidebarActiveBg: "#5BC0BE",
-    darkSidebarActiveText: "#06212A",
-  },
-  forest: {
-    lightBg: "#EFFAF3",
-    lightCard: "#FFFFFF",
-    lightAccent: "#116149",
-    lightSidebarBg: "#FFFFFF",
-    lightSidebarBorder: "#D5E8DC",
-    lightSidebarText: "#2F5A47",
-    lightSidebarHover: "#E6F4EB",
-    lightSidebarActiveBg: "#116149",
-    lightSidebarActiveText: "#FFFFFF",
-    darkBg: "#10251B",
-    darkCard: "#1B3A2A",
-    darkAccent: "#8FD694",
-    darkSidebarBg: "#132D21",
-    darkSidebarBorder: "#2B4B3A",
-    darkSidebarText: "#CDE7D3",
-    darkSidebarHover: "#1E3E2D",
-    darkSidebarActiveBg: "#8FD694",
-    darkSidebarActiveText: "#10251B",
-  },
-  sunset: {
-    lightBg: "#FFF4EE",
-    lightCard: "#FFFFFF",
-    lightAccent: "#D9480F",
-    lightSidebarBg: "#FFFFFF",
-    lightSidebarBorder: "#F3D8CA",
-    lightSidebarText: "#7A3B24",
-    lightSidebarHover: "#FFE9DE",
-    lightSidebarActiveBg: "#D9480F",
-    lightSidebarActiveText: "#FFFFFF",
-    darkBg: "#2B1A14",
-    darkCard: "#3A251D",
-    darkAccent: "#FFB37A",
-    darkSidebarBg: "#321E17",
-    darkSidebarBorder: "#5C382A",
-    darkSidebarText: "#FFD9BF",
-    darkSidebarHover: "#4A2C21",
-    darkSidebarActiveBg: "#FFB37A",
-    darkSidebarActiveText: "#2B1A14",
-  },
-};
-
-function getThemeStyles(settings: UserSettings): React.CSSProperties {
-  const palette = THEME_PALETTES[settings.theme_palette] || THEME_PALETTES.default;
-  if (settings.dark_mode) {
-    return {
-      backgroundColor: palette.darkBg,
-      color: "#F3F4F6",
-      ["--card-bg" as string]: palette.darkCard,
-      ["--card-border" as string]: "#374151",
-      ["--accent-color" as string]: palette.darkAccent,
-      ["--sidebar-bg" as string]: palette.darkSidebarBg,
-      ["--sidebar-border" as string]: palette.darkSidebarBorder,
-      ["--sidebar-text" as string]: palette.darkSidebarText,
-      ["--sidebar-hover" as string]: palette.darkSidebarHover,
-      ["--sidebar-active-bg" as string]: palette.darkSidebarActiveBg,
-      ["--sidebar-active-text" as string]: palette.darkSidebarActiveText,
-    };
-  }
-
-  return {
-    backgroundColor: palette.lightBg,
-    color: "#111827",
-    ["--card-bg" as string]: palette.lightCard,
-    ["--card-border" as string]: "#E5E7EB",
-    ["--accent-color" as string]: palette.lightAccent,
-    ["--sidebar-bg" as string]: palette.lightSidebarBg,
-    ["--sidebar-border" as string]: palette.lightSidebarBorder,
-    ["--sidebar-text" as string]: palette.lightSidebarText,
-    ["--sidebar-hover" as string]: palette.lightSidebarHover,
-    ["--sidebar-active-bg" as string]: palette.lightSidebarActiveBg,
-    ["--sidebar-active-text" as string]: palette.lightSidebarActiveText,
-  };
-}
-
-const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-  <div className={cn("rounded-2xl border shadow-sm p-6 bg-[var(--card-bg,#fff)] border-[var(--card-border,#e4e4e7)]", className)} onClick={onClick}>{children}</div>
-);
-
-const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any; label: string; active?: boolean; onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
-      active ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]" : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]",
-    )}
-  >
-    <Icon size={20} />
-    <span className="font-medium text-sm">{label}</span>
-  </button>
-);
-
-function getErrorMessage(error: unknown) {
-  if (typeof error === "string") return error;
-  if (error && typeof error === "object" && "message" in error && typeof (error as { message: unknown }).message === "string") {
-    return (error as { message: string }).message;
-  }
-  return "Erro inesperado";
-}
-
-function formatCurrency(value: number, currency = "BRL") {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
-}
-
-async function signInWithGoogle(redirectTo?: string) {
-  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectTo || window.location.href } });
-  if (error) throw error;
-}
-
-function AuthLanding() {
-  const [loading, setLoading] = useState(false);
-  return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
-      <Card className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-3xl font-bold">Voyage</h1>
-        <p className="text-zinc-500">Entre com Google para planejar viagens em grupo.</p>
-        <button
-          disabled={loading}
-          onClick={async () => {
-            setLoading(true);
-            try {
-              await signInWithGoogle(window.location.origin);
-            } catch (error) {
-              alert(getErrorMessage(error));
-            } finally {
-              setLoading(false);
-            }
-          }}
-          className="w-full bg-black text-white py-3 rounded-xl font-semibold"
-        >
-          {loading ? "Redirecionando..." : "Entrar com Google"}
-        </button>
-      </Card>
-    </div>
-  );
-}
-
-function LandingPage({ session, settings }: { session: Session; settings: UserSettings }) {
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [destination, setDestination] = useState("");
-  const [trips, setTrips] = useState<TripSummary[]>([]);
-  const [loadingTrips, setLoadingTrips] = useState(true);
-  const [creating, setCreating] = useState(false);
-
-  const loadTrips = async () => {
-    setLoadingTrips(true);
-    const { data, error } = await supabase.from("trips").select("id,name,destination,created_at").order("created_at", { ascending: false });
-    if (error) {
-      setTrips([]);
-      setLoadingTrips(false);
-      return;
-    }
-    setTrips((data || []) as TripSummary[]);
-    setLoadingTrips(false);
-  };
-
-  useEffect(() => {
-    void loadTrips();
-  }, []);
-
-  const createTrip = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    const now = new Date().toISOString();
-    const { data, error } = await supabase.rpc("create_trip_with_admin", {
-      p_name: name.trim(),
-      p_destination: destination.trim(),
-      p_start: now,
-      p_end: now,
-    });
-    setCreating(false);
-    if (error || !data) {
-      alert(getErrorMessage(error));
-      return;
-    }
-    navigate(`/trip/${data}`);
-  };
-
-  return (
-    <div className="min-h-screen p-6 md:p-10" style={getThemeStyles(settings)}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Voyage</h1>
-            <p className="text-zinc-500">{session.user.email}</p>
-          </div>
-          <button onClick={() => void supabase.auth.signOut()} className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2">
-            <LogOut size={16} />
-            Sair
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <h2 className="font-bold mb-4">Minhas viagens</h2>
-            <div className="space-y-2 max-h-[420px] overflow-auto">
-              {loadingTrips && <p className="text-sm text-zinc-500">Carregando...</p>}
-              {!loadingTrips && trips.length === 0 && <p className="text-sm text-zinc-500">Nenhuma viagem.</p>}
-              {trips.map((trip) => (
-                <button key={trip.id} onClick={() => navigate(`/trip/${trip.id}`)} className="w-full text-left p-3 rounded-xl border border-zinc-200 hover:border-zinc-400">
-                  <p className="font-semibold">{trip.name}</p>
-                  <p className="text-sm text-zinc-500">{trip.destination || "Sem destino"}</p>
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="font-bold mb-4">Criar viagem</h2>
-            <form onSubmit={createTrip} className="space-y-3">
-              <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da viagem" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
-              <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Destino" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
-              <button disabled={creating} className="w-full bg-black text-white py-2 rounded-xl font-semibold">{creating ? "Criando..." : "Criar"}</button>
-            </form>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-function InvitePage({ session }: { session: Session | null }) {
-  const navigate = useNavigate();
-  const { token } = useParams();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tripId, setTripId] = useState<string | null>(null);
-  const [attempted, setAttempted] = useState(false);
-
-  useEffect(() => {
-    setAttempted(false);
-    setError(null);
-    setTripId(null);
-  }, [token]);
-
-  useEffect(() => {
-    if (!session || !token || attempted || tripId) return;
-    setAttempted(true);
-    setLoading(true);
-    setError(null);
-    supabase
-      .rpc("accept_trip_invite", { p_token: token })
-      .then(({ data, error: rpcError }) => {
-        if (rpcError || !data) {
-          setError(getErrorMessage(rpcError));
-          return;
-        }
-        setTripId(data as string);
-      })
-      .finally(() => setLoading(false));
-  }, [session, token, attempted, tripId]);
-
-  if (!token) return <div className="min-h-screen flex items-center justify-center">Convite invalido.</div>;
-
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
-        <Card className="max-w-md w-full text-center space-y-4">
-          <h1 className="text-xl font-bold">Aceitar convite</h1>
-          <p className="text-sm text-zinc-500">Faça login com Google.</p>
-          <button onClick={() => void signInWithGoogle(window.location.href)} className="w-full bg-black text-white py-3 rounded-xl font-semibold">
-            Entrar com Google
-          </button>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
-      <Card className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-xl font-bold">Aceitar convite</h1>
-        {loading && <p className="text-sm text-zinc-500">Processando...</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {tripId && <p className="text-sm text-emerald-600">Convite aceito.</p>}
-        <div className="flex gap-2">
-          {tripId && <button onClick={() => navigate(`/trip/${tripId}`)} className="flex-1 bg-black text-white py-2 rounded-xl font-semibold">Ir para viagem</button>}
-          <button onClick={() => navigate("/")} className="flex-1 border border-zinc-200 py-2 rounded-xl font-semibold">Inicio</button>
-        </div>
-      </Card>
-    </div>
-  );
-}
 
 function TripDashboard({ session, settings, onSettingsChange }: { session: Session; settings: UserSettings; onSettingsChange: (next: UserSettings) => void }) {
   const { id } = useParams();
@@ -836,14 +388,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
     return () => clearTimeout(timeout);
   }, [id, trip, isAdmin, editTripName, editTripDestination, updatingTrip]);
-
-  const fileToDataUrl = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
-      reader.readAsDataURL(file);
-    });
 
   const findLegacyItineraryExpenseId = async (item: Pick<ItineraryItem, "trip_id" | "created_by_member_id" | "title">) => {
     const { data, error } = await supabase
@@ -2060,7 +1604,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     <span className="block mb-1 text-zinc-500">Paleta</span>
                     <select
                       value={settingsDraft.theme_palette}
-                      onChange={(e) => setSettingsDraft((current) => ({ ...current, theme_palette: e.target.value as ThemePalette }))}
+                      onChange={(e) => setSettingsDraft((current) => ({ ...current, theme_palette: e.target.value as any }))}
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                     >
                       <option value="default">Default</option>
@@ -2213,11 +1757,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   );
 }
 
-function ProtectedRoute({ session, children }: { session: Session | null; children: React.ReactElement }) {
-  if (!session) return <Navigate to="/" replace />;
-  return children;
-}
-
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -2236,7 +1775,7 @@ export default function App() {
     }
 
     setUserSettings({
-      theme_palette: (data.theme_palette as ThemePalette) || DEFAULT_SETTINGS.theme_palette,
+      theme_palette: (data.theme_palette as any) || DEFAULT_SETTINGS.theme_palette,
       dark_mode: Boolean(data.dark_mode),
       default_currency: (data.default_currency as string) || DEFAULT_SETTINGS.default_currency,
       spouse_user_id: (data.spouse_user_id as string | null) || null,
