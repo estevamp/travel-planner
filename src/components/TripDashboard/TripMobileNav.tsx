@@ -12,7 +12,7 @@ export function TripMobileNav({ activeTab, setActiveTab }: TripMobileNavProps) {
       <div className="grid grid-cols-6">
         <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
           <LayoutDashboard size={16} />
-          <span className="text-[11px] font-medium">Itinerario</span>
+          <span className="text-[11px] font-medium">Itinerário</span>
         </button>
         <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
           <DollarSign size={16} />

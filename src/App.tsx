@@ -472,7 +472,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const createItinerary = async (form: FormData) => {
     if (!id || !currentMember) return;
     const itineraryId = crypto.randomUUID();
-    const title = ((form.get("title") as string) || "").trim() || "Item do itinerario";
+    const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
     const amount = parseFloat(form.get("amount") as string) || 0;
     const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
     const now = new Date().toISOString();
@@ -1082,7 +1082,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                           </button>
                           <button
                             onClick={async () => {
-                              const confirmed = window.confirm(`Remover "${item.title}" do itinerario?`);
+                              const confirmed = window.confirm(`Remover "${item.title}" do itinerário?`);
                               if (!confirmed) return;
                               await deleteItineraryItem(item);
                             }}
@@ -1260,7 +1260,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   {budgetLimit > 0 && <p className={cn("text-sm font-semibold", isOverBudget ? "text-red-600" : "text-emerald-600")}>{Math.round(budgetProgress)}%</p>}
                 </div>
                 {budgetLimit <= 0 ? (
-                  <p className="text-sm text-zinc-500">Defina um limite em Configuracoes para acompanhar o orcamento.</p>
+                  <p className="text-sm text-zinc-500">Defina um limite em Configurações para acompanhar o orçamento.</p>
                 ) : (
                   <>
                     <div className="w-full h-3 rounded-full bg-zinc-200 overflow-hidden">
@@ -1662,7 +1662,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     />
                   </label>
                   <div className="text-sm text-zinc-500 flex items-end">
-                    {budgetOwnerUserId === session.user.id ? "Orcamento individual nesta viagem." : "Orcamento compartilhado com conjuge nesta viagem."}
+                    {budgetOwnerUserId === session.user.id ? "Orçamento individual nesta viagem." : "Orçamento compartilhado com cônjuge nesta viagem."}
                   </div>
                 </div>
               </Card>
@@ -1717,11 +1717,11 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                         Excluir viagem
                       </button>
                     </div>
-                    {updatingTrip && <p className="text-xs text-zinc-500">Salvando edicao automaticamente...</p>}
+                    {updatingTrip && <p className="text-xs text-zinc-500">Salvando edição automaticamente...</p>}
                   </div>
                 </Card>
               )}
-              {savingSettings && <p className="text-sm text-zinc-500">Salvando configuracoes automaticamente...</p>}
+              {savingSettings && <p className="text-sm text-zinc-500">Salvando configurações automaticamente...</p>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1731,7 +1731,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         <div className="grid grid-cols-6">
           <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <LayoutDashboard size={16} />
-            <span className="text-[11px] font-medium">Itinerario</span>
+            <span className="text-[11px] font-medium">Itinerário</span>
           </button>
           <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <DollarSign size={16} />
