@@ -55,6 +55,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const [invites, setInvites] = useState<TripInvite[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
+  const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingTrip, setUpdatingTrip] = useState(false);
   const [editTripName, setEditTripName] = useState("");
@@ -709,6 +710,54 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (error) alert(getErrorMessage(error));
   };
 
+  const copyIdeaToItinerary = async (idea: Idea) => {
+    if (!id || !currentMember || copyingIdeaId) return;
+    setCopyingIdeaId(idea.id);
+    
+    const itineraryId = crypto.randomUUID();
+    const amount = idea.estimated_amount || 0;
+    const now = new Date().toISOString();
+
+    const { error } = await supabase.from("itinerary").insert({
+      id: itineraryId,
+      trip_id: id,
+      created_by_member_id: currentMember.id,
+      type: "activity",
+      title: idea.title,
+      description: idea.maps_url ? `Google Maps: ${idea.maps_url}` : "",
+      location: "",
+      start_time: now,
+      end_time: now,
+      amount,
+      visibility: idea.visibility,
+      photo_url: null,
+    });
+
+    if (error) {
+      alert(getErrorMessage(error));
+      setCopyingIdeaId(null);
+      return;
+    }
+
+    if (amount > 0) {
+      const { error: expError } = await supabase.from("expenses").insert({
+        id: crypto.randomUUID(),
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        itinerary_item_id: itineraryId,
+        description: idea.title,
+        amount,
+        currency: settings.default_currency,
+        visibility: idea.visibility,
+        date: new Date().toISOString().split("T")[0],
+      });
+      if (expError) console.error(expError);
+    }
+
+    setCopyingIdeaId(null);
+    setActiveTab("itinerary");
+  };
+
   const startEditItinerary = (item: ItineraryItem) => {
     setEditingItineraryId(item.id);
     setItineraryDraft({
@@ -1071,7 +1120,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           <span className="font-bold text-xl">Voyage</span>
         </button>
         <nav className="space-y-2">
-          <SidebarItem icon={LayoutDashboard} label="Itinerário" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
+          <SidebarItem icon={LayoutDashboard} label="Atividades" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
@@ -1265,7 +1314,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 </div>
 
                 <Card>
-                  <h3 className="font-bold mb-4">Adicionar ao itinerário</h3>
+                  <h3 className="font-bold mb-4">Adicionar atividade</h3>
                   <form
                     className="space-y-3"
                     onSubmit={async (e) => {
@@ -1604,7 +1653,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   }}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input name="title" required placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input name="title" required placeholder="Título" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="estimated_amount" type="number" min="0" step="0.01" placeholder="Valor estimado (opcional)" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
@@ -1720,30 +1769,46 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                 </a>
                               )}
                             </div>
-                            {canManage && (
-                              <div className="flex flex-col gap-2 flex-shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditIdea(idea)}
-                                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition-colors"
-                                  aria-label="Editar ideia"
-                                >
-                                  <FilePenLine size={20} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
-                                    if (!confirmed) return;
-                                    await deleteIdea(idea);
-                                  }}
-                                  className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
-                                  aria-label="Excluir ideia"
-                                >
-                                  <Trash2 size={20} />
-                                </button>
-                              </div>
-                            )}
+                            <div className="flex flex-col gap-2 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => void copyIdeaToItinerary(idea)}
+                                disabled={copyingIdeaId === idea.id}
+                                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
+                                aria-label="Copiar para atividades"
+                                title="Copiar para atividades"
+                              >
+                                {copyingIdeaId === idea.id ? (
+                                  <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Plus size={20} />
+                                )}
+                              </button>
+                              {canManage && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditIdea(idea)}
+                                    className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition-colors"
+                                    aria-label="Editar ideia"
+                                  >
+                                    <FilePenLine size={20} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
+                                      if (!confirmed) return;
+                                      await deleteIdea(idea);
+                                    }}
+                                    className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
+                                    aria-label="Excluir ideia"
+                                  >
+                                    <Trash2 size={20} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {links.length > 0 && (
@@ -2295,7 +2360,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         <div className="grid grid-cols-6">
           <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <LayoutDashboard size={16} />
-            <span className="text-[11px] font-medium">Itinerário</span>
+            <span className="text-[11px] font-medium">Atividades</span>
           </button>
           <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <DollarSign size={16} />
