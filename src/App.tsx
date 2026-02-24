@@ -1067,7 +1067,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           <span className="font-bold text-xl">Voyage</span>
         </button>
         <nav className="space-y-2">
-          <SidebarItem icon={Calendar} label="Viagens" onClick={() => navigate("/")} />
+          <SidebarItem icon={Calendar} label="Viagens" active onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={LayoutDashboard} label="Itinerario" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
@@ -1090,41 +1090,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
             {tripOptions.length === 0 && <p className="text-xs opacity-70 px-1">Nenhuma viagem.</p>}
           </div>
         </div>
-        {isAdmin && trip && (
-          <form onSubmit={updateTrip} className="space-y-2 border-t border-zinc-200 pt-4">
-            <p className="text-xs uppercase font-bold opacity-70 px-1">Editar viagem</p>
-            <input
-              value={editTripName}
-              onChange={(e) => setEditTripName(e.target.value)}
-              placeholder="Nome da viagem"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              required
-            />
-            <input
-              value={editTripDestination}
-              onChange={(e) => setEditTripDestination(e.target.value)}
-              placeholder="Destino"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              required
-            />
-            <button
-              disabled={updatingTrip}
-              className="w-full px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center justify-center gap-2 text-sm hover:bg-[var(--sidebar-hover)]"
-            >
-              <FilePenLine size={16} />
-              {updatingTrip ? "Salvando..." : "Salvar edicao"}
-            </button>
-            <button
-              type="button"
-              onClick={deleteCurrentTrip}
-              disabled={updatingTrip}
-              className="w-full px-3 py-2 rounded-xl border border-red-200 text-red-600 flex items-center justify-center gap-2 text-sm"
-            >
-              <Trash2 size={16} />
-              Excluir viagem
-            </button>
-          </form>
-        )}
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center gap-2 justify-center hover:bg-[var(--sidebar-hover)]"><LogOut size={16} />Sair</button>
       </aside>
 
@@ -1301,43 +1266,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
           {activeTab === "expenses" && (
             <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <Card className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase font-bold text-zinc-400">Total de despesas</p>
-                  <p className="text-sm text-zinc-500">Soma das despesas visiveis para voce.</p>
-                </div>
-                <p className="text-2xl font-bold">{formatCurrency(expensesTotal, settings.default_currency)}</p>
-              </Card>
-
-              <Card className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">Orcamento da viagem</p>
-                  {budgetLimit > 0 && <p className={cn("text-sm font-semibold", isOverBudget ? "text-red-600" : "text-emerald-600")}>{Math.round(budgetProgress)}%</p>}
-                </div>
-                {budgetLimit <= 0 ? (
-                  <p className="text-sm text-zinc-500">Defina um limite em Configuracoes para acompanhar o orcamento.</p>
-                ) : (
-                  <>
-                    <div className="w-full h-3 rounded-full bg-zinc-200 overflow-hidden">
-                      <div
-                        className={cn("h-full rounded-full transition-all", isOverBudget ? "bg-red-500" : "bg-emerald-500")}
-                        style={{ width: `${budgetProgress}%` }}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                      <p><span className="text-zinc-500">Total:</span> {formatCurrency(expensesTotal, settings.default_currency)}</p>
-                      <p><span className="text-zinc-500">Limite:</span> {formatCurrency(budgetLimit, settings.default_currency)}</p>
-                      <p>
-                        <span className="text-zinc-500">{isOverBudget ? "Excesso:" : "Restante:"}</span>{" "}
-                        <span className={isOverBudget ? "text-red-600 font-semibold" : "text-emerald-600 font-semibold"}>
-                          {formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
-                        </span>
-                      </p>
-                    </div>
-                  </>
-                )}
-              </Card>
-
               <Card>
                 <h3 className="font-bold mb-4">Adicionar despesa</h3>
                 <form
@@ -1453,6 +1381,43 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     ))}
                   </tbody>
                 </table>
+              </Card>
+
+              <Card className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase font-bold text-zinc-400">Total de despesas</p>
+                  <p className="text-sm text-zinc-500">Soma das despesas visiveis para voce.</p>
+                </div>
+                <p className="text-2xl font-bold">{formatCurrency(expensesTotal, settings.default_currency)}</p>
+              </Card>
+
+              <Card className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold">Orcamento da viagem</p>
+                  {budgetLimit > 0 && <p className={cn("text-sm font-semibold", isOverBudget ? "text-red-600" : "text-emerald-600")}>{Math.round(budgetProgress)}%</p>}
+                </div>
+                {budgetLimit <= 0 ? (
+                  <p className="text-sm text-zinc-500">Defina um limite em Configuracoes para acompanhar o orcamento.</p>
+                ) : (
+                  <>
+                    <div className="w-full h-3 rounded-full bg-zinc-200 overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all", isOverBudget ? "bg-red-500" : "bg-emerald-500")}
+                        style={{ width: `${budgetProgress}%` }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                      <p><span className="text-zinc-500">Total:</span> {formatCurrency(expensesTotal, settings.default_currency)}</p>
+                      <p><span className="text-zinc-500">Limite:</span> {formatCurrency(budgetLimit, settings.default_currency)}</p>
+                      <p>
+                        <span className="text-zinc-500">{isOverBudget ? "Excesso:" : "Restante:"}</span>{" "}
+                        <span className={isOverBudget ? "text-red-600 font-semibold" : "text-emerald-600 font-semibold"}>
+                          {formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
+                        </span>
+                      </p>
+                    </div>
+                  </>
+                )}
               </Card>
             </motion.div>
           )}
@@ -1713,6 +1678,46 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 </Card>
               )}
 
+              {isAdmin && trip && (
+                <Card className="space-y-4">
+                  <h3 className="font-bold">Editar viagem</h3>
+                  <form onSubmit={updateTrip} className="space-y-3">
+                    <input
+                      value={editTripName}
+                      onChange={(e) => setEditTripName(e.target.value)}
+                      placeholder="Nome da viagem"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                      required
+                    />
+                    <input
+                      value={editTripDestination}
+                      onChange={(e) => setEditTripDestination(e.target.value)}
+                      placeholder="Destino"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                      required
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        disabled={updatingTrip}
+                        className="px-4 py-2 rounded-xl bg-black text-white text-sm font-bold flex items-center justify-center gap-2"
+                      >
+                        <FilePenLine size={16} />
+                        {updatingTrip ? "Salvando..." : "Salvar edicao"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deleteCurrentTrip}
+                        disabled={updatingTrip}
+                        className="px-4 py-2 rounded-xl border border-red-200 text-red-600 text-sm font-bold flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={16} />
+                        Excluir viagem
+                      </button>
+                    </div>
+                  </form>
+                </Card>
+              )}
+
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => void saveTripBudget()} disabled={savingSettings} className="px-4 py-2 rounded-xl border border-zinc-200 text-sm font-bold">
                   {savingSettings ? "Salvando..." : "Salvar orcamento"}
@@ -1728,7 +1733,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
         <div className="grid grid-cols-6">
-          <button type="button" onClick={() => navigate("/")} className="flex flex-col items-center justify-center gap-1 py-2 text-[var(--sidebar-text)]">
+          <button type="button" onClick={() => setActiveTab("itinerary")} className="flex flex-col items-center justify-center gap-1 py-2 text-[var(--sidebar-active-bg)] font-semibold">
             <Plane size={16} />
             <span className="text-[11px] font-medium">Viagens</span>
           </button>
