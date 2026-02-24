@@ -552,7 +552,8 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     const title = ((form.get("title") as string) || "").trim();
     if (!title) return;
     const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
-    const estimatedAmount = Math.max(0, parseFloat((form.get("estimated_amount") as string) || "0") || 0);
+    const estimatedAmountRaw = (form.get("estimated_amount") as string) || "";
+    const estimatedAmount = estimatedAmountRaw ? Math.max(0, parseFloat(estimatedAmountRaw) || 0) : 0;
     const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
     const links = ideaLinksDraft.map((link) => link.trim()).filter(Boolean);
     const attachmentFiles = Array.from((ideaAttachmentInputRef.current?.files || []) as FileList);
@@ -562,7 +563,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     let ideaInserted = false;
 
     try {
-      const { error: ideaError } = await supabase.from("ideas").insert({
+      const newIdea: Idea = {
         id: ideaId,
         trip_id: id,
         created_by_member_id: currentMember.id,
@@ -570,9 +571,21 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         maps_url: mapsUrl,
         estimated_amount: estimatedAmount,
         visibility,
-      });
+        created_at: new Date().toISOString(),
+      };
+
+      const { error: ideaError } = await supabase.from("ideas").insert(newIdea);
       if (ideaError) throw ideaError;
       ideaInserted = true;
+
+      // Update local state immediately
+      setTrip((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          ideas: [newIdea, ...prev.ideas],
+        };
+      });
 
       if (links.length > 0) {
         const { error: linksError } = await supabase.from("idea_links").insert(
@@ -634,12 +647,15 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (!editingIdeaId || editingIdeaId !== ideaId) return;
     const title = ideaDraft.title.trim();
     if (!title) return;
+    const estimatedAmount = ideaDraft.estimated_amount ? Math.max(0, parseFloat(ideaDraft.estimated_amount) || 0) : 0;
+    const mapsUrl = ideaDraft.maps_url.trim() || null;
+    
     const { error } = await supabase
       .from("ideas")
       .update({
         title,
-        maps_url: ideaDraft.maps_url.trim() || null,
-        estimated_amount: Math.max(0, parseFloat(ideaDraft.estimated_amount) || 0),
+        maps_url: mapsUrl,
+        estimated_amount: estimatedAmount,
         visibility: ideaDraft.visibility,
       })
       .eq("id", ideaId);
@@ -647,6 +663,26 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       alert(getErrorMessage(error));
       return;
     }
+
+    // Update local state immediately
+    setTrip((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        ideas: prev.ideas.map((idea) =>
+          idea.id === ideaId
+            ? {
+                ...idea,
+                title,
+                maps_url: mapsUrl,
+                estimated_amount: estimatedAmount,
+                visibility: ideaDraft.visibility,
+              }
+            : idea
+        ),
+      };
+    });
+
     setEditingIdeaId(null);
   };
 
@@ -1456,7 +1492,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input name="title" required placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input name="estimated_amount" required type="number" min="0" step="0.01" placeholder="Valor estimado" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input name="estimated_amount" type="number" min="0" step="0.01" placeholder="Valor estimado (opcional)" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                   </div>
                   <div className="space-y-2">
@@ -1509,7 +1545,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <input value={ideaDraft.title} onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))} placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                             <input value={ideaDraft.maps_url} onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))} placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                            <input value={ideaDraft.estimated_amount} onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))} type="number" min="0" step="0.01" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                            <input value={ideaDraft.estimated_amount} onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))} type="number" min="0" step="0.01" placeholder="Valor estimado (opcional)" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                             <label className="flex items-center gap-2 text-sm">
                               <input type="checkbox" checked={ideaDraft.visibility === "private"} onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))} />
                               <Lock size={12} />
