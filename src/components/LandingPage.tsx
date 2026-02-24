@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { LogOut } from "lucide-react";
+import { LogOut, Info } from "lucide-react";
 import { supabase } from "../supabase";
 import { Card } from "./Card";
 import { UserSettings, TripSummary } from "../types";
@@ -55,13 +55,19 @@ export function LandingPage({ session, settings }: { session: Session; settings:
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Voyage</h1>
+            <h1 className="text-3xl font-bold">Viajando</h1>
             <p className="text-zinc-500">{session.user.email}</p>
           </div>
-          <button onClick={() => void supabase.auth.signOut()} className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2">
-            <LogOut size={16} />
-            Sair
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate("/about")} className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 hover:bg-zinc-50 transition-colors">
+              <Info size={16} />
+              Sobre
+            </button>
+            <button onClick={() => void supabase.auth.signOut()} className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 hover:bg-zinc-50 transition-colors">
+              <LogOut size={16} />
+              Sair
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

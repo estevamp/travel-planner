@@ -8,6 +8,7 @@ import { LandingPage } from "./components/LandingPage";
 import { InvitePage } from "./components/InvitePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import TripDashboard from "./components/TripDashboard";
+import { AboutPage } from "./components/AboutPage";
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
@@ -88,6 +89,7 @@ export default function App() {
           }
         />
         <Route path="/invite/:token" element={<InvitePage session={session} />} />
+        <Route path="/about" element={<AboutPage />} />
       </Routes>
     </BrowserRouter>
   );
