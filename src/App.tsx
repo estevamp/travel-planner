@@ -910,12 +910,12 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           <span className="font-bold text-xl">Voyage</span>
         </button>
         <nav className="space-y-2">
-          <SidebarItem icon={LayoutDashboard} label="Itinerario" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
+          <SidebarItem icon={LayoutDashboard} label="Itinerário" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
           <SidebarItem icon={Users} label="Pessoas" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
-          <SidebarItem icon={Settings} label="Configuracoes" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
+          <SidebarItem icon={Settings} label="Configurações" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
         <div className="flex-1 flex flex-col min-h-0">
           <p className="text-xs uppercase font-bold opacity-70 mb-2 px-1">Minhas viagens</p>
@@ -1097,7 +1097,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 </div>
 
                 <Card>
-                  <h3 className="font-bold mb-4">Adicionar ao itinerario</h3>
+                  <h3 className="font-bold mb-4">Adicionar ao itinerário</h3>
                   <form
                     className="space-y-3"
                     onSubmit={async (e) => {
@@ -1256,7 +1256,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
               <Card className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">Orcamento da viagem</p>
+                  <p className="font-semibold">Orçamento da viagem</p>
                   {budgetLimit > 0 && <p className={cn("text-sm font-semibold", isOverBudget ? "text-red-600" : "text-emerald-600")}>{Math.round(budgetProgress)}%</p>}
                 </div>
                 {budgetLimit <= 0 ? (
@@ -1648,7 +1648,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
               </Card>
 
               <Card className="space-y-4">
-                <h3 className="font-bold">Orcamento da viagem</h3>
+                <h3 className="font-bold">Orçamento da viagem</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className="text-sm">
                     <span className="block mb-1 text-zinc-500">Limite desta viagem (individual ou casal)</span>
