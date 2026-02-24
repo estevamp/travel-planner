@@ -1,4 +1,4 @@
--- Voyage schema for Supabase (Postgres)
+-- Viajando schema for Supabase (Postgres)
 create extension if not exists pgcrypto;
 
 create table if not exists public.trips (
