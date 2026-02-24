@@ -31,6 +31,14 @@ export interface ItineraryItem {
   photo_url?: string | null;
 }
 
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  icon?: string | null;
+  color?: string | null;
+  created_at: string;
+}
+
 export interface Expense {
   id: string;
   trip_id: string;
@@ -39,7 +47,8 @@ export interface Expense {
   description: string;
   amount: number;
   currency: string;
-  category: string;
+  category_id?: string | null;
+  category?: ExpenseCategory | null;
   date: string;
   visibility: Visibility;
 }

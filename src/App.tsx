@@ -13,6 +13,7 @@ import type {
   TripBudget,
   ItineraryItem,
   Expense,
+  ExpenseCategory,
   DocumentItem,
   Idea,
   IdeaLink,
@@ -45,6 +46,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const [tripOptions, setTripOptions] = useState<TripSummary[]>([]);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [invites, setInvites] = useState<TripInvite[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
   const [loading, setLoading] = useState(true);
   const [updatingTrip, setUpdatingTrip] = useState(false);
@@ -80,12 +82,12 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   });
   const [expenseDraft, setExpenseDraft] = useState<{
     description: string;
-    category: string;
+    category_id: string;
     amount: string;
     visibility: Visibility;
   }>({
     description: "",
-    category: "",
+    category_id: "",
     amount: "0",
     visibility: "public",
   });
@@ -171,17 +173,18 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
   const loadTrip = async (tripId: string) => {
     setLoading(true);
-    const [tripRes, membersRes, itineraryRes, expensesRes, docsRes, ideasRes] = await Promise.all([
+    const [tripRes, membersRes, itineraryRes, expensesRes, docsRes, ideasRes, categoriesRes] = await Promise.all([
       supabase.from("trips").select("*").eq("id", tripId).single(),
       supabase.from("trip_members").select("id,trip_id,user_id,role,display_name").eq("trip_id", tripId),
       supabase.from("itinerary").select("*").eq("trip_id", tripId).order("start_time", { ascending: true }),
-      supabase.from("expenses").select("*").eq("trip_id", tripId).order("date", { ascending: true }),
+      supabase.from("expenses").select("*, category:expense_categories(*)").eq("trip_id", tripId).order("date", { ascending: true }),
       supabase.from("documents").select("*").eq("trip_id", tripId),
       supabase.from("ideas").select("*").eq("trip_id", tripId).order("created_at", { ascending: false }),
+      supabase.from("expense_categories").select("*").order("name", { ascending: true }),
     ]);
 
-    if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || !tripRes.data) {
-      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error);
+    if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error || !tripRes.data) {
+      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error);
       setTrip(null);
       setMembers([]);
       setInvites([]);
@@ -255,6 +258,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       idea_assets: ideaAssetsData,
     });
 
+    setCategories((categoriesRes.data || []) as ExpenseCategory[]);
     setLoading(false);
   };
 
@@ -270,6 +274,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       .channel(`trip-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
+      .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () => void loadTrip(id))
@@ -395,7 +400,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       .select("id")
       .eq("trip_id", item.trip_id)
       .eq("created_by_member_id", item.created_by_member_id)
-      .eq("category", "itinerary")
       .eq("description", item.title)
       .is("itinerary_item_id", null)
       .order("created_at", { ascending: false })
@@ -431,7 +435,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           description: nextData.title,
           amount: nextData.amount,
           visibility: nextData.visibility,
-          category: "itinerary",
           itinerary_item_id: itemId,
         })
         .eq("id", targetExpenseId);
@@ -447,7 +450,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       description: nextData.title,
       amount: nextData.amount,
       currency: settings.default_currency,
-      category: "itinerary",
       visibility: nextData.visibility,
       date: new Date().toISOString().split("T")[0],
     });
@@ -506,7 +508,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         description: title,
         amount,
         currency: settings.default_currency,
-        category: "itinerary",
         visibility,
         date: new Date().toISOString().split("T")[0],
       });
@@ -525,7 +526,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       description: (form.get("description") as string) || "Despesa",
       amount,
       currency: settings.default_currency,
-      category: (form.get("category") as string) || "general",
+      category_id: (form.get("category_id") as string) || null,
       visibility,
       date: new Date().toISOString().split("T")[0],
     });
@@ -725,7 +726,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     setEditingExpenseId(expense.id);
     setExpenseDraft({
       description: expense.description,
-      category: expense.category || "",
+      category_id: expense.category_id || "",
       amount: String(expense.amount || 0),
       visibility: expense.visibility,
     });
@@ -741,7 +742,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       .from("expenses")
       .update({
         description,
-        category: expenseDraft.category.trim() || "general",
+        category_id: expenseDraft.category_id || null,
         amount: parseFloat(expenseDraft.amount) || 0,
         visibility: expenseDraft.visibility,
       })
@@ -1132,7 +1133,12 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   }}
                 >
                   <input name="description" required placeholder="Descricao" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                  <input name="category" placeholder="Categoria" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                  <select name="category_id" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+                    <option value="">Sem categoria</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
                   <input name="amount" required type="number" min="0" step="0.01" placeholder="Valor" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                   <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
                   <label className="md:col-span-4 flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
@@ -1157,12 +1163,16 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                               <p className="text-xs text-zinc-400">{exp.date}</p>
                             </td>
                             <td className="px-4 py-3">
-                              <input
-                                value={expenseDraft.category}
-                                onChange={(e) => setExpenseDraft((current) => ({ ...current, category: e.target.value }))}
-                                placeholder="Categoria"
+                              <select
+                                value={expenseDraft.category_id}
+                                onChange={(e) => setExpenseDraft((current) => ({ ...current, category_id: e.target.value }))}
                                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                              />
+                              >
+                                <option value="">Sem categoria</option>
+                                {categories.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                              </select>
                             </td>
                             <td className="px-4 py-3">
                               <input
@@ -1209,7 +1219,15 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                         ) : (
                           <>
                             <td className="px-4 py-3"><p className="font-medium">{exp.description}</p><p className="text-xs text-zinc-400">{exp.date}</p></td>
-                            <td className="px-4 py-3 text-xs uppercase">{exp.category}</td>
+                            <td className="px-4 py-3 text-xs uppercase">
+                              {exp.category ? (
+                                <span className="flex items-center gap-1" style={{ color: exp.category.color || 'inherit' }}>
+                                  {exp.category.name}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-400">Geral</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</td>
                             <td className="px-4 py-3 text-xs uppercase">
                               {exp.visibility === "private" ? (
@@ -1721,6 +1739,47 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   </div>
                 </Card>
               )}
+
+              <Card className="space-y-4">
+                <h3 className="font-bold">Categorias de Despesas</h3>
+                <div className="space-y-4">
+                  <form
+                    className="flex gap-2"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const form = new FormData(e.currentTarget);
+                      const name = (form.get("name") as string).trim();
+                      if (!name) return;
+                      const { error } = await supabase.from("expense_categories").insert({ name });
+                      if (error) alert(getErrorMessage(error));
+                      else (e.target as HTMLFormElement).reset();
+                    }}
+                  >
+                    <input name="name" required placeholder="Nova categoria" className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
+                  </form>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-zinc-50">
+                        <span className="text-sm font-medium">{cat.name}</span>
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Excluir categoria "${cat.name}"?`)) return;
+                            const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
+                            if (error) alert(getErrorMessage(error));
+                          }}
+                          className="text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {categories.length === 0 && <p className="text-xs text-zinc-500">Nenhuma categoria configurada.</p>}
+                  </div>
+                </div>
+              </Card>
+
               {savingSettings && <p className="text-sm text-zinc-500">Salvando configurações automaticamente...</p>}
             </motion.div>
           )}

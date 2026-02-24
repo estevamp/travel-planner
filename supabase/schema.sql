@@ -56,6 +56,14 @@ create table if not exists public.itinerary (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.expense_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  icon text,
+  color text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips(id) on delete cascade,
@@ -63,7 +71,7 @@ create table if not exists public.expenses (
   description text not null,
   amount numeric(12,2) not null,
   currency text not null default 'BRL',
-  category text,
+  category_id uuid references public.expense_categories(id) on delete set null,
   date date,
   visibility text not null default 'public' check (visibility in ('public', 'private')),
   created_at timestamptz not null default now()
@@ -820,6 +828,7 @@ alter table public.ideas enable row level security;
 alter table public.idea_links enable row level security;
 alter table public.idea_assets enable row level security;
 alter table public.trip_budgets enable row level security;
+alter table public.expense_categories enable row level security;
 
 drop policy if exists trips_public_rw on public.trips;
 drop policy if exists itinerary_public_rw on public.itinerary;
@@ -1105,6 +1114,27 @@ create policy trip_budgets_delete_member on public.trip_budgets
 for delete using (
   public.is_trip_member(trip_id)
   and owner_user_id = public.budget_owner_user_id(trip_id, auth.uid())
+);
+
+drop policy if exists expense_categories_select_all on public.expense_categories;
+drop policy if exists expense_categories_all_admin on public.expense_categories;
+
+create policy expense_categories_select_all on public.expense_categories
+for select using (true);
+
+create policy expense_categories_all_admin on public.expense_categories
+for all using (
+  exists (
+    select 1 from auth.users
+    where auth.users.id = auth.uid()
+    and (auth.users.raw_app_meta_data->>'is_admin')::boolean = true
+  )
+) with check (
+  exists (
+    select 1 from auth.users
+    where auth.users.id = auth.uid()
+    and (auth.users.raw_app_meta_data->>'is_admin')::boolean = true
+  )
 );
 
 insert into storage.buckets (id, name, public)
