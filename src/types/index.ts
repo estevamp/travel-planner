@@ -1,6 +1,6 @@
 export type ItineraryType = "flight" | "bus" | "hotel" | "activity";
 export type Visibility = "public" | "private";
-export type ThemePalette = "default" | "ocean" | "forest" | "sunset";
+export type ThemePalette = "default" | "ocean" | "forest" | "sunset" | "lavender" | "midnight" | "rose";
 
 export interface UserSettings {
   theme_palette: ThemePalette;

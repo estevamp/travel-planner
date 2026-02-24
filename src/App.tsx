@@ -14,7 +14,7 @@ import {
   parseCurrencyToNumber,
 } from "./utils";
 import { getThemeStyles } from "./utils/theme";
-import { DOCS_BUCKET } from "./constants";
+import { DOCS_BUCKET, THEME_PALETTES } from "./constants";
 import type {
   UserSettings,
   TripBudget,
@@ -739,8 +739,95 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         amount: nextAmount,
         visibility: itineraryDraft.visibility,
       });
+      
+      // Update local expense state immediately
+      setTrip((prev) => {
+        if (!prev) return prev;
+        const linkedExpense = prev.expenses.find((exp) => exp.itinerary_item_id === itemId);
+        
+        if (linkedExpense) {
+          // Update existing linked expense
+          return {
+            ...prev,
+            expenses: prev.expenses.map((exp) =>
+              exp.id === linkedExpense.id
+                ? {
+                    ...exp,
+                    description: title,
+                    amount: nextAmount,
+                    visibility: itineraryDraft.visibility,
+                  }
+                : exp
+            ),
+          };
+        } else {
+          // Check for legacy expense (same title, same creator, no itinerary_item_id)
+          const legacyExpense = prev.expenses.find(
+            (exp) =>
+              exp.created_by_member_id === sourceItem.created_by_member_id &&
+              exp.description === sourceItem.title &&
+              !exp.itinerary_item_id
+          );
+          
+          if (legacyExpense) {
+            // Update legacy expense
+            return {
+              ...prev,
+              expenses: prev.expenses.map((exp) =>
+                exp.id === legacyExpense.id
+                  ? {
+                      ...exp,
+                      description: title,
+                      amount: nextAmount,
+                      visibility: itineraryDraft.visibility,
+                      itinerary_item_id: itemId,
+                    }
+                  : exp
+              ),
+            };
+          } else {
+            // Add new expense to local state
+            return {
+              ...prev,
+              expenses: [
+                ...prev.expenses,
+                {
+                  id: crypto.randomUUID(),
+                  trip_id: sourceItem.trip_id,
+                  created_by_member_id: sourceItem.created_by_member_id,
+                  itinerary_item_id: itemId,
+                  description: title,
+                  amount: nextAmount,
+                  currency: settings.default_currency,
+                  visibility: itineraryDraft.visibility,
+                  date: new Date().toISOString().split("T")[0],
+                  category_id: null,
+                  category: null,
+                },
+              ].sort((a, b) => a.date.localeCompare(b.date)),
+            };
+          }
+        }
+      });
     } else {
       await removeItineraryExpense(itemId, sourceItem);
+      
+      // Remove expense from local state immediately
+      setTrip((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          expenses: prev.expenses.filter(
+            (exp) =>
+              exp.itinerary_item_id !== itemId &&
+              !(
+                exp.created_by_member_id === sourceItem.created_by_member_id &&
+                exp.description === sourceItem.title &&
+                !exp.itinerary_item_id
+              )
+          ),
+        };
+      });
     }
 
     setSavingItinerary(false);
@@ -984,13 +1071,23 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       </aside>
 
       <main className="flex-1 min-w-0 overflow-y-auto p-4 pb-24 md:p-10">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
           <div className="min-w-0">
-            <h2 className="text-2xl md:text-3xl font-bold truncate">{trip.name}</h2>
-            <div className="flex items-center gap-2 text-zinc-500 mt-1 text-sm md:text-base"><MapPin size={16} className="flex-shrink-0" /> <span className="truncate">{trip.destination}</span></div>
+            <h2 className="text-3xl md:text-4xl font-bold truncate bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
+            <div className="flex items-center gap-2 text-zinc-500 mt-2 text-sm md:text-base">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <MapPin size={14} className="text-white" />
+              </div>
+              <span className="truncate font-medium">{trip.destination}</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {isAdmin && <div className="px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold uppercase flex items-center gap-1"><Shield size={12} />Admin</div>}
+            {isAdmin && (
+              <div className="px-4 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xs font-bold uppercase flex items-center gap-2 shadow-lg">
+                <Shield size={14} />
+                Admin
+              </div>
+            )}
           </div>
         </header>
 
@@ -1656,144 +1753,267 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
           {activeTab === "settings" && (
             <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <Card className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Palette size={16} />
-                  <h3 className="font-bold">Aparencia</h3>
+              <Card className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Palette size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Aparência</h3>
+                    <p className="text-sm text-zinc-500">Personalize o visual do aplicativo</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="text-sm">
-                    <span className="block mb-1 text-zinc-500">Paleta</span>
-                    <select
-                      value={settingsDraft.theme_palette}
-                      onChange={(e) => setSettingsDraft((current) => ({ ...current, theme_palette: e.target.value as any }))}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                    >
-                      <option value="default">Default</option>
-                      <option value="ocean">Ocean</option>
-                      <option value="forest">Forest</option>
-                      <option value="sunset">Sunset</option>
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    <span className="block mb-1 text-zinc-500">Dark mode</span>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold mb-3 block">Modo de Exibição</label>
                     <button
                       type="button"
                       onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
-                      className={cn("w-full px-3 py-2 rounded-xl border text-sm flex items-center justify-center gap-2", settingsDraft.dark_mode ? "border-zinc-700 bg-zinc-800 text-white" : "border-zinc-200")}
+                      className={cn(
+                        "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
+                        settingsDraft.dark_mode
+                          ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
+                          : "border-zinc-200 bg-gradient-to-br from-white to-zinc-50 hover:border-zinc-300 shadow-sm"
+                      )}
                     >
-                      {settingsDraft.dark_mode ? <Moon size={14} /> : <Sun size={14} />}
-                      {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
+                      <div className="flex items-center gap-3">
+                        {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
+                        <span className="text-base">{settingsDraft.dark_mode ? "Modo Escuro" : "Modo Claro"}</span>
+                      </div>
+                      <div className={cn(
+                        "px-3 py-1 rounded-full text-xs font-bold",
+                        settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
+                      )}>
+                        {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
+                      </div>
                     </button>
-                  </label>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold mb-3 block">Tema de Cores</label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {(["default", "ocean", "forest", "sunset", "lavender", "midnight", "rose"] as const).map((theme) => {
+                        const palette = THEME_PALETTES[theme];
+                        const isActive = settingsDraft.theme_palette === theme;
+                        const themeNames: Record<string, string> = {
+                          default: "Padrão",
+                          ocean: "Oceano",
+                          forest: "Floresta",
+                          sunset: "Pôr do Sol",
+                          lavender: "Lavanda",
+                          midnight: "Meia-Noite",
+                          rose: "Rosa"
+                        };
+                        
+                        return (
+                          <button
+                            key={theme}
+                            type="button"
+                            onClick={() => setSettingsDraft((current) => ({ ...current, theme_palette: theme }))}
+                            className={cn(
+                              "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105",
+                              isActive
+                                ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
+                                : "border-zinc-200 hover:border-zinc-300 shadow-sm"
+                            )}
+                          >
+                            <div className="space-y-2">
+                              <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
+                                <div
+                                  className="flex-1"
+                                  style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkSidebarActiveBg : palette.lightSidebarActiveBg }}
+                                />
+                                <div
+                                  className="flex-1"
+                                  style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
+                                />
+                                <div
+                                  className="flex-1"
+                                  style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkBg : palette.lightBg }}
+                                />
+                              </div>
+                              <p className="text-xs font-semibold text-center">{themeNames[theme]}</p>
+                            </div>
+                            {isActive && (
+                              <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--accent-color)] flex items-center justify-center shadow-lg">
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </Card>
 
-              <Card className="space-y-4">
-                <h3 className="font-bold">Financeiro</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="text-sm">
-                    <span className="block mb-1 text-zinc-500">Moeda padrao</span>
-                    <select
-                      value={settingsDraft.default_currency}
-                      onChange={(e) => setSettingsDraft((current) => ({ ...current, default_currency: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                    >
-                      <option value="BRL">BRL</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </label>
+              <Card className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                    <DollarSign size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Financeiro</h3>
+                    <p className="text-sm text-zinc-500">Configure suas preferências monetárias</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold block">Moeda Padrão</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {["BRL", "USD", "EUR"].map((currency) => (
+                      <button
+                        key={currency}
+                        type="button"
+                        onClick={() => setSettingsDraft((current) => ({ ...current, default_currency: currency }))}
+                        className={cn(
+                          "px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 hover:scale-105",
+                          settingsDraft.default_currency === currency
+                            ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
+                            : "border-zinc-200 hover:border-zinc-300 shadow-sm"
+                        )}
+                      >
+                        {currency}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </Card>
 
-              <Card className="space-y-4">
-                <h3 className="font-bold">Orçamento da viagem</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="text-sm">
-                    <span className="block mb-1 text-zinc-500">Limite desta viagem (individual ou casal)</span>
-                    <input
-                      value={settingsDraft.budget_limit_masked || ""}
-                      onChange={(e) => {
-                        const masked = maskCurrency(e.target.value);
-                        setSettingsDraft((prev) => ({ ...prev, budget_limit_masked: masked }));
-                        setTripBudget((current) => ({
-                          id: current?.id || "",
-                          trip_id: id || "",
-                          owner_user_id: budgetOwnerUserId || session.user.id,
-                          budget_limit: parseCurrencyToNumber(masked),
-                        }));
-                      }}
-                      placeholder="0,00"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                    />
-                  </label>
-                  <div className="text-sm text-zinc-500 flex items-end">
-                    {budgetOwnerUserId === session.user.id ? "Orçamento individual nesta viagem." : "Orçamento compartilhado com cônjuge nesta viagem."}
+              <Card className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                    <DollarSign size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Orçamento da Viagem</h3>
+                    <p className="text-sm text-zinc-500">Defina um limite de gastos</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <label className="text-sm font-semibold block">Limite de Orçamento</label>
+                  <input
+                    value={settingsDraft.budget_limit_masked || ""}
+                    onChange={(e) => {
+                      const masked = maskCurrency(e.target.value);
+                      setSettingsDraft((prev) => ({ ...prev, budget_limit_masked: masked }));
+                      setTripBudget((current) => ({
+                        id: current?.id || "",
+                        trip_id: id || "",
+                        owner_user_id: budgetOwnerUserId || session.user.id,
+                        budget_limit: parseCurrencyToNumber(masked),
+                      }));
+                    }}
+                    placeholder="0,00"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                  />
+                  <div className="px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <p className="text-xs text-zinc-600">
+                      {budgetOwnerUserId === session.user.id
+                        ? "💡 Orçamento individual nesta viagem"
+                        : "👥 Orçamento compartilhado com cônjuge nesta viagem"}
+                    </p>
                   </div>
                 </div>
               </Card>
 
               {currentMember && (
-                <Card className="space-y-4">
-                  <h3 className="font-bold">Conjuge (global)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Card className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                      <Users size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Cônjuge</h3>
+                      <p className="text-sm text-zinc-500">Configuração global para todas as viagens</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold block">Selecione seu cônjuge</label>
                     <select
                       value={selfSpouseUserId}
                       onChange={(e) => setSelfSpouseUserId(e.target.value)}
-                      className="md:col-span-2 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
                     >
-                      <option value="">Sem conjuge</option>
+                      <option value="">Sem cônjuge</option>
                       {members.filter((m) => m.user_id !== currentMember.user_id).map((m) => (
                         <option key={m.id} value={m.user_id}>{m.display_name || m.user_id}</option>
                       ))}
                     </select>
-                    <div className="px-4 py-2 rounded-xl border border-zinc-200 text-sm text-zinc-500 flex items-center justify-center">
-                      Salvamento automatico
+                    <div className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
+                      <p className="text-xs text-blue-700 font-medium">✨ Salvamento automático ativado</p>
                     </div>
                   </div>
                 </Card>
               )}
 
               {isAdmin && trip && (
-                <Card className="space-y-4">
-                  <h3 className="font-bold">Editar viagem</h3>
-                  <div className="space-y-3">
-                    <input
-                      value={editTripName}
-                      onChange={(e) => setEditTripName(e.target.value)}
-                      placeholder="Nome da viagem"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                      required
-                    />
-                    <input
-                      value={editTripDestination}
-                      onChange={(e) => setEditTripDestination(e.target.value)}
-                      placeholder="Destino"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                      required
-                    />
-                    <div className="flex flex-wrap gap-2">
+                <Card className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                      <Settings size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Gerenciar Viagem</h3>
+                      <p className="text-sm text-zinc-500">Edite ou exclua esta viagem</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold block">Nome da Viagem</label>
+                      <input
+                        value={editTripName}
+                        onChange={(e) => setEditTripName(e.target.value)}
+                        placeholder="Nome da viagem"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold block">Destino</label>
+                      <input
+                        value={editTripDestination}
+                        onChange={(e) => setEditTripDestination(e.target.value)}
+                        placeholder="Destino"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                        required
+                      />
+                    </div>
+                    {updatingTrip && (
+                      <div className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
+                        <p className="text-xs text-blue-700 font-medium">💾 Salvando alterações automaticamente...</p>
+                      </div>
+                    )}
+                    <div className="pt-2">
                       <button
                         type="button"
                         onClick={deleteCurrentTrip}
                         disabled={updatingTrip}
-                        className="px-4 py-2 rounded-xl border border-red-200 text-red-600 text-sm font-bold flex items-center justify-center gap-2"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all disabled:opacity-50"
                       >
                         <Trash2 size={16} />
-                        Excluir viagem
+                        Excluir Viagem Permanentemente
                       </button>
                     </div>
-                    {updatingTrip && <p className="text-xs text-zinc-500">Salvando edição automaticamente...</p>}
                   </div>
                 </Card>
               )}
 
-              <Card className="space-y-4">
-                <h3 className="font-bold">Categorias de Despesas</h3>
+              <Card className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                    <FileText size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Categorias de Despesas</h3>
+                    <p className="text-sm text-zinc-500">Organize suas despesas por categoria</p>
+                  </div>
+                </div>
                 <div className="space-y-4">
                   <form
-                    className="flex gap-2"
+                    className="flex gap-3"
                     onSubmit={async (e) => {
                       e.preventDefault();
                       const form = new FormData(e.currentTarget);
@@ -1808,32 +2028,49 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                       }
                     }}
                   >
-                    <input name="name" required placeholder="Nova categoria" className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
+                    <input
+                      name="name"
+                      required
+                      placeholder="Nova categoria"
+                      className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                    />
+                    <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
+                      <Plus size={16} />
+                      Adicionar
+                    </button>
                   </form>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {categories.map((cat) => (
-                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-zinc-50">
-                        <span className="text-sm font-medium">{cat.name}</span>
+                      <div key={cat.id} className="flex items-center justify-between p-4 rounded-xl border-2 border-zinc-200 bg-gradient-to-br from-white to-zinc-50 hover:border-zinc-300 transition-all group">
+                        <span className="text-sm font-semibold">{cat.name}</span>
                         <button
                           onClick={async () => {
                             if (!window.confirm(`Excluir categoria "${cat.name}"?`)) return;
                             const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
                             if (error) alert(getErrorMessage(error));
                           }}
-                          className="text-zinc-400 hover:text-red-500"
+                          className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     ))}
-                    {categories.length === 0 && <p className="text-xs text-zinc-500">Nenhuma categoria configurada.</p>}
+                    {categories.length === 0 && (
+                      <div className="sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed border-zinc-200">
+                        <p className="text-sm text-zinc-500">Nenhuma categoria configurada ainda.</p>
+                        <p className="text-xs text-zinc-400 mt-1">Adicione sua primeira categoria acima!</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
 
-              {savingSettings && <p className="text-sm text-zinc-500">Salvando configurações automaticamente...</p>}
+              {savingSettings && (
+                <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200">
+                  <p className="text-sm text-green-700 font-medium">✅ Salvando configurações automaticamente...</p>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
