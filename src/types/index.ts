@@ -7,6 +7,7 @@ export interface UserSettings {
   dark_mode: boolean;
   default_currency: string;
   spouse_user_id: string | null;
+  budget_limit_masked?: string;
 }
 
 export interface TripBudget {

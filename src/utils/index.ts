@@ -24,3 +24,16 @@ export const fileToDataUrl = (file: File) =>
     reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
     reader.readAsDataURL(file);
   });
+
+export function maskCurrency(value: string) {
+  const cleanValue = value.replace(/\D/g, "");
+  const numberValue = Number(cleanValue) / 100;
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numberValue);
+}
+
+export function parseCurrencyToNumber(value: string): number {
+  return Number(value.replace(/\D/g, "")) / 100;
+}

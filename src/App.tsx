@@ -5,7 +5,14 @@ import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboar
 import { AnimatePresence, motion } from "motion/react";
 import { format } from "date-fns";
 import { supabase } from "./supabase";
-import { cn, getErrorMessage, formatCurrency, fileToDataUrl } from "./utils";
+import {
+  cn,
+  getErrorMessage,
+  formatCurrency,
+  fileToDataUrl,
+  maskCurrency,
+  parseCurrencyToNumber,
+} from "./utils";
 import { getThemeStyles } from "./utils/theme";
 import { DOCS_BUCKET } from "./constants";
 import type {
@@ -482,7 +489,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (!id || !currentMember) return;
     const itineraryId = crypto.randomUUID();
     const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
-    const amount = parseFloat(form.get("amount") as string) || 0;
+    const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
     const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
     const now = new Date().toISOString();
 
@@ -525,7 +532,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const createExpense = async (form: FormData) => {
     if (!id || !currentMember) return;
     const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
-    const amount = parseFloat(form.get("amount") as string) || 0;
+    const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
     const { error } = await supabase.from("expenses").insert({
       id: crypto.randomUUID(),
       trip_id: id,
@@ -673,7 +680,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       title: item.title,
       description: item.description || "",
       location: item.location || "",
-      amount: String(item.amount || 0),
+      amount: maskCurrency(String((item.amount || 0) * 100)),
       visibility: item.visibility,
     });
   };
@@ -684,7 +691,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (!sourceItem) return;
     const title = itineraryDraft.title.trim();
     if (!title) return;
-    const nextAmount = parseFloat(itineraryDraft.amount) || 0;
+    const nextAmount = parseCurrencyToNumber(itineraryDraft.amount) || 0;
 
     setSavingItinerary(true);
     const { error } = await supabase
@@ -755,7 +762,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     setExpenseDraft({
       description: expense.description,
       category_id: expense.category_id || "",
-      amount: String(expense.amount || 0),
+      amount: maskCurrency(String((expense.amount || 0) * 100)),
       visibility: expense.visibility,
     });
   };
@@ -771,7 +778,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       .update({
         description,
         category_id: expenseDraft.category_id || null,
-        amount: parseFloat(expenseDraft.amount) || 0,
+        amount: parseCurrencyToNumber(expenseDraft.amount) || 0,
         visibility: expenseDraft.visibility,
       })
       .eq("id", expenseId);
@@ -863,7 +870,9 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       return;
     }
 
-    setTripBudget({ ...(data as TripBudget), budget_limit: Number((data as TripBudget).budget_limit) || 0 });
+    const budget = data as TripBudget;
+    setTripBudget({ ...budget, budget_limit: Number(budget.budget_limit) || 0 });
+    setSettingsDraft((prev) => ({ ...prev, budget_limit_masked: maskCurrency(String((Number(budget.budget_limit) || 0) * 100)) }));
   };
 
   const saveTripBudget = async () => {
@@ -932,8 +941,8 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem nao encontrada ou sem permissao.</div>;
 
   return (
-    <div className="min-h-screen flex" style={themedStyles}>
-      <aside className="w-64 border-r p-6 hidden md:flex flex-col gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
+    <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden" style={themedStyles}>
+      <aside className="w-64 border-r p-6 hidden md:flex flex-col flex-shrink-0 gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
           <Plane size={18} />
           <span className="font-bold text-xl">Voyage</span>
@@ -974,11 +983,11 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center gap-2 justify-center hover:bg-[var(--sidebar-hover)]"><LogOut size={16} />Sair</button>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-10">
-        <header className="flex items-center justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-3xl font-bold">{trip.name}</h2>
-            <div className="flex items-center gap-2 text-zinc-500 mt-1"><MapPin size={16} />{trip.destination}</div>
+      <main className="flex-1 min-w-0 overflow-y-auto p-4 pb-24 md:p-10">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div className="min-w-0">
+            <h2 className="text-2xl md:text-3xl font-bold truncate">{trip.name}</h2>
+            <div className="flex items-center gap-2 text-zinc-500 mt-1 text-sm md:text-base"><MapPin size={16} className="flex-shrink-0" /> <span className="truncate">{trip.destination}</span></div>
           </div>
           <div className="flex items-center gap-2">
             {isAdmin && <div className="px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold uppercase flex items-center gap-1"><Shield size={12} />Admin</div>}
@@ -1022,10 +1031,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                               />
                               <input
                                 value={itineraryDraft.amount}
-                                onChange={(e) => setItineraryDraft((current) => ({ ...current, amount: e.target.value }))}
-                                type="number"
-                                min="0"
-                                step="0.01"
+                                onChange={(e) => setItineraryDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
                                 placeholder="Valor"
                                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                               />
@@ -1064,14 +1070,14 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                             </div>
                           ) : (
                             <>
-                              <div className="flex items-center justify-between">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                 <h4 className="font-bold truncate">{item.title}</h4>
-                                <span className="text-xs text-zinc-400">{format(new Date(item.start_time), "dd/MM HH:mm")}</span>
+                                <span className="text-xs text-zinc-400 whitespace-nowrap">{format(new Date(item.start_time), "dd/MM HH:mm")}</span>
                               </div>
-                              <p className="text-sm text-zinc-500">{item.description}</p>
-                              <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500">
-                                <span>{item.location || "Sem local"}</span>
-                                <span>{formatCurrency(item.amount, settings.default_currency)}</span>
+                              <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
+                                <span className="truncate max-w-[150px]">{item.location || "Sem local"}</span>
+                                <span className="font-medium">{formatCurrency(item.amount, settings.default_currency)}</span>
                                 {item.visibility === "private" && 
                                 <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
                                   <Lock size={12} />
@@ -1138,7 +1144,12 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     <select name="type" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"><option value="activity">Atividade</option><option value="flight">Voo</option><option value="bus">Onibus</option><option value="hotel">Hospedagem</option></select>
                     <input name="title" required placeholder="Titulo" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input name="amount" type="number" min="0" step="0.01" required placeholder="Valor" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input
+                      name="amount"
+                      placeholder="Valor (opcional)"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                      onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+                    />
                     <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                     <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-2 rounded-xl text-sm font-bold">Adicionar</button>
@@ -1167,7 +1178,13 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
-                  <input name="amount" required type="number" min="0" step="0.01" placeholder="Valor" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                  <input
+                    name="amount"
+                    required
+                    placeholder="Valor"
+                    className="px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+                  />
                   <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
                   <label className="md:col-span-4 flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                 </form>
@@ -1205,10 +1222,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                             <td className="px-4 py-3">
                               <input
                                 value={expenseDraft.amount}
-                                onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: e.target.value }))}
-                                type="number"
-                                min="0"
-                                step="0.01"
+                                onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
                                 placeholder="Valor"
                                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                               />
@@ -1383,8 +1397,8 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 </form>
               </Card>
 
-              <div className="space-y-3">
-                {trip.ideas.length === 0 && <Card><p className="text-sm text-zinc-500">Nenhuma ideia cadastrada.</p></Card>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {trip.ideas.length === 0 && <Card className="sm:col-span-2"><p className="text-sm text-zinc-500">Nenhuma ideia cadastrada.</p></Card>}
                 {trip.ideas.map((idea) => {
                   const links = ideaLinksByIdeaId.get(idea.id) || [];
                   const assets = ideaAssetsByIdeaId.get(idea.id) || [];
@@ -1699,11 +1713,18 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   <label className="text-sm">
                     <span className="block mb-1 text-zinc-500">Limite desta viagem (individual ou casal)</span>
                     <input
-                      value={String(tripBudget?.budget_limit || 0)}
-                      onChange={(e) => setTripBudget((current) => ({ id: current?.id || "", trip_id: id || "", owner_user_id: budgetOwnerUserId || session.user.id, budget_limit: Number(e.target.value) || 0 }))}
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      value={settingsDraft.budget_limit_masked || ""}
+                      onChange={(e) => {
+                        const masked = maskCurrency(e.target.value);
+                        setSettingsDraft((prev) => ({ ...prev, budget_limit_masked: masked }));
+                        setTripBudget((current) => ({
+                          id: current?.id || "",
+                          trip_id: id || "",
+                          owner_user_id: budgetOwnerUserId || session.user.id,
+                          budget_limit: parseCurrencyToNumber(masked),
+                        }));
+                      }}
+                      placeholder="0,00"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                     />
                   </label>
