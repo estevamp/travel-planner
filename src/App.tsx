@@ -1027,7 +1027,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                   type="button"
                                   disabled={savingItinerary}
                                   onClick={() => void saveItineraryEdit(item.id)}
-                                  className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold"
+                                  className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold"
                                 >
                                   {savingItinerary ? "Salvando..." : "Salvar"}
                                 </button>
@@ -1120,7 +1120,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     <input name="amount" type="number" min="0" step="0.01" required placeholder="Valor" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                    <button className="w-full bg-black text-white py-2 rounded-xl text-sm font-bold">Adicionar</button>
+                    <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-2 rounded-xl text-sm font-bold">Adicionar</button>
                   </form>
                 </Card>
               </div>
@@ -1147,7 +1147,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     ))}
                   </select>
                   <input name="amount" required type="number" min="0" step="0.01" placeholder="Valor" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                  <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
+                  <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
                   <label className="md:col-span-4 flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                 </form>
               </Card>
@@ -1208,7 +1208,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                   type="button"
                                   disabled={savingExpense}
                                   onClick={() => void saveExpenseEdit(exp.id)}
-                                  className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold"
+                                  className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold"
                                 >
                                   {savingExpense ? "Salvando..." : "Salvar"}
                                 </button>
@@ -1358,7 +1358,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                       <input ref={ideaPhotoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple className="block w-full text-sm" />
                     </label>
                   </div>
-                  <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Salvar ideia</button>
+                  <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Salvar ideia</button>
                 </form>
               </Card>
 
@@ -1384,7 +1384,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                             </label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => void saveIdeaEdit(idea.id)} className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold">Salvar</button>
+                            <button type="button" onClick={() => void saveIdeaEdit(idea.id)} className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold">Salvar</button>
                             <button type="button" onClick={() => setEditingIdeaId(null)} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">Cancelar</button>
                           </div>
                         </div>
@@ -1552,7 +1552,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                       onClick={async () => {
                         await setGlobalSpouse(selfSpouseUserId || null);
                       }}
-                      className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold"
+                      className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold"
                     >
                       Salvar
                     </button>
@@ -1565,7 +1565,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   <h3 className="font-bold mb-4">Convidar pessoa</h3>
                   <div className="flex flex-col md:flex-row gap-3">
                     <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} type="email" placeholder="email@exemplo.com" className="flex-1 px-4 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <button onClick={createInvite} className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 justify-center"><UserPlus size={16} />Gerar convite</button>
+                    <button onClick={createInvite} className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 justify-center"><UserPlus size={16} />Gerar convite</button>
                   </div>
                   {generatedLink && <div className="mt-3 p-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs break-all">{generatedLink}</div>}
                 </Card>
@@ -1763,7 +1763,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     }}
                   >
                     <input name="name" required placeholder="Nova categoria" className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
+                    <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
                   </form>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

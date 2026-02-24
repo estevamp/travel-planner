@@ -1122,19 +1122,11 @@ drop policy if exists expense_categories_all_admin on public.expense_categories;
 create policy expense_categories_select_all on public.expense_categories
 for select using (true);
 
-create policy expense_categories_all_admin on public.expense_categories
+create policy expense_categories_all_authenticated on public.expense_categories
 for all using (
-  exists (
-    select 1 from auth.users
-    where auth.users.id = auth.uid()
-    and (auth.users.raw_app_meta_data->>'is_admin')::boolean = true
-  )
+  auth.role() = 'authenticated'
 ) with check (
-  exists (
-    select 1 from auth.users
-    where auth.users.id = auth.uid()
-    and (auth.users.raw_app_meta_data->>'is_admin')::boolean = true
-  )
+  auth.role() = 'authenticated'
 );
 
 insert into storage.buckets (id, name, public)
