@@ -177,7 +177,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       supabase.from("trips").select("*").eq("id", tripId).single(),
       supabase.from("trip_members").select("id,trip_id,user_id,role,display_name").eq("trip_id", tripId),
       supabase.from("itinerary").select("*").eq("trip_id", tripId).order("start_time", { ascending: true }),
-      supabase.from("expenses").select("*, category:expense_categories(*)").eq("trip_id", tripId).order("date", { ascending: true }),
+      supabase.from("expenses").select("*").eq("trip_id", tripId).order("date", { ascending: true }),
       supabase.from("documents").select("*").eq("trip_id", tripId),
       supabase.from("ideas").select("*").eq("trip_id", tripId).order("created_at", { ascending: false }),
       supabase.from("expense_categories").select("*").order("name", { ascending: true }),
@@ -248,17 +248,24 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       ideaAssetsData = (ideaAssetsRes.data || []) as IdeaAsset[];
     }
 
+    const nextCategories = (categoriesRes.data || []) as ExpenseCategory[];
+    const categoryMap = new Map(nextCategories.map(c => [c.id, c]));
+
     setTrip({
       ...(tripRes.data as Omit<Trip, "itinerary" | "expenses" | "documents" | "ideas" | "idea_links" | "idea_assets">),
       itinerary: (itineraryRes.data || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })) as ItineraryItem[],
-      expenses: (expensesRes.data || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })) as Expense[],
+      expenses: (expensesRes.data || []).map((item) => ({
+        ...item,
+        amount: Number(item.amount) || 0,
+        category: item.category_id ? categoryMap.get(item.category_id) : null
+      })) as Expense[],
       documents: (docsRes.data || []) as DocumentItem[],
       ideas: (ideasRes.data || []).map((item) => ({ ...item, estimated_amount: Number(item.estimated_amount) || 0 })) as Idea[],
       idea_links: ideaLinksData,
       idea_assets: ideaAssetsData,
     });
 
-    setCategories((categoriesRes.data || []) as ExpenseCategory[]);
+    setCategories(nextCategories);
     setLoading(false);
   };
 
