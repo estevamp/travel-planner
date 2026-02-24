@@ -1645,7 +1645,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
               </Card>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {trip.ideas.length === 0 && <Card className="sm:col-span-2"><p className="text-sm text-zinc-500">Nenhuma ideia cadastrada.</p></Card>}
+                {trip.ideas.length === 0 && <Card className="sm:col-span-2"><p className="text-sm text-zinc-500 text-center py-4">Nenhuma ideia cadastrada.</p></Card>}
                 {trip.ideas.map((idea) => {
                   const links = ideaLinksByIdeaId.get(idea.id) || [];
                   const assets = ideaAssetsByIdeaId.get(idea.id) || [];
@@ -1656,38 +1656,80 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     <Card key={idea.id} className="space-y-3">
                       {editingIdeaId === idea.id ? (
                         <div className="space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <input value={ideaDraft.title} onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))} placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                            <input value={ideaDraft.maps_url} onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))} placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                            <input value={ideaDraft.estimated_amount} onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))} type="number" min="0" step="0.01" placeholder="Valor estimado (opcional)" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                          <div className="space-y-3">
+                            <input
+                              value={ideaDraft.title}
+                              onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
+                              placeholder="Titulo"
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                            />
+                            <input
+                              value={ideaDraft.maps_url}
+                              onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))}
+                              placeholder="URL do Google Maps"
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                            />
+                            <input
+                              value={ideaDraft.estimated_amount}
+                              onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Valor estimado (opcional)"
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                            />
                             <label className="flex items-center gap-2 text-sm">
-                              <input type="checkbox" checked={ideaDraft.visibility === "private"} onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))} />
-                              <Lock size={12} />
+                              <input
+                                type="checkbox"
+                                checked={ideaDraft.visibility === "private"}
+                                onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
+                              />
+                              <Lock size={14} />
+                              <span>Marcar como privado</span>
                             </label>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => void saveIdeaEdit(idea.id)} className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold">Salvar</button>
-                            <button type="button" onClick={() => setEditingIdeaId(null)} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">Cancelar</button>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void saveIdeaEdit(idea.id)}
+                              className="flex-1 px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all"
+                            >
+                              Salvar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingIdeaId(null)}
+                              className="flex-1 px-4 py-2 rounded-xl border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50 transition-all"
+                            >
+                              Cancelar
+                            </button>
                           </div>
                         </div>
                       ) : (
                         <>
                           <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-semibold flex items-center gap-2">
-                                {idea.title}
-                                {idea.visibility === "private" && <Lock size={14} className="text-orange-600" title="Privado" />}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold flex items-center gap-2 flex-wrap">
+                                <span className="break-words">{idea.title}</span>
+                                {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
                               </p>
-                              <p className="text-sm text-zinc-500">Estimado: {formatCurrency(idea.estimated_amount, settings.default_currency)}</p>
+                              <p className="text-sm text-zinc-500 mt-1">Estimado: {formatCurrency(idea.estimated_amount, settings.default_currency)}</p>
                               {idea.maps_url && (
-                                <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-1">
+                                <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
                                   <MapPin size={12} />Google Maps
                                 </a>
                               )}
                             </div>
                             {canManage && (
-                              <div className="flex items-center gap-2">
-                                <button type="button" onClick={() => startEditIdea(idea)} className="text-zinc-400 hover:text-zinc-700"><FilePenLine size={16} /></button>
+                              <div className="flex flex-col gap-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => startEditIdea(idea)}
+                                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition-colors"
+                                  aria-label="Editar ideia"
+                                >
+                                  <FilePenLine size={20} />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={async () => {
@@ -1695,43 +1737,66 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                     if (!confirmed) return;
                                     await deleteIdea(idea);
                                   }}
-                                  className="text-zinc-400 hover:text-red-500"
+                                  className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
+                                  aria-label="Excluir ideia"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={20} />
                                 </button>
                               </div>
                             )}
                           </div>
 
                           {links.length > 0 && (
-                            <div className="space-y-1">
-                              <p className="text-xs uppercase text-zinc-500">URLs</p>
-                              {links.map((link) => (
-                                <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="block text-sm text-blue-600 break-all">
-                                  <span className="inline-flex items-center gap-1"><LinkIcon size={12} />{link.label || link.url}</span>
-                                </a>
-                              ))}
+                            <div className="space-y-2 pt-2 border-t border-zinc-100">
+                              <p className="text-xs uppercase font-semibold text-zinc-500">URLs</p>
+                              <div className="space-y-1">
+                                {links.map((link) => (
+                                  <a
+                                    key={link.id}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block text-sm text-blue-600 break-all hover:underline"
+                                  >
+                                    <span className="inline-flex items-center gap-1">
+                                      <LinkIcon size={12} className="flex-shrink-0" />
+                                      <span className="break-all">{link.label || link.url}</span>
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
                             </div>
                           )}
                           {attachments.length > 0 && (
-                            <div className="space-y-1">
-                              <p className="text-xs uppercase text-zinc-500">Anexos</p>
+                            <div className="space-y-2 pt-2 border-t border-zinc-100">
+                              <p className="text-xs uppercase font-semibold text-zinc-500">Anexos</p>
                               <div className="flex flex-wrap gap-2">
                                 {attachments.map((asset) => (
-                                  <button key={asset.id} type="button" onClick={() => void openIdeaAsset(asset)} className="px-2 py-1 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1">
-                                    <Paperclip size={12} />{asset.name}
+                                  <button
+                                    key={asset.id}
+                                    type="button"
+                                    onClick={() => void openIdeaAsset(asset)}
+                                    className="px-3 py-2 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                                  >
+                                    <Paperclip size={12} />
+                                    <span className="max-w-[150px] truncate">{asset.name}</span>
                                   </button>
                                 ))}
                               </div>
                             </div>
                           )}
                           {photos.length > 0 && (
-                            <div className="space-y-1">
-                              <p className="text-xs uppercase text-zinc-500">Fotos</p>
+                            <div className="space-y-2 pt-2 border-t border-zinc-100">
+                              <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
                               <div className="flex flex-wrap gap-2">
                                 {photos.map((asset) => (
-                                  <button key={asset.id} type="button" onClick={() => void openIdeaAsset(asset)} className="px-2 py-1 rounded-lg border border-zinc-200 text-xs">
-                                    {asset.name}
+                                  <button
+                                    key={asset.id}
+                                    type="button"
+                                    onClick={() => void openIdeaAsset(asset)}
+                                    className="px-3 py-2 rounded-lg border border-zinc-200 text-xs hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                                  >
+                                    <span className="max-w-[150px] truncate">{asset.name}</span>
                                   </button>
                                 ))}
                               </div>
