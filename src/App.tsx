@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Bus, Calendar, DollarSign, FileText, Hotel, LayoutDashboard, LogOut, MapPin, Plane, Plus, Shield, Trash2, UserPlus, Users } from "lucide-react";
+import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboard, LogOut, MapPin, Plane, Plus, Shield, Trash2, UserPlus, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -286,11 +286,16 @@ function InvitePage({ session }: { session: Session | null }) {
 
 function TripDashboard({ session }: { session: Session }) {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [tripOptions, setTripOptions] = useState<TripSummary[]>([]);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [invites, setInvites] = useState<TripInvite[]>([]);
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "documents" | "people">("itinerary");
   const [loading, setLoading] = useState(true);
+  const [updatingTrip, setUpdatingTrip] = useState(false);
+  const [editTripName, setEditTripName] = useState("");
+  const [editTripDestination, setEditTripDestination] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [pairMemberId, setPairMemberId] = useState("");
@@ -301,6 +306,15 @@ function TripDashboard({ session }: { session: Session }) {
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
   const isAdmin = currentMember?.role === "admin";
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+
+  const loadTripOptions = async () => {
+    const { data, error } = await supabase.from("trips").select("id,name,destination,created_at").order("created_at", { ascending: false });
+    if (error) {
+      setTripOptions([]);
+      return;
+    }
+    setTripOptions((data || []) as TripSummary[]);
+  };
 
   const loadTrip = async (tripId: string) => {
     setLoading(true);
@@ -354,6 +368,10 @@ function TripDashboard({ session }: { session: Session }) {
   };
 
   useEffect(() => {
+    void loadTripOptions();
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
     void loadTrip(id);
     const channel = supabase
@@ -369,6 +387,11 @@ function TripDashboard({ session }: { session: Session }) {
       void supabase.removeChannel(channel);
     };
   }, [id]);
+
+  useEffect(() => {
+    setEditTripName(trip?.name || "");
+    setEditTripDestination(trip?.destination || "");
+  }, [trip?.id, trip?.name, trip?.destination]);
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -470,6 +493,43 @@ function TripDashboard({ session }: { session: Session }) {
     await loadTrip(id);
   };
 
+  const updateTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !trip || !isAdmin || updatingTrip) return;
+    const name = editTripName.trim();
+    const destination = editTripDestination.trim();
+    if (!name || !destination) return;
+
+    setUpdatingTrip(true);
+    const { error } = await supabase.from("trips").update({ name, destination }).eq("id", id);
+    setUpdatingTrip(false);
+
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+
+    await Promise.all([loadTrip(id), loadTripOptions()]);
+  };
+
+  const deleteCurrentTrip = async () => {
+    if (!id || !trip || !isAdmin || updatingTrip) return;
+    const confirmed = window.confirm(`Excluir a viagem "${trip.name}"? Esta acao nao pode ser desfeita.`);
+    if (!confirmed) return;
+
+    setUpdatingTrip(true);
+    const { error } = await supabase.from("trips").delete().eq("id", id);
+    setUpdatingTrip(false);
+
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+
+    await loadTripOptions();
+    navigate("/");
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem nao encontrada ou sem permissao.</div>;
 
@@ -477,12 +537,66 @@ function TripDashboard({ session }: { session: Session }) {
     <div className="min-h-screen bg-[#F8F9FA] flex">
       <aside className="w-64 border-r border-zinc-200 bg-white p-6 hidden md:flex flex-col gap-8">
         <div className="flex items-center gap-2 px-2"><Plane size={18} /><span className="font-bold text-xl">Voyage</span></div>
-        <nav className="flex-1 space-y-2">
+        <nav className="space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Itinerario" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
           <SidebarItem icon={Users} label="Pessoas" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
         </nav>
+        <div className="flex-1 flex flex-col min-h-0">
+          <p className="text-xs uppercase font-bold text-zinc-400 mb-2 px-1">Viagens</p>
+          <div className="space-y-2 overflow-y-auto pr-1">
+            {tripOptions.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => navigate(`/trip/${option.id}`)}
+                className={cn(
+                  "w-full text-left rounded-xl border px-3 py-2",
+                  option.id === id ? "border-black bg-zinc-100" : "border-zinc-200 hover:border-zinc-400",
+                )}
+              >
+                <p className="text-sm font-semibold truncate">{option.name}</p>
+                <p className="text-xs text-zinc-500 truncate">{option.destination || "Sem destino"}</p>
+              </button>
+            ))}
+            {tripOptions.length === 0 && <p className="text-xs text-zinc-400 px-1">Nenhuma viagem.</p>}
+          </div>
+        </div>
+        {isAdmin && trip && (
+          <form onSubmit={updateTrip} className="space-y-2 border-t border-zinc-200 pt-4">
+            <p className="text-xs uppercase font-bold text-zinc-400 px-1">Editar viagem</p>
+            <input
+              value={editTripName}
+              onChange={(e) => setEditTripName(e.target.value)}
+              placeholder="Nome da viagem"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              required
+            />
+            <input
+              value={editTripDestination}
+              onChange={(e) => setEditTripDestination(e.target.value)}
+              placeholder="Destino"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              required
+            />
+            <button
+              disabled={updatingTrip}
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-zinc-700 flex items-center justify-center gap-2 text-sm"
+            >
+              <FilePenLine size={16} />
+              {updatingTrip ? "Salvando..." : "Salvar edicao"}
+            </button>
+            <button
+              type="button"
+              onClick={deleteCurrentTrip}
+              disabled={updatingTrip}
+              className="w-full px-3 py-2 rounded-xl border border-red-200 text-red-600 flex items-center justify-center gap-2 text-sm"
+            >
+              <Trash2 size={16} />
+              Excluir viagem
+            </button>
+          </form>
+        )}
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 justify-center"><LogOut size={16} />Sair</button>
       </aside>
 
