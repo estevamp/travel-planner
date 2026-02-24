@@ -1062,12 +1062,12 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   return (
     <div className="min-h-screen flex" style={themedStyles}>
       <aside className="w-64 border-r p-6 hidden md:flex flex-col gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
-        <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 px-2 text-left">
+        <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
           <Plane size={18} />
           <span className="font-bold text-xl">Voyage</span>
         </button>
         <nav className="space-y-2">
-          <SidebarItem icon={Calendar} label="Viagens" active onClick={() => setActiveTab("itinerary")} />
+          <SidebarItem icon={Calendar} label="Viagens" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={LayoutDashboard} label="Itinerario" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
@@ -1733,7 +1733,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
         <div className="grid grid-cols-6">
-          <button type="button" onClick={() => setActiveTab("itinerary")} className="flex flex-col items-center justify-center gap-1 py-2 text-[var(--sidebar-active-bg)] font-semibold">
+          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <Plane size={16} />
             <span className="text-[11px] font-medium">Viagens</span>
           </button>
