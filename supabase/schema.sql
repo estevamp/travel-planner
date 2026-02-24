@@ -78,6 +78,34 @@ create table if not exists public.documents (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.ideas (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references public.trips(id) on delete cascade,
+  created_by_member_id uuid references public.trip_members(id) on delete cascade,
+  title text not null,
+  maps_url text,
+  estimated_amount numeric(12,2) not null default 0 check (estimated_amount >= 0),
+  visibility text not null default 'public' check (visibility in ('public', 'private')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.idea_links (
+  id uuid primary key default gen_random_uuid(),
+  idea_id uuid not null references public.ideas(id) on delete cascade,
+  label text,
+  url text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.idea_assets (
+  id uuid primary key default gen_random_uuid(),
+  idea_id uuid not null references public.ideas(id) on delete cascade,
+  name text not null,
+  url text not null,
+  asset_type text not null check (asset_type in ('attachment', 'photo')),
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.trip_budgets (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips(id) on delete cascade,
@@ -100,6 +128,10 @@ alter table public.expenses add column if not exists created_by_member_id uuid r
 alter table public.expenses add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
 alter table public.expenses add column if not exists itinerary_item_id uuid references public.itinerary(id) on delete cascade;
 alter table public.documents add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
+alter table public.ideas add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
+alter table public.ideas add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
+alter table public.ideas add column if not exists maps_url text;
+alter table public.ideas add column if not exists estimated_amount numeric(12,2) not null default 0;
 
 alter table public.trip_members
   drop constraint if exists trip_members_spouse_member_id_fkey,
@@ -131,6 +163,9 @@ create index if not exists idx_itinerary_trip_id on public.itinerary(trip_id);
 create index if not exists idx_expenses_trip_id on public.expenses(trip_id);
 create index if not exists idx_expenses_itinerary_item_id on public.expenses(itinerary_item_id);
 create index if not exists idx_documents_trip_id on public.documents(trip_id);
+create index if not exists idx_ideas_trip_id on public.ideas(trip_id);
+create index if not exists idx_idea_links_idea_id on public.idea_links(idea_id);
+create index if not exists idx_idea_assets_idea_id on public.idea_assets(idea_id);
 create index if not exists idx_trip_budgets_trip_id on public.trip_budgets(trip_id);
 create index if not exists idx_trip_budgets_owner_user_id on public.trip_budgets(owner_user_id);
 
@@ -781,6 +816,9 @@ alter table public.trip_invites enable row level security;
 alter table public.itinerary enable row level security;
 alter table public.expenses enable row level security;
 alter table public.documents enable row level security;
+alter table public.ideas enable row level security;
+alter table public.idea_links enable row level security;
+alter table public.idea_assets enable row level security;
 alter table public.trip_budgets enable row level security;
 
 drop policy if exists trips_public_rw on public.trips;
@@ -870,6 +908,151 @@ create policy expenses_delete_owner_or_admin on public.expenses
 for delete using (
   created_by_member_id = public.current_member_id(trip_id)
   or public.is_trip_admin(trip_id)
+);
+
+drop policy if exists ideas_select_visibility on public.ideas;
+drop policy if exists ideas_insert_member on public.ideas;
+drop policy if exists ideas_update_owner_or_admin on public.ideas;
+drop policy if exists ideas_delete_owner_or_admin on public.ideas;
+create policy ideas_select_visibility on public.ideas
+for select using (public.can_view_scoped_data(trip_id, created_by_member_id, visibility));
+create policy ideas_insert_member on public.ideas
+for insert with check (created_by_member_id = public.current_member_id(trip_id));
+create policy ideas_update_owner_or_admin on public.ideas
+for update using (
+  created_by_member_id = public.current_member_id(trip_id)
+  or public.is_trip_admin(trip_id)
+)
+with check (
+  created_by_member_id = public.current_member_id(trip_id)
+  or public.is_trip_admin(trip_id)
+);
+create policy ideas_delete_owner_or_admin on public.ideas
+for delete using (
+  created_by_member_id = public.current_member_id(trip_id)
+  or public.is_trip_admin(trip_id)
+);
+
+drop policy if exists idea_links_select_visibility on public.idea_links;
+drop policy if exists idea_links_insert_owner_or_admin on public.idea_links;
+drop policy if exists idea_links_update_owner_or_admin on public.idea_links;
+drop policy if exists idea_links_delete_owner_or_admin on public.idea_links;
+create policy idea_links_select_visibility on public.idea_links
+for select using (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and public.can_view_scoped_data(i.trip_id, i.created_by_member_id, i.visibility)
+  )
+);
+create policy idea_links_insert_owner_or_admin on public.idea_links
+for insert with check (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+create policy idea_links_update_owner_or_admin on public.idea_links
+for update using (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+create policy idea_links_delete_owner_or_admin on public.idea_links
+for delete using (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+
+drop policy if exists idea_assets_select_visibility on public.idea_assets;
+drop policy if exists idea_assets_insert_owner_or_admin on public.idea_assets;
+drop policy if exists idea_assets_update_owner_or_admin on public.idea_assets;
+drop policy if exists idea_assets_delete_owner_or_admin on public.idea_assets;
+create policy idea_assets_select_visibility on public.idea_assets
+for select using (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and public.can_view_scoped_data(i.trip_id, i.created_by_member_id, i.visibility)
+  )
+);
+create policy idea_assets_insert_owner_or_admin on public.idea_assets
+for insert with check (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+create policy idea_assets_update_owner_or_admin on public.idea_assets
+for update using (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+create policy idea_assets_delete_owner_or_admin on public.idea_assets
+for delete using (
+  exists (
+    select 1
+    from public.ideas i
+    where i.id = idea_id
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
 );
 
 drop policy if exists documents_select_owner_or_spouse on public.documents;
@@ -974,6 +1157,86 @@ for delete using (
   and public.current_member_id(split_part(name, '/', 1)::uuid) = split_part(name, '/', 2)::uuid
 );
 
+drop policy if exists ideas_bucket_select on storage.objects;
+drop policy if exists ideas_bucket_insert on storage.objects;
+drop policy if exists ideas_bucket_update on storage.objects;
+drop policy if exists ideas_bucket_delete on storage.objects;
+
+create policy ideas_bucket_select on storage.objects
+for select using (
+  bucket_id = 'travel-documents'
+  and split_part(name, '/', 1) = 'ideas'
+  and split_part(name, '/', 2) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 3) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 4) ~* '^[0-9a-f-]{36}$'
+  and exists (
+    select 1
+    from public.idea_assets ia
+    join public.ideas i on i.id = ia.idea_id
+    where ia.url = name
+      and i.id::text = split_part(name, '/', 4)
+      and public.can_view_scoped_data(i.trip_id, i.created_by_member_id, i.visibility)
+  )
+);
+
+create policy ideas_bucket_insert on storage.objects
+for insert with check (
+  bucket_id = 'travel-documents'
+  and split_part(name, '/', 1) = 'ideas'
+  and split_part(name, '/', 2) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 3) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 4) ~* '^[0-9a-f-]{36}$'
+  and public.current_member_id(split_part(name, '/', 2)::uuid) = split_part(name, '/', 3)::uuid
+  and exists (
+    select 1
+    from public.ideas i
+    where i.id::text = split_part(name, '/', 4)
+      and i.trip_id::text = split_part(name, '/', 2)
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+
+create policy ideas_bucket_update on storage.objects
+for update using (
+  bucket_id = 'travel-documents'
+  and split_part(name, '/', 1) = 'ideas'
+  and split_part(name, '/', 2) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 3) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 4) ~* '^[0-9a-f-]{36}$'
+  and public.current_member_id(split_part(name, '/', 2)::uuid) = split_part(name, '/', 3)::uuid
+)
+with check (
+  bucket_id = 'travel-documents'
+  and split_part(name, '/', 1) = 'ideas'
+  and split_part(name, '/', 2) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 3) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 4) ~* '^[0-9a-f-]{36}$'
+  and public.current_member_id(split_part(name, '/', 2)::uuid) = split_part(name, '/', 3)::uuid
+);
+
+create policy ideas_bucket_delete on storage.objects
+for delete using (
+  bucket_id = 'travel-documents'
+  and split_part(name, '/', 1) = 'ideas'
+  and split_part(name, '/', 2) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 3) ~* '^[0-9a-f-]{36}$'
+  and split_part(name, '/', 4) ~* '^[0-9a-f-]{36}$'
+  and public.current_member_id(split_part(name, '/', 2)::uuid) = split_part(name, '/', 3)::uuid
+  and exists (
+    select 1
+    from public.ideas i
+    where i.id::text = split_part(name, '/', 4)
+      and i.trip_id::text = split_part(name, '/', 2)
+      and (
+        i.created_by_member_id = public.current_member_id(i.trip_id)
+        or public.is_trip_admin(i.trip_id)
+      )
+  )
+);
+
 revoke all on function public.sync_my_profile() from public;
 revoke all on function public.current_member_id(uuid) from public;
 revoke all on function public.is_trip_member(uuid) from public;
@@ -1025,6 +1288,27 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'documents'
   ) then
     alter publication supabase_realtime add table public.documents;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'ideas'
+  ) then
+    alter publication supabase_realtime add table public.ideas;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'idea_links'
+  ) then
+    alter publication supabase_realtime add table public.idea_links;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'idea_assets'
+  ) then
+    alter publication supabase_realtime add table public.idea_assets;
   end if;
 
   if not exists (

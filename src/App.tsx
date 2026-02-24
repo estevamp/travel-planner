@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboard, LogOut, MapPin, Moon, Palette, Plane, Plus, Settings, Shield, Sun, Trash2, UserPlus, Users } from "lucide-react";
+import { Bus, Calendar, DollarSign, FilePenLine, FileText, Hotel, LayoutDashboard, Lightbulb, Link as LinkIcon, Lock, LogOut, MapPin, Moon, Palette, Paperclip, Plane, Plus, Settings, Shield, Sun, Trash2, UserPlus, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -67,6 +67,34 @@ interface DocumentItem {
   url: string;
 }
 
+interface Idea {
+  id: string;
+  trip_id: string;
+  created_by_member_id: string;
+  title: string;
+  maps_url: string | null;
+  estimated_amount: number;
+  visibility: Visibility;
+  created_at: string;
+}
+
+interface IdeaLink {
+  id: string;
+  idea_id: string;
+  label: string | null;
+  url: string;
+  created_at: string;
+}
+
+interface IdeaAsset {
+  id: string;
+  idea_id: string;
+  name: string;
+  url: string;
+  asset_type: "attachment" | "photo";
+  created_at: string;
+}
+
 interface TripMember {
   id: string;
   trip_id: string;
@@ -92,6 +120,9 @@ interface Trip {
   itinerary: ItineraryItem[];
   expenses: Expense[];
   documents: DocumentItem[];
+  ideas: Idea[];
+  idea_links: IdeaLink[];
+  idea_assets: IdeaAsset[];
 }
 
 interface TripSummary {
@@ -462,7 +493,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const [tripOptions, setTripOptions] = useState<TripSummary[]>([]);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [invites, setInvites] = useState<TripInvite[]>([]);
-  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "documents" | "people" | "settings">("itinerary");
+  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
   const [loading, setLoading] = useState(true);
   const [updatingTrip, setUpdatingTrip] = useState(false);
   const [editTripName, setEditTripName] = useState("");
@@ -506,8 +537,23 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     amount: "0",
     visibility: "public",
   });
+  const [ideaLinksDraft, setIdeaLinksDraft] = useState<string[]>([""]);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
+  const [ideaDraft, setIdeaDraft] = useState<{
+    title: string;
+    maps_url: string;
+    estimated_amount: string;
+    visibility: Visibility;
+  }>({
+    title: "",
+    maps_url: "",
+    estimated_amount: "0",
+    visibility: "public",
+  });
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const ideaAttachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const ideaPhotoInputRef = useRef<HTMLInputElement | null>(null);
   const settingsAutosaveReadyRef = useRef(false);
   const spouseAutosaveReadyRef = useRef(false);
   const budgetAutosaveReadyRef = useRef(false);
@@ -517,6 +563,24 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const isAdmin = currentMember?.role === "admin";
   const memberByUserId = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const themedStyles = useMemo(() => getThemeStyles(settings), [settings]);
+  const ideaLinksByIdeaId = useMemo(() => {
+    const map = new Map<string, IdeaLink[]>();
+    for (const link of trip?.idea_links || []) {
+      const list = map.get(link.idea_id) || [];
+      list.push(link);
+      map.set(link.idea_id, list);
+    }
+    return map;
+  }, [trip?.idea_links]);
+  const ideaAssetsByIdeaId = useMemo(() => {
+    const map = new Map<string, IdeaAsset[]>();
+    for (const asset of trip?.idea_assets || []) {
+      const list = map.get(asset.idea_id) || [];
+      list.push(asset);
+      map.set(asset.idea_id, list);
+    }
+    return map;
+  }, [trip?.idea_assets]);
 
   const loadTripOptions = async () => {
     const { data, error } = await supabase.from("trips").select("id,name,destination,created_at").order("created_at", { ascending: false });
@@ -555,16 +619,17 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
   const loadTrip = async (tripId: string) => {
     setLoading(true);
-    const [tripRes, membersRes, itineraryRes, expensesRes, docsRes] = await Promise.all([
+    const [tripRes, membersRes, itineraryRes, expensesRes, docsRes, ideasRes] = await Promise.all([
       supabase.from("trips").select("*").eq("id", tripId).single(),
       supabase.from("trip_members").select("id,trip_id,user_id,role,display_name").eq("trip_id", tripId),
       supabase.from("itinerary").select("*").eq("trip_id", tripId).order("start_time", { ascending: true }),
       supabase.from("expenses").select("*").eq("trip_id", tripId).order("date", { ascending: true }),
       supabase.from("documents").select("*").eq("trip_id", tripId),
+      supabase.from("ideas").select("*").eq("trip_id", tripId).order("created_at", { ascending: false }),
     ]);
 
-    if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || !tripRes.data) {
-      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error);
+    if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || !tripRes.data) {
+      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error);
       setTrip(null);
       setMembers([]);
       setInvites([]);
@@ -608,11 +673,34 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       setInvites([]);
     }
 
+    const ideaIds = (ideasRes.data || []).map((idea) => idea.id as string);
+    let ideaLinksData: IdeaLink[] = [];
+    let ideaAssetsData: IdeaAsset[] = [];
+    if (ideaIds.length > 0) {
+      const [ideaLinksRes, ideaAssetsRes] = await Promise.all([
+        supabase.from("idea_links").select("*").in("idea_id", ideaIds),
+        supabase.from("idea_assets").select("*").in("idea_id", ideaIds),
+      ]);
+      if (ideaLinksRes.error || ideaAssetsRes.error) {
+        console.error(ideaLinksRes.error || ideaAssetsRes.error);
+        setTrip(null);
+        setMembers([]);
+        setInvites([]);
+        setLoading(false);
+        return;
+      }
+      ideaLinksData = (ideaLinksRes.data || []) as IdeaLink[];
+      ideaAssetsData = (ideaAssetsRes.data || []) as IdeaAsset[];
+    }
+
     setTrip({
-      ...(tripRes.data as Omit<Trip, "itinerary" | "expenses" | "documents">),
+      ...(tripRes.data as Omit<Trip, "itinerary" | "expenses" | "documents" | "ideas" | "idea_links" | "idea_assets">),
       itinerary: (itineraryRes.data || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })) as ItineraryItem[],
       expenses: (expensesRes.data || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })) as Expense[],
       documents: (docsRes.data || []) as DocumentItem[],
+      ideas: (ideasRes.data || []).map((item) => ({ ...item, estimated_amount: Number(item.estimated_amount) || 0 })) as Idea[],
+      idea_links: ideaLinksData,
+      idea_assets: ideaAssetsData,
     });
 
     setLoading(false);
@@ -630,6 +718,9 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       .channel(`trip-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
+      .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
+      .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () => void loadTrip(id))
+      .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_invites", filter: `trip_id=eq.${id}` }, () => void loadTrip(id))
@@ -897,6 +988,132 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (error) alert(getErrorMessage(error));
   };
 
+  const createIdea = async (form: FormData) => {
+    if (!id || !currentMember) return;
+    const title = ((form.get("title") as string) || "").trim();
+    if (!title) return;
+    const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
+    const estimatedAmount = Math.max(0, parseFloat((form.get("estimated_amount") as string) || "0") || 0);
+    const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
+    const links = ideaLinksDraft.map((link) => link.trim()).filter(Boolean);
+    const attachmentFiles = Array.from((ideaAttachmentInputRef.current?.files || []) as FileList);
+    const photoFiles = Array.from((ideaPhotoInputRef.current?.files || []) as FileList);
+    const ideaId = crypto.randomUUID();
+    const uploadedPaths: string[] = [];
+    let ideaInserted = false;
+
+    try {
+      const { error: ideaError } = await supabase.from("ideas").insert({
+        id: ideaId,
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        title,
+        maps_url: mapsUrl,
+        estimated_amount: estimatedAmount,
+        visibility,
+      });
+      if (ideaError) throw ideaError;
+      ideaInserted = true;
+
+      if (links.length > 0) {
+        const { error: linksError } = await supabase.from("idea_links").insert(
+          links.map((url) => ({
+            id: crypto.randomUUID(),
+            idea_id: ideaId,
+            label: null,
+            url,
+          })),
+        );
+        if (linksError) throw linksError;
+      }
+
+      const nextAssets: Array<{ id: string; idea_id: string; name: string; url: string; asset_type: "attachment" | "photo" }> = [];
+      const allFiles: Array<{ file: File; type: "attachment" | "photo" }> = [
+        ...attachmentFiles.map((file) => ({ file, type: "attachment" as const })),
+        ...photoFiles.map((file) => ({ file, type: "photo" as const })),
+      ];
+      for (const item of allFiles) {
+        const safeName = item.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `ideas/${id}/${currentMember.id}/${ideaId}/${crypto.randomUUID()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(path, item.file, { contentType: item.file.type || undefined, upsert: false });
+        if (uploadError) throw uploadError;
+        uploadedPaths.push(path);
+        nextAssets.push({ id: crypto.randomUUID(), idea_id: ideaId, name: item.file.name, url: path, asset_type: item.type });
+      }
+      if (nextAssets.length > 0) {
+        const { error: assetsError } = await supabase.from("idea_assets").insert(nextAssets);
+        if (assetsError) throw assetsError;
+      }
+
+      setIdeaLinksDraft([""]);
+      if (ideaAttachmentInputRef.current) ideaAttachmentInputRef.current.value = "";
+      if (ideaPhotoInputRef.current) ideaPhotoInputRef.current.value = "";
+    } catch (error) {
+      if (uploadedPaths.length > 0) {
+        const { error: cleanupError } = await supabase.storage.from(DOCS_BUCKET).remove(uploadedPaths);
+        if (cleanupError) console.error(cleanupError);
+      }
+      if (ideaInserted) {
+        const { error: cleanupIdeaError } = await supabase.from("ideas").delete().eq("id", ideaId);
+        if (cleanupIdeaError) console.error(cleanupIdeaError);
+      }
+      alert(getErrorMessage(error));
+    }
+  };
+
+  const startEditIdea = (idea: Idea) => {
+    setEditingIdeaId(idea.id);
+    setIdeaDraft({
+      title: idea.title,
+      maps_url: idea.maps_url || "",
+      estimated_amount: String(idea.estimated_amount || 0),
+      visibility: idea.visibility,
+    });
+  };
+
+  const saveIdeaEdit = async (ideaId: string) => {
+    if (!editingIdeaId || editingIdeaId !== ideaId) return;
+    const title = ideaDraft.title.trim();
+    if (!title) return;
+    const { error } = await supabase
+      .from("ideas")
+      .update({
+        title,
+        maps_url: ideaDraft.maps_url.trim() || null,
+        estimated_amount: Math.max(0, parseFloat(ideaDraft.estimated_amount) || 0),
+        visibility: ideaDraft.visibility,
+      })
+      .eq("id", ideaId);
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+    setEditingIdeaId(null);
+  };
+
+  const openIdeaAsset = async (asset: IdeaAsset) => {
+    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(asset.url, 60);
+    if (error || !data) {
+      alert(getErrorMessage(error));
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const deleteIdea = async (idea: Idea) => {
+    const assets = ideaAssetsByIdeaId.get(idea.id) || [];
+    const paths = assets.map((asset) => asset.url);
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove(paths);
+      if (storageError) {
+        alert(getErrorMessage(storageError));
+        return;
+      }
+    }
+    const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
+    if (error) alert(getErrorMessage(error));
+  };
+
   const startEditItinerary = (item: ItineraryItem) => {
     setEditingItineraryId(item.id);
     setItineraryDraft({
@@ -1151,6 +1368,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         <nav className="space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Itinerario" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
+          <SidebarItem icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
           <SidebarItem icon={Users} label="Pessoas" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
           <SidebarItem icon={Settings} label="Configuracoes" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
@@ -1446,7 +1664,16 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                             <td className="px-4 py-3"><p className="font-medium">{exp.description}</p><p className="text-xs text-zinc-400">{exp.date}</p></td>
                             <td className="px-4 py-3 text-xs uppercase">{exp.category}</td>
                             <td className="px-4 py-3 font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</td>
-                            <td className="px-4 py-3 text-xs uppercase">{exp.visibility}</td>
+                            <td className="px-4 py-3 text-xs uppercase">
+                              {exp.visibility === "private" ? (
+                                <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
+                                  <Lock size={12} />
+                                  Privado
+                                </span>
+                              ) : (
+                                <span>Publico</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <button type="button" onClick={() => startEditExpense(exp)} className="text-zinc-400 hover:text-zinc-700">
@@ -1509,6 +1736,160 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   </>
                 )}
               </Card>
+            </motion.div>
+          )}
+          {activeTab === "ideas" && (
+            <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <Card>
+                <h3 className="font-bold mb-4">Adicionar ideia</h3>
+                <form
+                  className="space-y-3"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await createIdea(new FormData(e.currentTarget));
+                    (e.target as HTMLFormElement).reset();
+                  }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input name="title" required placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input name="estimated_amount" required type="number" min="0" step="0.01" placeholder="Valor estimado" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar privado (voce + conjuge)</label>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">URLs</p>
+                    {ideaLinksDraft.map((value, index) => (
+                      <div key={`idea-link-${index}`} className="flex items-center gap-2">
+                        <input
+                          value={value}
+                          onChange={(e) => setIdeaLinksDraft((current) => current.map((entry, i) => (i === index ? e.target.value : entry)))}
+                          placeholder="https://..."
+                          className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                        />
+                        {ideaLinksDraft.length > 1 && (
+                          <button type="button" className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold" onClick={() => setIdeaLinksDraft((current) => current.filter((_, i) => i !== index))}>
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setIdeaLinksDraft((current) => [...current, ""])} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">
+                      Adicionar URL
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <span className="text-xs text-zinc-500">Anexos</span>
+                      <input ref={ideaAttachmentInputRef} type="file" multiple className="block w-full text-sm" />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-zinc-500">Fotos</span>
+                      <input ref={ideaPhotoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple className="block w-full text-sm" />
+                    </label>
+                  </div>
+                  <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Salvar ideia</button>
+                </form>
+              </Card>
+
+              <div className="space-y-3">
+                {trip.ideas.length === 0 && <Card><p className="text-sm text-zinc-500">Nenhuma ideia cadastrada.</p></Card>}
+                {trip.ideas.map((idea) => {
+                  const links = ideaLinksByIdeaId.get(idea.id) || [];
+                  const assets = ideaAssetsByIdeaId.get(idea.id) || [];
+                  const attachments = assets.filter((asset) => asset.asset_type === "attachment");
+                  const photos = assets.filter((asset) => asset.asset_type === "photo");
+                  const canManage = currentMember?.id === idea.created_by_member_id || isAdmin;
+                  return (
+                    <Card key={idea.id} className="space-y-3">
+                      {editingIdeaId === idea.id ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input value={ideaDraft.title} onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))} placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                            <input value={ideaDraft.maps_url} onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))} placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                            <input value={ideaDraft.estimated_amount} onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))} type="number" min="0" step="0.01" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                            <label className="flex items-center gap-2 text-sm">
+                              <input type="checkbox" checked={ideaDraft.visibility === "private"} onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))} />
+                              Privado
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => void saveIdeaEdit(idea.id)} className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold">Salvar</button>
+                            <button type="button" onClick={() => setEditingIdeaId(null)} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold flex items-center gap-2">
+                                {idea.title}
+                                {idea.visibility === "private" && <Lock size={14} className="text-orange-600" title="Privado" />}
+                              </p>
+                              <p className="text-sm text-zinc-500">Estimado: {formatCurrency(idea.estimated_amount, settings.default_currency)}</p>
+                              {idea.maps_url && (
+                                <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-1">
+                                  <MapPin size={12} />Google Maps
+                                </a>
+                              )}
+                            </div>
+                            {canManage && (
+                              <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => startEditIdea(idea)} className="text-zinc-400 hover:text-zinc-700"><FilePenLine size={16} /></button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
+                                    if (!confirmed) return;
+                                    await deleteIdea(idea);
+                                  }}
+                                  className="text-zinc-400 hover:text-red-500"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {links.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase text-zinc-500">URLs</p>
+                              {links.map((link) => (
+                                <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="block text-sm text-blue-600 break-all">
+                                  <span className="inline-flex items-center gap-1"><LinkIcon size={12} />{link.label || link.url}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                          {attachments.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase text-zinc-500">Anexos</p>
+                              <div className="flex flex-wrap gap-2">
+                                {attachments.map((asset) => (
+                                  <button key={asset.id} type="button" onClick={() => void openIdeaAsset(asset)} className="px-2 py-1 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1">
+                                    <Paperclip size={12} />{asset.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {photos.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase text-zinc-500">Fotos</p>
+                              <div className="flex flex-wrap gap-2">
+                                {photos.map((asset) => (
+                                  <button key={asset.id} type="button" onClick={() => void openIdeaAsset(asset)} className="px-2 py-1 rounded-lg border border-zinc-200 text-xs">
+                                    {asset.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
             </motion.div>
           )}
           {activeTab === "documents" && (
@@ -1801,7 +2182,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <LayoutDashboard size={16} />
             <span className="text-[11px] font-medium">Itinerario</span>
@@ -1809,6 +2190,10 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <DollarSign size={16} />
             <span className="text-[11px] font-medium">Despesas</span>
+          </button>
+          <button type="button" onClick={() => setActiveTab("ideas")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "ideas" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
+            <Lightbulb size={16} />
+            <span className="text-[11px] font-medium">Ideias</span>
           </button>
           <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "documents" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
             <FileText size={16} />
