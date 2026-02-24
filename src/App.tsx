@@ -1012,7 +1012,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                   checked={itineraryDraft.visibility === "private"}
                                   onChange={(e) => setItineraryDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
                                 />
-                                Marcar privado (voce + conjuge)
+                                Marcar como privado (você + cônjuge)
                               </label>
                               <div className="flex gap-2">
                                 <button
@@ -1043,7 +1043,10 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                               <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500">
                                 <span>{item.location || "Sem local"}</span>
                                 <span>{formatCurrency(item.amount, settings.default_currency)}</span>
-                                {item.visibility === "private" && <span className="font-bold uppercase text-orange-600">Privado</span>}
+                                {item.visibility === "private" && 
+                                <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
+                                  <Lock size={12} />
+                                </span>}
                               </div>
                             </>
                           )}
@@ -1108,7 +1111,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="amount" type="number" min="0" step="0.01" required placeholder="Valor" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar privado (voce + conjuge)</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                     <button className="w-full bg-black text-white py-2 rounded-xl text-sm font-bold">Adicionar</button>
                   </form>
                 </Card>
@@ -1132,7 +1135,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   <input name="category" placeholder="Categoria" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                   <input name="amount" required type="number" min="0" step="0.01" placeholder="Valor" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                   <button className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
-                  <label className="md:col-span-4 flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar privado (voce + conjuge)</label>
+                  <label className="md:col-span-4 flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                 </form>
               </Card>
 
@@ -1212,7 +1215,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                               {exp.visibility === "private" ? (
                                 <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
                                   <Lock size={12} />
-                                  Privado
                                 </span>
                               ) : (
                                 <span>Publico</span>
@@ -1298,7 +1300,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     <input name="title" required placeholder="Titulo" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                     <input name="estimated_amount" required type="number" min="0" step="0.01" placeholder="Valor estimado" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar privado (voce + conjuge)</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-semibold">URLs</p>
@@ -1353,7 +1355,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                             <input value={ideaDraft.estimated_amount} onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))} type="number" min="0" step="0.01" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
                             <label className="flex items-center gap-2 text-sm">
                               <input type="checkbox" checked={ideaDraft.visibility === "private"} onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))} />
-                              Privado
+                              <Lock size={12} />
                             </label>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1441,7 +1443,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
               <Card className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-200 bg-transparent cursor-pointer" onClick={() => documentInputRef.current?.click()}>
                 <Plus className="text-zinc-300 mb-2" size={32} />
                 <p className="text-sm font-medium text-zinc-400">Adicionar Documento</p>
-                <p className="text-xs text-zinc-300 mt-1">Privado: voce e conjuge</p>
+                <p className="text-xs text-zinc-300 mt-1">Privado</p>
               </Card>
               <input
                 ref={documentInputRef}
