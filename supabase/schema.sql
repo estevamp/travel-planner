@@ -156,6 +156,8 @@ create or replace function public.current_member_id(p_trip_id uuid)
 returns uuid
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select tm.id
   from public.trip_members tm
@@ -168,6 +170,8 @@ create or replace function public.is_trip_member(p_trip_id uuid)
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select exists (
     select 1
@@ -181,6 +185,8 @@ create or replace function public.is_trip_admin(p_trip_id uuid)
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select exists (
     select 1
@@ -195,6 +201,8 @@ create or replace function public.can_view_owner_data(p_trip_id uuid, p_owner_me
 returns boolean
 language plpgsql
 stable
+security definer
+set search_path = public
 as $$
 declare
   v_current_member uuid;
@@ -228,6 +236,8 @@ create or replace function public.can_view_scoped_data(p_trip_id uuid, p_owner_m
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select
     (
@@ -658,12 +668,22 @@ for delete using (
 );
 
 revoke all on function public.sync_my_profile() from public;
+revoke all on function public.current_member_id(uuid) from public;
+revoke all on function public.is_trip_member(uuid) from public;
+revoke all on function public.is_trip_admin(uuid) from public;
+revoke all on function public.can_view_owner_data(uuid, uuid) from public;
+revoke all on function public.can_view_scoped_data(uuid, uuid, text) from public;
 revoke all on function public.create_trip_with_admin(text, text, timestamptz, timestamptz) from public;
 revoke all on function public.create_trip_invite(uuid, text) from public;
 revoke all on function public.accept_trip_invite(text) from public;
 revoke all on function public.set_trip_spouse(uuid, uuid, uuid) from public;
 
 grant execute on function public.sync_my_profile() to authenticated;
+grant execute on function public.current_member_id(uuid) to authenticated;
+grant execute on function public.is_trip_member(uuid) to authenticated;
+grant execute on function public.is_trip_admin(uuid) to authenticated;
+grant execute on function public.can_view_owner_data(uuid, uuid) to authenticated;
+grant execute on function public.can_view_scoped_data(uuid, uuid, text) to authenticated;
 grant execute on function public.create_trip_with_admin(text, text, timestamptz, timestamptz) to authenticated;
 grant execute on function public.create_trip_invite(uuid, text) to authenticated;
 grant execute on function public.accept_trip_invite(text) to authenticated;

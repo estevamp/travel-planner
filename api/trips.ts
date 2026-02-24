@@ -21,11 +21,15 @@ export default async function handler(req: any, res: any) {
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return json(res, 500, {
       error: "Supabase env vars are missing. Set SUPABASE_URL/SUPABASE_ANON_KEY (or VITE_ equivalents).",
     });
+  }
+  if (!authHeader || !String(authHeader).toLowerCase().startsWith("bearer ")) {
+    return json(res, 401, { error: "Missing user Authorization bearer token" });
   }
 
   let payload: CreateTripInput = {};
@@ -46,19 +50,18 @@ export default async function handler(req: any, res: any) {
   const startDate = payload.start_date || payload.startDate || now;
   const endDate = payload.end_date || payload.endDate || startDate;
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/trips`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/create_trip_with_admin`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      Prefer: "return=representation",
+      Authorization: String(authHeader),
     },
     body: JSON.stringify({
-      name,
-      destination,
-      start_date: startDate,
-      end_date: endDate,
+      p_name: name,
+      p_destination: destination,
+      p_start: startDate,
+      p_end: endDate,
     }),
   });
 
@@ -67,12 +70,10 @@ export default async function handler(req: any, res: any) {
     return json(res, response.status, { error: "Failed to create trip", details: text });
   }
 
-  const rows = (await response.json()) as Array<{ id: string }>;
-  const trip = rows?.[0];
-
-  if (!trip) {
-    return json(res, 502, { error: "Supabase did not return the created trip" });
+  const tripId = (await response.json()) as string | null;
+  if (!tripId) {
+    return json(res, 502, { error: "Supabase did not return the created trip id" });
   }
 
-  return json(res, 201, trip);
+  return json(res, 201, { id: tripId });
 }
