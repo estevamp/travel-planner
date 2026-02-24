@@ -83,6 +83,7 @@ alter table public.itinerary add column if not exists created_by_member_id uuid 
 alter table public.itinerary add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
 alter table public.expenses add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
 alter table public.expenses add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
+alter table public.expenses add column if not exists itinerary_item_id uuid references public.itinerary(id) on delete cascade;
 alter table public.documents add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
 
 alter table public.trip_members
@@ -99,6 +100,7 @@ create index if not exists idx_trip_members_user_id on public.trip_members(user_
 create index if not exists idx_trip_invites_trip_id on public.trip_invites(trip_id);
 create index if not exists idx_itinerary_trip_id on public.itinerary(trip_id);
 create index if not exists idx_expenses_trip_id on public.expenses(trip_id);
+create index if not exists idx_expenses_itinerary_item_id on public.expenses(itinerary_item_id);
 create index if not exists idx_documents_trip_id on public.documents(trip_id);
 
 create or replace function public.handle_new_user_profile()

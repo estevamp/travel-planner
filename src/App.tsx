@@ -35,6 +35,7 @@ interface Expense {
   id: string;
   trip_id: string;
   created_by_member_id: string;
+  itinerary_item_id?: string | null;
   description: string;
   amount: number;
   currency: string;
@@ -444,18 +445,100 @@ function TripDashboard({ session }: { session: Session }) {
       reader.readAsDataURL(file);
     });
 
+  const findLegacyItineraryExpenseId = async (item: Pick<ItineraryItem, "trip_id" | "created_by_member_id" | "title">) => {
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("id")
+      .eq("trip_id", item.trip_id)
+      .eq("created_by_member_id", item.created_by_member_id)
+      .eq("category", "itinerary")
+      .eq("description", item.title)
+      .is("itinerary_item_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error(error);
+      return null;
+    }
+
+    return data?.[0]?.id || null;
+  };
+
+  const upsertItineraryExpense = async (itemId: string, sourceItem: ItineraryItem, nextData: { title: string; amount: number; visibility: Visibility }) => {
+    const { data: linkedData, error: linkedError } = await supabase
+      .from("expenses")
+      .select("id")
+      .eq("trip_id", sourceItem.trip_id)
+      .eq("itinerary_item_id", itemId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (linkedError) console.error(linkedError);
+
+    const linkedExpenseId = linkedData?.[0]?.id || null;
+    const legacyExpenseId = linkedExpenseId ? null : await findLegacyItineraryExpenseId(sourceItem);
+    const targetExpenseId = linkedExpenseId || legacyExpenseId;
+
+    if (targetExpenseId) {
+      const { error: updateError } = await supabase
+        .from("expenses")
+        .update({
+          description: nextData.title,
+          amount: nextData.amount,
+          visibility: nextData.visibility,
+          category: "itinerary",
+          itinerary_item_id: itemId,
+        })
+        .eq("id", targetExpenseId);
+      if (updateError) console.error(updateError);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("expenses").insert({
+      id: crypto.randomUUID(),
+      trip_id: sourceItem.trip_id,
+      created_by_member_id: sourceItem.created_by_member_id,
+      itinerary_item_id: itemId,
+      description: nextData.title,
+      amount: nextData.amount,
+      currency: "BRL",
+      category: "itinerary",
+      visibility: nextData.visibility,
+      date: new Date().toISOString().split("T")[0],
+    });
+    if (insertError) console.error(insertError);
+  };
+
+  const removeItineraryExpense = async (itemId: string, sourceItem: ItineraryItem) => {
+    const { error: linkedDeleteError } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("trip_id", sourceItem.trip_id)
+      .eq("itinerary_item_id", itemId);
+    if (linkedDeleteError) console.error(linkedDeleteError);
+
+    const legacyExpenseId = await findLegacyItineraryExpenseId(sourceItem);
+    if (!legacyExpenseId) return;
+
+    const { error: legacyDeleteError } = await supabase.from("expenses").delete().eq("id", legacyExpenseId);
+    if (legacyDeleteError) console.error(legacyDeleteError);
+  };
+
   const createItinerary = async (form: FormData) => {
     if (!id || !currentMember) return;
+    const itineraryId = crypto.randomUUID();
+    const title = ((form.get("title") as string) || "").trim() || "Item do itinerario";
     const amount = parseFloat(form.get("amount") as string) || 0;
     const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
     const now = new Date().toISOString();
 
     const { error } = await supabase.from("itinerary").insert({
-      id: crypto.randomUUID(),
+      id: itineraryId,
       trip_id: id,
       created_by_member_id: currentMember.id,
       type: form.get("type") as ItineraryType,
-      title: form.get("title") as string,
+      title,
       description: (form.get("description") as string) || "",
       location: (form.get("location") as string) || "",
       start_time: now,
@@ -475,7 +558,8 @@ function TripDashboard({ session }: { session: Session }) {
         id: crypto.randomUUID(),
         trip_id: id,
         created_by_member_id: currentMember.id,
-        description: (form.get("title") as string) || "Item do itinerario",
+        itinerary_item_id: itineraryId,
+        description: title,
         amount,
         currency: "BRL",
         category: "itinerary",
@@ -518,8 +602,11 @@ function TripDashboard({ session }: { session: Session }) {
 
   const saveItineraryEdit = async (itemId: string) => {
     if (!id || !editingItineraryId || editingItineraryId !== itemId || savingItinerary) return;
+    const sourceItem = trip?.itinerary.find((entry) => entry.id === itemId);
+    if (!sourceItem) return;
     const title = itineraryDraft.title.trim();
     if (!title) return;
+    const nextAmount = parseFloat(itineraryDraft.amount) || 0;
 
     setSavingItinerary(true);
     const { error } = await supabase
@@ -529,18 +616,39 @@ function TripDashboard({ session }: { session: Session }) {
         title,
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),
-        amount: parseFloat(itineraryDraft.amount) || 0,
+        amount: nextAmount,
         visibility: itineraryDraft.visibility,
       })
       .eq("id", itemId);
-    setSavingItinerary(false);
 
+    if (error) {
+      setSavingItinerary(false);
+      alert(getErrorMessage(error));
+      return;
+    }
+
+    if (nextAmount > 0) {
+      await upsertItineraryExpense(itemId, sourceItem, {
+        title,
+        amount: nextAmount,
+        visibility: itineraryDraft.visibility,
+      });
+    } else {
+      await removeItineraryExpense(itemId, sourceItem);
+    }
+
+    setSavingItinerary(false);
+    setEditingItineraryId(null);
+  };
+
+  const deleteItineraryItem = async (item: ItineraryItem) => {
+    const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
     if (error) {
       alert(getErrorMessage(error));
       return;
     }
 
-    setEditingItineraryId(null);
+    await removeItineraryExpense(item.id, item);
   };
 
   const startEditExpense = (expense: Expense) => {
@@ -674,6 +782,11 @@ function TripDashboard({ session }: { session: Session }) {
     navigate("/");
   };
 
+  const expensesTotal = useMemo(
+    () => (trip ? trip.expenses.reduce((total, expense) => total + (Number(expense.amount) || 0), 0) : 0),
+    [trip],
+  );
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem nao encontrada ou sem permissao.</div>;
 
@@ -748,7 +861,7 @@ function TripDashboard({ session }: { session: Session }) {
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 justify-center"><LogOut size={16} />Sair</button>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-10">
+      <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-10">
         <header className="flex items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-bold">{trip.name}</h2>
@@ -885,8 +998,7 @@ function TripDashboard({ session }: { session: Session }) {
                             onClick={async () => {
                               const confirmed = window.confirm(`Remover "${item.title}" do itinerario?`);
                               if (!confirmed) return;
-                              const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
-                              if (error) alert(getErrorMessage(error));
+                              await deleteItineraryItem(item);
                             }}
                             className="opacity-0 group-hover:opacity-100 p-2 text-zinc-400 hover:text-red-500"
                           >
@@ -923,6 +1035,14 @@ function TripDashboard({ session }: { session: Session }) {
 
           {activeTab === "expenses" && (
             <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <Card className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase font-bold text-zinc-400">Total de despesas</p>
+                  <p className="text-sm text-zinc-500">Soma das despesas visiveis para voce.</p>
+                </div>
+                <p className="text-2xl font-bold">{formatCurrency(expensesTotal)}</p>
+              </Card>
+
               <Card>
                 <h3 className="font-bold mb-4">Adicionar despesa</h3>
                 <form
@@ -1213,6 +1333,31 @@ function TripDashboard({ session }: { session: Session }) {
           )}
         </AnimatePresence>
       </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur md:hidden">
+        <div className="grid grid-cols-5">
+          <button type="button" onClick={() => navigate("/")} className="flex flex-col items-center justify-center gap-1 py-2 text-zinc-500">
+            <Plane size={16} />
+            <span className="text-[11px] font-medium">Viagens</span>
+          </button>
+          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-black" : "text-zinc-500")}>
+            <LayoutDashboard size={16} />
+            <span className="text-[11px] font-medium">Itinerario</span>
+          </button>
+          <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-black" : "text-zinc-500")}>
+            <DollarSign size={16} />
+            <span className="text-[11px] font-medium">Despesas</span>
+          </button>
+          <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "documents" ? "text-black" : "text-zinc-500")}>
+            <FileText size={16} />
+            <span className="text-[11px] font-medium">Docs</span>
+          </button>
+          <button type="button" onClick={() => setActiveTab("people")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "people" ? "text-black" : "text-zinc-500")}>
+            <Users size={16} />
+            <span className="text-[11px] font-medium">Pessoas</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
