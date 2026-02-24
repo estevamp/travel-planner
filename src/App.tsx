@@ -1297,15 +1297,15 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
               <Card>
                 <h3 className="font-bold mb-4">Adicionar despesa</h3>
                 <form
-                  className="grid grid-cols-1 md:grid-cols-4 gap-3"
+                  className="space-y-3"
                   onSubmit={async (e) => {
                     e.preventDefault();
                     await createExpense(new FormData(e.currentTarget));
                     (e.target as HTMLFormElement).reset();
                   }}
                 >
-                  <input name="description" required placeholder="Descricao" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                  <select name="category_id" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+                  <input name="description" required placeholder="Descricao" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                  <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
                     <option value="">Sem categoria</option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -1315,15 +1315,16 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     name="amount"
                     required
                     placeholder="Valor"
-                    className="px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                     onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
                   />
-                  <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
-                  <label className="md:col-span-4 flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
+                  <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
                 </form>
               </Card>
 
-              <Card className="p-0 overflow-hidden">
+              {/* Desktop table view */}
+              <Card className="p-0 overflow-hidden hidden md:block">
                 <table className="w-full text-left border-collapse">
                   <thead><tr className="bg-zinc-50"><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase">Visib.</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
                   <tbody className="divide-y divide-zinc-100">
@@ -1438,6 +1439,113 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   </tbody>
                 </table>
               </Card>
+
+              {/* Mobile card view */}
+              <div className="space-y-3 md:hidden">
+                {trip.expenses.length === 0 && (
+                  <Card>
+                    <p className="text-sm text-zinc-500 text-center">Nenhuma despesa cadastrada.</p>
+                  </Card>
+                )}
+                {trip.expenses.map((exp) => (
+                  <Card key={exp.id} className="space-y-3">
+                    {editingExpenseId === exp.id ? (
+                      <>
+                        <div className="space-y-3">
+                          <input
+                            value={expenseDraft.description}
+                            onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
+                            placeholder="Descricao"
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                          />
+                          <select
+                            value={expenseDraft.category_id}
+                            onChange={(e) => setExpenseDraft((current) => ({ ...current, category_id: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                          >
+                            <option value="">Sem categoria</option>
+                            {categories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                          <input
+                            value={expenseDraft.amount}
+                            onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
+                            placeholder="Valor"
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                          />
+                          <label className="flex items-center gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={expenseDraft.visibility === "private"}
+                              onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
+                            />
+                            Marcar como privado
+                          </label>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={savingExpense}
+                            onClick={() => void saveExpenseEdit(exp.id)}
+                            className="flex-1 px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold"
+                          >
+                            {savingExpense ? "Salvando..." : "Salvar"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingExpense}
+                            onClick={() => setEditingExpenseId(null)}
+                            className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm font-bold"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-bold truncate">{exp.description}</h4>
+                              {exp.visibility === "private" && (
+                                <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />
+                              )}
+                            </div>
+                            <p className="text-xs text-zinc-400 mb-2">{exp.date}</p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                              {exp.category ? (
+                                <span className="inline-flex items-center gap-1 text-xs uppercase" style={{ color: exp.category.color || 'inherit' }}>
+                                  {exp.category.name}
+                                </span>
+                              ) : (
+                                <span className="text-xs uppercase text-zinc-400">Geral</span>
+                              )}
+                              <span className="font-bold text-base">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <button type="button" onClick={() => startEditExpense(exp)} className="p-2 text-zinc-400 hover:text-zinc-700">
+                              <FilePenLine size={18} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                const confirmed = window.confirm(`Remover a despesa "${exp.description}"?`);
+                                if (!confirmed) return;
+                                const { error } = await supabase.from("expenses").delete().eq("id", exp.id);
+                                if (error) alert(getErrorMessage(error));
+                              }}
+                              className="p-2 text-zinc-400 hover:text-red-500"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </Card>
+                ))}
+              </div>
 
               <Card className="flex items-center justify-between">
                 <div>
