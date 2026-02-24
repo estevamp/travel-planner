@@ -570,13 +570,26 @@ function TripDashboard({ session }: { session: Session }) {
     const email = inviteEmail.trim().toLowerCase();
     if (!email) return;
 
-    const { data, error } = await supabase.rpc("create_trip_invite", { p_trip_id: id, p_email: email });
-    if (error || !data) {
-      alert(getErrorMessage(error));
+    const firstTry = await supabase.rpc("create_trip_invite", { p_trip_id: id, p_email: email });
+    let inviteToken = firstTry.data as string | null;
+    let inviteError = firstTry.error;
+
+    if (!inviteToken && inviteError?.code === "PGRST202") {
+      const secondTry = await supabase.rpc("create_trip_invite", { trip_id: id, email });
+      inviteToken = secondTry.data as string | null;
+      inviteError = secondTry.error;
+    }
+
+    if (!inviteToken || inviteError) {
+      if (inviteError?.code === "PGRST202") {
+        alert('RPC create_trip_invite nao encontrada no Supabase. Execute o schema SQL atualizado (supabase/schema.sql) no projeto remoto.');
+        return;
+      }
+      alert(getErrorMessage(inviteError));
       return;
     }
 
-    const link = `${window.location.origin}/invite/${data}`;
+    const link = `${window.location.origin}/invite/${inviteToken}`;
     setGeneratedLink(link);
     setInviteEmail("");
     await navigator.clipboard.writeText(link);
