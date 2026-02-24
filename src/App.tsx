@@ -680,8 +680,12 @@ function TripDashboard({ session }: { session: Session }) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex">
       <aside className="w-64 border-r border-zinc-200 bg-white p-6 hidden md:flex flex-col gap-8">
-        <div className="flex items-center gap-2 px-2"><Plane size={18} /><span className="font-bold text-xl">Voyage</span></div>
+        <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 px-2 text-left">
+          <Plane size={18} />
+          <span className="font-bold text-xl">Voyage</span>
+        </button>
         <nav className="space-y-2">
+          <SidebarItem icon={Calendar} label="Viagens" onClick={() => navigate("/")} />
           <SidebarItem icon={LayoutDashboard} label="Itinerario" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
