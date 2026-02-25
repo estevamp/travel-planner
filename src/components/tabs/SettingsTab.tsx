@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES } from "../../constants";
@@ -25,6 +25,7 @@ interface SettingsTabProps {
   onSetTrip: (trip: Trip) => void;
   onDeleteTrip: () => void;
   onReloadTripOptions: () => void;
+  onNavigateToAbout: () => void;
 }
 
 export function SettingsTab({
@@ -45,6 +46,7 @@ export function SettingsTab({
   onSetTrip,
   onDeleteTrip,
   onReloadTripOptions,
+  onNavigateToAbout,
 }: SettingsTabProps) {
   const [settingsDraft, setSettingsDraft] = useState<UserSettings>(settings);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -534,6 +536,16 @@ export function SettingsTab({
           <p className="text-sm text-green-700 font-medium">✅ Salvando configurações automaticamente...</p>
         </div>
       )}
+
+      <div className="pt-4">
+        <button
+          onClick={onNavigateToAbout}
+          className="w-full px-4 py-4 rounded-2xl border-2 border-zinc-200 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all shadow-sm"
+        >
+          <Info size={18} />
+          Sobre o Partiu!
+        </button>
+      </div>
     </motion.div>
   );
 }

@@ -498,6 +498,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               onSetTrip={setTrip}
               onDeleteTrip={deleteCurrentTrip}
               onReloadTripOptions={reloadTripOptions}
+              onNavigateToAbout={() => navigate("/about")}
             />
           )}
         </AnimatePresence>

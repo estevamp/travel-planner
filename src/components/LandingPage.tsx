@@ -59,10 +59,6 @@ export function LandingPage({ session, settings }: { session: Session; settings:
             <p className="text-zinc-500">{session.user.email}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate("/about")} className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 hover:bg-zinc-50 transition-colors">
-              <Info size={16} />
-              Sobre
-            </button>
             <button onClick={() => void supabase.auth.signOut()} className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 flex items-center gap-2 hover:bg-zinc-50 transition-colors">
               <LogOut size={16} />
               Sair
