@@ -480,7 +480,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
                       <div className="grid grid-cols-3 gap-2">
                         {photos.map((asset) => (
-                          <div key={asset.id} className="relative group/photo aspect-square">
+                          <div key={asset.id} className="relative aspect-square">
                             <button
                               type="button"
                               onClick={() => void openIdeaAsset(asset)}
@@ -488,10 +488,13 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                             >
                               <PhotoThumbnail asset={asset} />
                             </button>
-                            {canManage && editingIdeaId === idea.id && (
+                            {canManage && (
                               <button
-                                onClick={() => void handleDeleteAsset(asset)}
-                                className="absolute -top-1 -right-1 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/photo:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteAsset(asset);
+                                }}
+                                className="absolute -top-1 -right-1 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -508,7 +511,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="text-xs uppercase font-semibold text-zinc-500">Links</p>
                       <div className="space-y-1">
                         {links.map((link) => (
-                          <div key={link.id} className="flex items-center justify-between gap-2 group/link">
+                          <div key={link.id} className="flex items-center justify-between gap-2">
                             <a
                               href={link.url}
                               target="_blank"
@@ -524,10 +527,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                               <button
                                 type="button"
                                 onClick={() => void handleDeleteLink(link.id)}
-                                className={cn(
-                                  "p-1 text-zinc-400 hover:text-red-500 transition-opacity",
-                                  editingIdeaId === idea.id ? "opacity-100" : "opacity-0 group-hover/link:opacity-100"
-                                )}
+                                className="p-1 text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -553,10 +553,10 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                               <Paperclip size={12} />
                               <span className="max-w-[150px] truncate">{asset.name}</span>
                             </button>
-                            {canManage && editingIdeaId === idea.id && (
+                            {canManage && (
                               <button
                                 onClick={() => void handleDeleteAsset(asset)}
-                                className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/asset:opacity-100 transition-opacity"
+                                className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                               >
                                 <Trash2 size={10} />
                               </button>
