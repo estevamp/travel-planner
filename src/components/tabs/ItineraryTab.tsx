@@ -89,6 +89,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
       .from("itinerary")
       .update({
         type_id: itineraryDraft.type_id || null,
+        type: itineraryDraft.type_id ? itineraryTypes.find(t => t.id === itineraryDraft.type_id)?.name : null,
         title,
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),

@@ -135,6 +135,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       trip_id: id,
       created_by_member_id: currentMember.id,
       type_id,
+      type: type_id ? itineraryTypes.find(t => t.id === type_id)?.name : null,
       title,
       description,
       location,
