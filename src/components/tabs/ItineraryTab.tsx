@@ -89,7 +89,6 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
       .from("itinerary")
       .update({
         type_id: itineraryDraft.type_id || null,
-        type: itineraryDraft.type_id ? itineraryTypes.find(t => t.id === itineraryDraft.type_id)?.name : null,
         title,
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),
@@ -269,7 +268,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                   <button
                     type="button"
                     onClick={() => startEditItinerary(item)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-zinc-400 hover:text-zinc-700"
+                    className="p-2 text-zinc-400 hover:text-zinc-700"
                   >
                     <FilePenLine size={16} />
                   </button>
@@ -279,7 +278,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                       if (!confirmed) return;
                       await deleteItineraryItem(item);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-zinc-400 hover:text-red-500"
+                    className="p-2 text-zinc-400 hover:text-red-500"
                   >
                     <Trash2 size={16} />
                   </button>
