@@ -23,12 +23,12 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
-    description: string;
+    notes: string;
     maps_url: string;
     visibility: Visibility;
   }>({
     title: "",
-    description: "",
+    notes: "",
     maps_url: "",
     visibility: "public",
   });
@@ -57,7 +57,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     setEditingIdeaId(idea.id);
     setIdeaDraft({
       title: idea.title,
-      description: idea.description || "",
+      notes: idea.notes || "",
       maps_url: idea.maps_url || "",
       visibility: idea.visibility,
     });
@@ -67,7 +67,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (!editingIdeaId || editingIdeaId !== ideaId) return;
     const title = ideaDraft.title.trim();
     if (!title) return;
-    const description = ideaDraft.description.trim() || null;
+    const notes = ideaDraft.notes.trim() || null;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
     
     // Optimistic update
@@ -78,7 +78,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
           ? {
               ...idea,
               title,
-              description,
+              notes,
               maps_url: mapsUrl,
               visibility: ideaDraft.visibility,
             }
@@ -90,7 +90,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       .from("ideas")
       .update({
         title,
-        description,
+        notes,
         maps_url: mapsUrl,
         visibility: ideaDraft.visibility,
       })
@@ -149,7 +149,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       created_by_member_id: currentMember.id,
       type_id: null,
       title: idea.title,
-      description: idea.description || (idea.maps_url ? `Google Maps: ${idea.maps_url}` : ""),
+      description: idea.notes || (idea.maps_url ? `Google Maps: ${idea.maps_url}` : ""),
       location: "",
       start_time: now,
       end_time: now,
@@ -254,9 +254,9 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
                     />
                     <textarea
-                      value={ideaDraft.description}
-                      onChange={(e) => setIdeaDraft((current) => ({ ...current, description: e.target.value }))}
-                      placeholder="Notas/Descrição"
+                      value={ideaDraft.notes}
+                      onChange={(e) => setIdeaDraft((current) => ({ ...current, notes: e.target.value }))}
+                      placeholder="Notas"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all h-20"
                     />
                     <input
@@ -322,7 +322,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                         <span className="break-words">{idea.title}</span>
                         {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
                       </p>
-                      {idea.description && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.description}</p>}
+                      {idea.notes && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.notes}</p>}
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
                           <MapPin size={12} />Google Maps

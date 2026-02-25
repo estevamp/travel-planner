@@ -77,7 +77,7 @@ export interface Idea {
   trip_id: string;
   created_by_member_id: string;
   title: string;
-  description: string | null;
+  notes: string | null;
   maps_url: string | null;
   estimated_amount: number;
   currency: string;

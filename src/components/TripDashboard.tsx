@@ -206,7 +206,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     if (!title) return;
     
     const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const description = ((form.get("description") as string) || "").trim() || null;
+    const notes = ((form.get("notes") as string) || "").trim() || null;
     const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
     const ideaId = crypto.randomUUID();
 
@@ -216,7 +216,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       trip_id: id,
       created_by_member_id: currentMember.id,
       title,
-      description,
+      notes,
       maps_url: mapsUrl,
       estimated_amount: 0,
       currency: ideaCurrency,
@@ -231,7 +231,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       trip_id: id,
       created_by_member_id: currentMember.id,
       title,
-      description,
+      notes,
       maps_url: mapsUrl,
       estimated_amount: 0,
       currency: ideaCurrency,
@@ -632,8 +632,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             <input name="title" required placeholder="Ex: Museu do Louvre" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Notas/Descrição</label>
-            <textarea name="description" placeholder="Detalhes da ideia..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Notas</label>
+            <textarea name="notes" placeholder="Detalhes da ideia..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL do Google Maps</label>
