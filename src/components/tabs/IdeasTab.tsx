@@ -24,12 +24,10 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
     maps_url: string;
-    estimated_amount: string;
     visibility: Visibility;
   }>({
     title: "",
     maps_url: "",
-    estimated_amount: "0",
     visibility: "public",
   });
 
@@ -58,7 +56,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     setIdeaDraft({
       title: idea.title,
       maps_url: idea.maps_url || "",
-      estimated_amount: String(idea.estimated_amount || 0),
       visibility: idea.visibility,
     });
   };
@@ -67,7 +64,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (!editingIdeaId || editingIdeaId !== ideaId) return;
     const title = ideaDraft.title.trim();
     if (!title) return;
-    const estimatedAmount = parseCurrencyToNumber(ideaDraft.estimated_amount) || 0;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
     
     // Optimistic update
@@ -79,7 +75,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
               ...idea,
               title,
               maps_url: mapsUrl,
-              estimated_amount: estimatedAmount,
               visibility: ideaDraft.visibility,
             }
           : idea
@@ -91,7 +86,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       .update({
         title,
         maps_url: mapsUrl,
-        estimated_amount: estimatedAmount,
         visibility: ideaDraft.visibility,
       })
       .eq("id", ideaId);
@@ -141,7 +135,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     setCopyingIdeaId(idea.id);
     
     const itineraryId = crypto.randomUUID();
-    const amount = idea.estimated_amount || 0;
     const now = new Date().toISOString();
 
     const { error } = await supabase.from("itinerary").insert({
@@ -154,7 +147,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       location: "",
       start_time: now,
       end_time: now,
-      amount,
+      amount: 0,
       currency: settings.default_currency,
       visibility: idea.visibility,
       photo_url: null,
@@ -164,21 +157,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       alert(getErrorMessage(error));
       setCopyingIdeaId(null);
       return;
-    }
-
-    if (amount > 0) {
-      const { error: expError } = await supabase.from("expenses").insert({
-        id: crypto.randomUUID(),
-        trip_id: trip.id,
-        created_by_member_id: currentMember.id,
-        itinerary_item_id: itineraryId,
-        description: idea.title,
-        amount,
-        currency: settings.default_currency,
-        visibility: idea.visibility,
-        date: new Date().toISOString().split("T")[0],
-      });
-      if (expError) console.error(expError);
     }
 
     setCopyingIdeaId(null);
@@ -217,12 +195,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       placeholder="URL do Google Maps"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
                     />
-                    <input
-                      value={ideaDraft.estimated_amount}
-                      onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: maskCurrency(e.target.value) }))}
-                      placeholder="Valor estimado (opcional)"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
-                    />
                     <label className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -258,7 +230,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                         <span className="break-words">{idea.title}</span>
                         {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
                       </p>
-                      <p className="text-sm text-zinc-500 mt-1">Estimado: {formatCurrency(idea.estimated_amount, settings.default_currency)}</p>
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
                           <MapPin size={12} />Google Maps

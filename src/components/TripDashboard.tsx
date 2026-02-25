@@ -206,7 +206,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     if (!title) return;
     
     const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const estimatedAmount = parseCurrencyToNumber(form.get("estimated_amount") as string) || 0;
     const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
     const ideaId = crypto.randomUUID();
 
@@ -217,7 +216,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       created_by_member_id: currentMember.id,
       title,
       maps_url: mapsUrl,
-      estimated_amount: estimatedAmount,
+      estimated_amount: 0,
       currency: ideaCurrency,
       visibility,
       created_at: new Date().toISOString(),
@@ -231,7 +230,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       created_by_member_id: currentMember.id,
       title,
       maps_url: mapsUrl,
-      estimated_amount: estimatedAmount,
+      estimated_amount: 0,
       currency: ideaCurrency,
       visibility,
       created_at: new Date().toISOString(),
@@ -634,18 +633,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             <input name="maps_url" placeholder="https://goo.gl/maps/..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           </div>
           
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              name="estimated_amount"
-              placeholder="Valor estimado (opcional)"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-            />
-            <CurrencySelector
-              value={ideaCurrency}
-              onChange={setIdeaCurrency}
-            />
-          </div>
           
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="is_private" />
