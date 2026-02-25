@@ -346,7 +346,7 @@ export function SettingsTab({
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-semibold block">Nome da Viagem</label>
+              <label className="text-sm font-semibold block required-indicator">Nome da Viagem</label>
               <input
                 value={editTripName}
                 onChange={(e) => setEditTripName(e.target.value)}
@@ -356,7 +356,7 @@ export function SettingsTab({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold block">Destino</label>
+              <label className="text-sm font-semibold block required-indicator">Destino</label>
               <input
                 value={editTripDestination}
                 onChange={(e) => setEditTripDestination(e.target.value)}
@@ -486,12 +486,15 @@ export function SettingsTab({
               }
             }}
           >
-            <input
-              name="name"
-              required
-              placeholder="Nova categoria"
-              className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
-            />
+            <div className="flex-1 space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Nome da Categoria</label>
+              <input
+                name="name"
+                required
+                placeholder="Ex: Alimentação"
+                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+              />
+            </div>
             <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
               <Plus size={16} />
               Adicionar
@@ -568,12 +571,15 @@ export function SettingsTab({
             }}
           >
             <div className="flex gap-3">
-              <input
-                name="name"
-                required
-                placeholder="Novo tipo de atividade"
-                className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
-              />
+              <div className="flex-1 space-y-1">
+                <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Nome do Tipo</label>
+                <input
+                  name="name"
+                  required
+                  placeholder="Ex: Voo"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                />
+              </div>
               <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
                 <Plus size={16} />
                 Adicionar

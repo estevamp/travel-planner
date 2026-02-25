@@ -516,8 +516,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             ))}
           </select>
           
-          <input name="title" required placeholder="Título" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-          <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
+            <input name="title" required placeholder="Ex: Jantar no restaurante" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Local</label>
+            <input name="location" placeholder="Ex: Rua Augusta, 123" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          </div>
           
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -557,7 +563,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             (e.target as HTMLFormElement).reset();
           }}
         >
-          <input name="description" required placeholder="Descrição" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
+            <input name="description" required placeholder="Ex: Almoço" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          </div>
           
           <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
             <option value="">Sem categoria</option>
@@ -567,13 +576,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           </select>
           
           <div className="grid grid-cols-2 gap-3">
-            <input
-              name="amount"
-              required
-              placeholder="Valor"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Valor</label>
+              <input
+                name="amount"
+                required
+                placeholder="0,00"
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+              />
+            </div>
             <CurrencySelector
               value={expenseCurrency}
               onChange={setExpenseCurrency}
@@ -605,8 +617,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             (e.target as HTMLFormElement).reset();
           }}
         >
-          <input name="title" required placeholder="Título" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-          <input name="maps_url" placeholder="URL do Google Maps" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
+            <input name="title" required placeholder="Ex: Museu do Louvre" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL do Google Maps</label>
+            <input name="maps_url" placeholder="https://goo.gl/maps/..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          </div>
           
           <div className="grid grid-cols-2 gap-3">
             <input

@@ -25,3 +25,11 @@
     opacity: 0.5;
   }
 }
+
+@layer components {
+  .required-indicator::after {
+    content: " *";
+    color: #ef4444; /* text-red-500 */
+    font-weight: bold;
+  }
+}

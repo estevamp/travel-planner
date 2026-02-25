@@ -84,9 +84,15 @@ export function LandingPage({ session, settings }: { session: Session; settings:
           <Card>
             <h2 className="font-bold mb-4">Criar viagem</h2>
             <form onSubmit={createTrip} className="space-y-3">
-              <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da viagem" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
-              <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Destino" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
-              <button disabled={creating} className="w-full bg-black text-white py-2 rounded-xl font-semibold">{creating ? "Criando..." : "Criar"}</button>
+              <div className="space-y-1">
+                <label className="text-sm font-medium required-indicator">Nome da viagem</label>
+                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Férias de Verão" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium required-indicator">Destino</label>
+                <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Ex: Paris, França" className="w-full px-4 py-2 rounded-xl border border-zinc-200" />
+              </div>
+              <button disabled={creating} className="w-full bg-black text-white py-2 rounded-xl font-semibold mt-2">{creating ? "Criando..." : "Criar"}</button>
             </form>
           </Card>
         </div>
