@@ -33,8 +33,8 @@ export interface ItineraryItem {
   title: string;
   description: string;
   location: string;
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
   amount: number;
   currency: string;
   visibility: Visibility;

@@ -107,7 +107,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     const type_id = form.get("type_id") as string;
     const description = (form.get("description") as string) || "";
     const location = (form.get("location") as string) || "";
-    const now = new Date().toISOString();
+    const start_time = (form.get("start_time") as string) || null;
+    const end_time = (form.get("end_time") as string) || null;
 
     // Optimistic update
     const newItem: ItineraryItem = {
@@ -119,15 +120,15 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       title,
       description,
       location,
-      start_time: now,
-      end_time: now,
+      start_time,
+      end_time,
       amount: 0,
       currency: settings.default_currency,
       visibility,
       photo_url: null,
     };
 
-    setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => a.start_time.localeCompare(b.start_time)) } : null);
+    setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")) } : null);
 
     const { error } = await supabase.from("itinerary").insert({
       id: itineraryId,
@@ -137,8 +138,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       title,
       description,
       location,
-      start_time: now,
-      end_time: now,
+      start_time,
+      end_time,
       amount: 0,
       currency: settings.default_currency,
       visibility,
@@ -518,6 +519,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           <input name="title" required placeholder="Título" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
+              <input type="datetime-local" name="start_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
+              <input type="datetime-local" name="end_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            </div>
+          </div>
           
           <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
           

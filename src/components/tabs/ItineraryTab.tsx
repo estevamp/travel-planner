@@ -26,12 +26,16 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
     description: string;
     location: string;
     visibility: Visibility;
+    start_time: string;
+    end_time: string;
   }>({
     type_id: "",
     title: "",
     description: "",
     location: "",
     visibility: "public",
+    start_time: "",
+    end_time: "",
   });
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -44,6 +48,8 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
       description: item.description || "",
       location: item.location || "",
       visibility: item.visibility,
+      start_time: item.start_time ? item.start_time.slice(0, 16) : "",
+      end_time: item.end_time ? item.end_time.slice(0, 16) : "",
     });
   };
 
@@ -69,6 +75,8 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
               visibility: itineraryDraft.visibility,
+              start_time: itineraryDraft.start_time || null,
+              end_time: itineraryDraft.end_time || null,
             }
           : item
       ),
@@ -82,6 +90,8 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),
         visibility: itineraryDraft.visibility,
+        start_time: itineraryDraft.start_time || null,
+        end_time: itineraryDraft.end_time || null,
       })
       .eq("id", itemId);
 
@@ -145,6 +155,26 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                         placeholder="Local"
                         className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                       />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
+                          <input
+                            type="datetime-local"
+                            value={itineraryDraft.start_time}
+                            onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
+                          <input
+                            type="datetime-local"
+                            value={itineraryDraft.end_time}
+                            onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                          />
+                        </div>
+                      </div>
                       <textarea
                         value={itineraryDraft.description}
                         onChange={(e) => setItineraryDraft((current) => ({ ...current, description: e.target.value }))}
@@ -182,7 +212,19 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                     <>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <h4 className="font-bold truncate">{item.title}</h4>
-                        <span className="text-xs text-zinc-400 whitespace-nowrap">{format(new Date(item.start_time), "dd/MM HH:mm")}</span>
+                        <div className="flex flex-col items-end">
+                          {item.start_time && (
+                            <span className="text-xs text-zinc-400 whitespace-nowrap">
+                              {format(new Date(item.start_time), "dd/MM HH:mm")}
+                              {item.end_time && ` - ${format(new Date(item.end_time), "HH:mm")}`}
+                            </span>
+                          )}
+                          {item.end_time && item.start_time && format(new Date(item.start_time), "dd/MM") !== format(new Date(item.end_time), "dd/MM") && (
+                            <span className="text-[10px] text-zinc-400 whitespace-nowrap">
+                              até {format(new Date(item.end_time), "dd/MM")}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
