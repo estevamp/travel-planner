@@ -1,11 +1,12 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { supabase } from "../../supabase";
 import { getErrorMessage } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
 import type { Trip, TripMember } from "../../types";
 import { Card } from "../Card";
+import { DocumentViewer } from "../DocumentViewer";
 
 interface DocumentsTabProps {
   trip: Trip;
@@ -16,6 +17,7 @@ interface DocumentsTabProps {
 
 export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: DocumentsTabProps) {
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<{ name: string; url: string } | null>(null);
 
   const deleteDocument = async (docId: string, docUrl: string) => {
     // Optimistic update
@@ -43,7 +45,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: Docu
       <input
         ref={documentInputRef}
         type="file"
-        accept=".pdf,image/png,image/jpeg,image/jpg"
+        accept=".pdf,image/png,image/jpeg,image/jpg,text/plain,.doc,.docx"
         className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0];
@@ -63,34 +65,63 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: Docu
       />
 
       {trip.documents.map((doc) => (
-        <Card key={doc.id} className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center"><FileText size={24} /></div>
+        <Card key={doc.id} className="flex items-center gap-4 group">
+          <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
+            <FileText size={24} />
+          </div>
           <div className="min-w-0 flex-1">
-            <h4 className="font-bold truncate">{doc.name}</h4>
-            <button
-              type="button"
-              onClick={async () => {
-                const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 60);
-                if (error || !data) {
-                  alert(getErrorMessage(error));
-                  return;
-                }
-                window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-              }}
-              className="text-xs text-zinc-500"
-            >
-              Abrir documento
-            </button>
+            <h4 className="font-bold truncate text-sm md:text-base">{doc.name}</h4>
+            <div className="flex gap-3 mt-1">
+              <button
+                type="button"
+                onClick={async () => {
+                  const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 3600);
+                  if (error || !data) {
+                    alert(getErrorMessage(error));
+                    return;
+                  }
+                  setSelectedDoc({ name: doc.name, url: data.signedUrl });
+                }}
+                className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1"
+              >
+                <Eye size={12} />
+                Visualizar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 60);
+                  if (error || !data) {
+                    alert(getErrorMessage(error));
+                    return;
+                  }
+                  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                }}
+                className="text-xs text-zinc-500 hover:underline"
+              >
+                Abrir original
+              </button>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => void deleteDocument(doc.id, doc.url)}
-            className="text-zinc-300 hover:text-red-500"
+            className="text-zinc-300 hover:text-red-500 transition-colors p-2"
+            title="Excluir documento"
           >
             <Trash2 size={16} />
           </button>
         </Card>
       ))}
+
+      {selectedDoc && (
+        <DocumentViewer
+          isOpen={!!selectedDoc}
+          onClose={() => setSelectedDoc(null)}
+          docName={selectedDoc.name}
+          docUrl={selectedDoc.url}
+        />
+      )}
     </motion.div>
   );
 }
