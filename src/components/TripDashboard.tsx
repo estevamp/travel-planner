@@ -583,6 +583,10 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         itinerary: [...prev.itinerary, newItem].sort((a, b) => a.start_time.localeCompare(b.start_time)),
       };
     });
+    
+    // Close modal and reset currency
+    closeModal();
+    setItineraryCurrency(settings.default_currency);
   };
 
   const createExpense = async (form: FormData) => {
@@ -681,6 +685,10 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       setIdeaLinksDraft([""]);
       if (ideaAttachmentInputRef.current) ideaAttachmentInputRef.current.value = "";
       if (ideaPhotoInputRef.current) ideaPhotoInputRef.current.value = "";
+      
+      // Close modal and reset currency
+      closeModal();
+      setIdeaCurrency(settings.default_currency);
     } catch (error) {
       if (uploadedPaths.length > 0) {
         const { error: cleanupError } = await supabase.storage.from(DOCS_BUCKET).remove(uploadedPaths);
@@ -1436,31 +1444,9 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   ))}
                 </div>
 
-                <Card>
-                  <h3 className="font-bold mb-4">Adicionar atividade</h3>
-                  <form
-                    className="space-y-3"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      await createItinerary(new FormData(e.currentTarget));
-                      (e.target as HTMLFormElement).reset();
-                    }}
-                  >
-                    <select name="type" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"><option value="activity">Atividade</option><option value="flight">Voo</option><option value="bus">Onibus</option><option value="hotel">Hospedagem</option></select>
-                    <input name="title" required placeholder="Titulo" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input
-                      name="amount"
-                      placeholder="Valor (opcional)"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                      onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-                    />
-                    <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                    <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold min-h-[44px]">Adicionar</button>
-                  </form>
-                </Card>
               </div>
+              
+              <FloatingActionButton onClick={() => openModal('itinerary')} />
             </motion.div>
           )}
 
@@ -1815,34 +1801,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 ))}
               </div>
 
-              <Card>
-                <h3 className="font-bold mb-4">Adicionar despesa</h3>
-                <form
-                  className="space-y-3"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    await createExpense(new FormData(e.currentTarget));
-                    (e.target as HTMLFormElement).reset();
-                  }}
-                >
-                  <input name="description" required placeholder="Descricao" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                  <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
-                    <option value="">Sem categoria</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    name="amount"
-                    required
-                    placeholder="Valor"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                    onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-                  />
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                  <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-3 rounded-xl text-sm font-bold min-h-[44px]">Adicionar</button>
-                </form>
-              </Card>
+              <FloatingActionButton onClick={() => openModal('expense')} />
             </motion.div>
           )}
           {activeTab === "ideas" && (
@@ -2025,61 +1984,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 })}
               </div>
 
-              <Card>
-                <h3 className="font-bold mb-4">Adicionar ideia</h3>
-                <form
-                  className="space-y-3"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    await createIdea(new FormData(e.currentTarget));
-                    (e.target as HTMLFormElement).reset();
-                  }}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input name="title" required placeholder="Título" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input
-                      name="estimated_amount"
-                      placeholder="Valor estimado (opcional)"
-                      className="px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                      onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-                    />
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">URLs</p>
-                    {ideaLinksDraft.map((value, index) => (
-                      <div key={`idea-link-${index}`} className="flex items-center gap-2">
-                        <input
-                          value={value}
-                          onChange={(e) => setIdeaLinksDraft((current) => current.map((entry, i) => (i === index ? e.target.value : entry)))}
-                          placeholder="https://..."
-                          className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                        />
-                        {ideaLinksDraft.length > 1 && (
-                          <button type="button" className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold" onClick={() => setIdeaLinksDraft((current) => current.filter((_, i) => i !== index))}>
-                            Remover
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setIdeaLinksDraft((current) => [...current, ""])} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">
-                      Adicionar URL
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label className="space-y-1">
-                      <span className="text-xs text-zinc-500">Anexos</span>
-                      <input ref={ideaAttachmentInputRef} type="file" multiple className="block w-full text-sm" />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs text-zinc-500">Fotos</span>
-                      <input ref={ideaPhotoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple className="block w-full text-sm" />
-                    </label>
-                  </div>
-                  <button className="w-full md:w-auto bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold min-h-[44px]">Salvar ideia</button>
-                </form>
-              </Card>
+              <FloatingActionButton onClick={() => openModal('idea')} />
             </motion.div>
           )}
           {activeTab === "documents" && (
@@ -2562,6 +2467,179 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
           )}
         </AnimatePresence>
       </main>
+
+      {/* Modals */}
+      <Modal
+        isOpen={showAddModal && modalType === 'itinerary'}
+        onClose={closeModal}
+        title="Nova Atividade"
+        size="md"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await createItinerary(new FormData(e.currentTarget));
+            (e.target as HTMLFormElement).reset();
+          }}
+        >
+          <select name="type" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+            <option value="activity">Atividade</option>
+            <option value="flight">Voo</option>
+            <option value="bus">Ônibus</option>
+            <option value="hotel">Hospedagem</option>
+          </select>
+          
+          <input name="title" required placeholder="Título" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              name="amount"
+              placeholder="Valor (opcional)"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+            />
+            <CurrencySelector
+              value={itineraryCurrency}
+              onChange={setItineraryCurrency}
+            />
+          </div>
+          
+          <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="is_private" />
+            Marcar como privado
+          </label>
+          
+          <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
+            Adicionar
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showAddModal && modalType === 'expense'}
+        onClose={closeModal}
+        title="Nova Despesa"
+        size="md"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await createExpense(new FormData(e.currentTarget));
+            (e.target as HTMLFormElement).reset();
+          }}
+        >
+          <input name="description" required placeholder="Descrição" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          
+          <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+            <option value="">Sem categoria</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              name="amount"
+              required
+              placeholder="Valor"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+            />
+            <CurrencySelector
+              value={expenseCurrency}
+              onChange={setExpenseCurrency}
+            />
+          </div>
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="is_private" />
+            Marcar como privado
+          </label>
+          
+          <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
+            Adicionar
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showAddModal && modalType === 'idea'}
+        onClose={closeModal}
+        title="Nova Ideia"
+        size="lg"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await createIdea(new FormData(e.currentTarget));
+            (e.target as HTMLFormElement).reset();
+          }}
+        >
+          <input name="title" required placeholder="Título" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          <input name="maps_url" placeholder="URL do Google Maps" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              name="estimated_amount"
+              placeholder="Valor estimado (opcional)"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+            />
+            <CurrencySelector
+              value={ideaCurrency}
+              onChange={setIdeaCurrency}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">URLs</p>
+            {ideaLinksDraft.map((value, index) => (
+              <div key={`idea-link-${index}`} className="flex items-center gap-2">
+                <input
+                  value={value}
+                  onChange={(e) => setIdeaLinksDraft((current) => current.map((entry, i) => (i === index ? e.target.value : entry)))}
+                  placeholder="https://..."
+                  className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                />
+                {ideaLinksDraft.length > 1 && (
+                  <button type="button" className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold" onClick={() => setIdeaLinksDraft((current) => current.filter((_, i) => i !== index))}>
+                    Remover
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" onClick={() => setIdeaLinksDraft((current) => [...current, ""])} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">
+              Adicionar URL
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="space-y-1">
+              <span className="text-xs text-zinc-500">Anexos</span>
+              <input ref={ideaAttachmentInputRef} type="file" multiple className="block w-full text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-zinc-500">Fotos</span>
+              <input ref={ideaPhotoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple className="block w-full text-sm" />
+            </label>
+          </div>
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="is_private" />
+            Marcar como privado
+          </label>
+          
+          <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
+            Salvar Ideia
+          </button>
+        </form>
+      </Modal>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
         <div className="grid grid-cols-6">
