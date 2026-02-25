@@ -1136,7 +1136,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem nao encontrada ou sem permissao.</div>;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
+    <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
       <aside className="w-64 border-r p-6 hidden md:flex flex-col flex-shrink-0 gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
           <Plane size={18} />
@@ -1178,11 +1178,11 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center gap-2 justify-center hover:bg-[var(--sidebar-hover)]"><LogOut size={16} />Sair</button>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-y-auto p-4 pb-24 md:p-10">
+      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:p-10">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl md:text-4xl font-bold truncate bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
+              <h2 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
               <button
                 onClick={() => setShowMobileTripSelector(true)}
                 className="md:hidden p-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -1215,7 +1215,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 initial={{ opacity: 0, y: 100 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 100 }}
-                className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+                className="w-full max-w-[95vw] bg-white rounded-3xl overflow-hidden shadow-2xl"
               >
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
