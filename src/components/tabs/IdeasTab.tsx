@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
 import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus } from "lucide-react";
 import { supabase } from "../../supabase";
-import { getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
+import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
 import type { Trip, Idea, IdeaLink, IdeaAsset, TripMember, UserSettings, Visibility } from "../../types";
 import { Card } from "../Card";
@@ -178,7 +178,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     for (const file of Array.from(files)) {
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `ideas/${ideaId}/${fileName}`;
+      const filePath = `${trip.id}/${currentMember?.id}/ideas/${ideaId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(filePath, file);
       if (uploadError) {
@@ -452,7 +452,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                     </div>
                   </div>
 
-                  {links.length > 0 && (
+                  {(links.length > 0 || editingIdeaId === idea.id) && (
                     <div className="space-y-2 pt-2 border-t border-zinc-100">
                       <p className="text-xs uppercase font-semibold text-zinc-500">URLs</p>
                       <div className="space-y-1">
@@ -469,14 +469,16 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                                 <span className="break-all">{link.label || link.url}</span>
                               </span>
                             </a>
-                            {editingIdeaId === idea.id && (
-                              <button
-                                onClick={() => void handleDeleteLink(link.id)}
-                                className="p-1 text-zinc-400 hover:text-red-500 opacity-0 group-hover/link:opacity-100 transition-opacity"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteLink(link.id)}
+                              className={cn(
+                                "p-1 text-zinc-400 hover:text-red-500 transition-opacity",
+                                editingIdeaId === idea.id ? "opacity-100" : "opacity-0 group-hover/link:opacity-100"
+                              )}
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         ))}
                       </div>
