@@ -141,6 +141,8 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const isAdmin = currentMember?.role === "admin";
   const memberByUserId = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const themedStyles = useMemo(() => {
+    // Prioriza o tema da viagem se ele existir e não for 'default'
+    // Caso contrário, usa o tema global do usuário
     const effectivePalette = trip?.theme_palette && trip.theme_palette !== 'default'
       ? trip.theme_palette
       : settings.theme_palette;
@@ -149,7 +151,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       ...settings,
       theme_palette: effectivePalette
     });
-  }, [settings, trip?.theme_palette]);
+  }, [settings.theme_palette, settings.dark_mode, trip?.theme_palette, trip?.id]);
 
   // Modal helper functions
   const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
