@@ -58,7 +58,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
             <h2 className="text-lg font-semibold">Contribua</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            Esse app é distribuído sem custo. Se quiser me ajudar com um cafézinho, pode fazer um pix para <span className="font-medium text-slate-900 dark:text-slate-100">estevamp@gmail.com</span>.
+            Esse app é distribuído sem custo. Se quiser me ajudar com um cafézinho, pode fazer um pix para <span className="font-medium text-amber-600 dark:text-slate-100">estevamp@gmail.com</span>.
           </p>
         </section>
 
