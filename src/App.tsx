@@ -89,7 +89,7 @@ export default function App() {
           }
         />
         <Route path="/invite/:token" element={<InvitePage session={session} />} />
-        <Route path="/about" element={<AboutPage />} />
+        <Route path="/about" element={<AboutPage settings={userSettings} />} />
       </Routes>
     </BrowserRouter>
   );
