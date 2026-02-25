@@ -113,6 +113,7 @@ export interface Trip {
   id: string;
   name: string;
   destination: string;
+  theme_palette: ThemePalette;
   start_date: string;
   end_date: string;
   itinerary: ItineraryItem[];

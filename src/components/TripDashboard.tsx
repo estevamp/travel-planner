@@ -140,7 +140,13 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
   const isAdmin = currentMember?.role === "admin";
   const memberByUserId = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
-  const themedStyles = useMemo(() => getThemeStyles(settings), [settings]);
+  const themedStyles = useMemo(() => {
+    const effectiveSettings = {
+      ...settings,
+      theme_palette: trip?.theme_palette || settings.theme_palette
+    };
+    return getThemeStyles(effectiveSettings);
+  }, [settings, trip?.theme_palette]);
 
   // Modal helper functions
   const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
@@ -419,12 +425,16 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     const name = editTripName.trim();
     const destination = editTripDestination.trim();
     if (!name || !destination) return;
-    if (name === trip.name && destination === trip.destination) return;
+    if (name === trip.name && destination === trip.destination && trip.theme_palette === (trip.theme_palette || 'default')) return;
 
     const timeout = setTimeout(async () => {
       if (updatingTrip) return;
       setUpdatingTrip(true);
-      const { error } = await supabase.from("trips").update({ name, destination }).eq("id", id);
+      const { error } = await supabase.from("trips").update({
+        name,
+        destination,
+        theme_palette: trip.theme_palette
+      }).eq("id", id);
       setUpdatingTrip(false);
       if (error) {
         alert(getErrorMessage(error));
@@ -1574,19 +1584,30 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
               {/* Desktop table view */}
               <Card className="p-0 overflow-hidden hidden md:block">
                 <table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-zinc-50"><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase">Visib.</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
+                  <thead><tr className="bg-zinc-50"><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
                   <tbody className="divide-y divide-zinc-100">
                     {trip.expenses.map((exp) => (
                       <tr key={exp.id}>
                         {editingExpenseId === exp.id ? (
                           <>
                             <td className="px-4 py-3 space-y-2">
-                              <input
-                                value={expenseDraft.description}
-                                onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
-                                placeholder="Descricao"
-                                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                              />
+                              <div className="flex items-center gap-2">
+                                <input
+                                  value={expenseDraft.description}
+                                  onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
+                                  placeholder="Descricao"
+                                  className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                                />
+                                <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Privado">
+                                  <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={expenseDraft.visibility === "private"}
+                                    onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
+                                  />
+                                  <Lock size={16} className={cn("transition-colors", expenseDraft.visibility === "private" ? "text-orange-600" : "text-zinc-300")} />
+                                </label>
+                              </div>
                               <p className="text-xs text-zinc-400">{exp.date}</p>
                             </td>
                             <td className="px-4 py-3">
@@ -1608,16 +1629,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                                 placeholder="Valor"
                                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                               />
-                            </td>
-                            <td className="px-4 py-3">
-                              <label className="flex items-center gap-2 text-xs uppercase">
-                                <input
-                                  type="checkbox"
-                                  checked={expenseDraft.visibility === "private"}
-                                  onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                                />
-                                {expenseDraft.visibility}
-                              </label>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-2">
@@ -1642,7 +1653,15 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                           </>
                         ) : (
                           <>
-                            <td className="px-4 py-3"><p className="font-medium">{exp.description}</p><p className="text-xs text-zinc-400">{exp.date}</p></td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{exp.description}</p>
+                                {exp.visibility === "private" && (
+                                  <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />
+                                )}
+                              </div>
+                              <p className="text-xs text-zinc-400">{exp.date}</p>
+                            </td>
                             <td className="px-4 py-3 text-xs uppercase">
                               {exp.category ? (
                                 <span className="flex items-center gap-1" style={{ color: exp.category.color || 'inherit' }}>
@@ -1653,15 +1672,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                               )}
                             </td>
                             <td className="px-4 py-3 font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</td>
-                            <td className="px-4 py-3 text-xs uppercase">
-                              {exp.visibility === "private" ? (
-                                <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
-                                  <Lock size={12} />
-                                </span>
-                              ) : (
-                                <span>Publico</span>
-                              )}
-                            </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <button type="button" onClick={() => startEditExpense(exp)} className="text-zinc-400 hover:text-zinc-700">
@@ -2372,6 +2382,35 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                         className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold block">Tema da Viagem</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {(["default", "ocean", "forest", "sunset", "lavender", "midnight", "rose"] as const).map((key) => {
+                          const palette = THEME_PALETTES[key];
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                if (!trip) return;
+                                setTrip({ ...trip, theme_palette: key });
+                              }}
+                              className={cn(
+                                "h-10 rounded-xl border-2 transition-all flex items-center justify-center",
+                                (trip?.theme_palette || 'default') === key
+                                  ? "border-[var(--accent-color)] scale-105 shadow-sm"
+                                  : "border-zinc-200 hover:border-zinc-300"
+                              )}
+                              style={{ backgroundColor: settings.dark_mode ? palette.darkAccent : palette.lightAccent }}
+                            >
+                              {(trip?.theme_palette || 'default') === key && (
+                                <div className="w-2 h-2 rounded-full bg-white shadow-sm" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                     {updatingTrip && (
                       <div className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
