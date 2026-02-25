@@ -444,7 +444,8 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         alert(getErrorMessage(error));
         return;
       }
-      await Promise.all([loadTrip(id), loadTripOptions()]);
+      // Only reload trip options (sidebar), not the full trip to avoid flickering
+      await loadTripOptions();
     }, 500);
 
     return () => clearTimeout(timeout);
