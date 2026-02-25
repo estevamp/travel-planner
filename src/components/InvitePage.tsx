@@ -34,11 +34,13 @@ export function InvitePage({ session }: { session: Session | null }) {
     setError(null);
     supabase
       .rpc("accept_trip_invite", { p_token: token })
-      .then(({ data, error: rpcError }) => {
+      .then(async ({ data, error: rpcError }) => {
         if (rpcError || !data) {
           setError(getErrorMessage(rpcError));
           return;
         }
+        // Refresh session to ensure RLS policies pick up the new membership
+        await supabase.auth.refreshSession();
         setTripId(data as string);
       })
       .finally(() => setLoading(false));

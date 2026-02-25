@@ -52,6 +52,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
+  const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updatingTrip, setUpdatingTrip] = useState(false);
   const [editTripName, setEditTripName] = useState("");
@@ -524,6 +525,32 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       });
       if (expError) console.error(expError);
     }
+
+    // Optimistic update
+    const newItem: ItineraryItem = {
+      id: itineraryId,
+      trip_id: id,
+      created_by_member_id: currentMember.id,
+      type: form.get("type") as ItineraryType,
+      title,
+      description: (form.get("description") as string) || "",
+      location: (form.get("location") as string) || "",
+      start_time: now,
+      end_time: now,
+      amount,
+      visibility,
+      photo_url: null,
+    };
+
+    setTrip((prev) => {
+      if (!prev) return prev;
+      // Avoid duplicates if realtime already kicked in
+      if (prev.itinerary.some(item => item.id === itineraryId)) return prev;
+      return {
+        ...prev,
+        itinerary: [...prev.itinerary, newItem].sort((a, b) => a.start_time.localeCompare(b.start_time)),
+      };
+    });
   };
 
   const createExpense = async (form: FormData) => {
@@ -550,7 +577,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (!title) return;
     const visibility: Visibility = form.get("is_private") === "on" ? "private" : "public";
     const estimatedAmountRaw = (form.get("estimated_amount") as string) || "";
-    const estimatedAmount = estimatedAmountRaw ? Math.max(0, parseFloat(estimatedAmountRaw) || 0) : 0;
+    const estimatedAmount = parseCurrencyToNumber(estimatedAmountRaw) || 0;
     const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
     const links = ideaLinksDraft.map((link) => link.trim()).filter(Boolean);
     const attachmentFiles = Array.from((ideaAttachmentInputRef.current?.files || []) as FileList);
@@ -644,7 +671,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     if (!editingIdeaId || editingIdeaId !== ideaId) return;
     const title = ideaDraft.title.trim();
     if (!title) return;
-    const estimatedAmount = ideaDraft.estimated_amount ? Math.max(0, parseFloat(ideaDraft.estimated_amount) || 0) : 0;
+    const estimatedAmount = parseCurrencyToNumber(ideaDraft.estimated_amount) || 0;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
     
     const { error } = await supabase
@@ -1109,7 +1136,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem nao encontrada ou sem permissao.</div>;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden" style={themedStyles}>
+    <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
       <aside className="w-64 border-r p-6 hidden md:flex flex-col flex-shrink-0 gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
           <Plane size={18} />
@@ -1152,11 +1179,20 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       </aside>
 
       <main className="flex-1 min-w-0 overflow-y-auto p-4 pb-24 md:p-10">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-          <div className="min-w-0">
-            <h2 className="text-3xl md:text-4xl font-bold truncate bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-10">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl md:text-4xl font-bold truncate bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
+              <button
+                onClick={() => setShowMobileTripSelector(true)}
+                className="md:hidden p-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Trocar viagem"
+              >
+                <Bus size={20} />
+              </button>
+            </div>
             <div className="flex items-center gap-2 text-zinc-500 mt-2 text-sm md:text-base">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0">
                 <MapPin size={14} className="text-white" />
               </div>
               <span className="truncate font-medium">{trip.destination}</span>
@@ -1171,6 +1207,60 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
             )}
           </div>
         </header>
+
+        <AnimatePresence>
+          {showMobileTripSelector && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, y: 100 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 100 }}
+                className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+              >
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold">Minhas Viagens</h3>
+                    <button onClick={() => setShowMobileTripSelector(false)} className="p-2 rounded-full hover:bg-zinc-100">
+                      <Plus size={20} className="rotate-45" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {tripOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          navigate(`/trip/${option.id}`);
+                          setShowMobileTripSelector(false);
+                        }}
+                        className={cn(
+                          "w-full text-left rounded-2xl border p-4 transition-all",
+                          option.id === id
+                            ? "bg-[var(--sidebar-active-bg)] border-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
+                            : "border-zinc-100 hover:border-zinc-200 bg-zinc-50"
+                        )}
+                      >
+                        <p className="font-bold truncate">{option.name}</p>
+                        <p className="text-sm opacity-80 truncate">{option.destination || "Sem destino"}</p>
+                      </button>
+                    ))}
+                    {tripOptions.length === 0 && <p className="text-center py-8 text-zinc-500">Nenhuma viagem encontrada.</p>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileTripSelector(false);
+                      void createTripFromSidebar();
+                    }}
+                    className="w-full py-4 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
+                  >
+                    <Plus size={18} />
+                    Nova Viagem
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="wait">
           {activeTab === "itinerary" && (
@@ -1330,7 +1420,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                     />
                     <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                    <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-2 rounded-xl text-sm font-bold">Adicionar</button>
+                    <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold min-h-[44px]">Adicionar</button>
                   </form>
                 </Card>
               </div>
@@ -1598,97 +1688,38 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                 ))}
               </div>
 
-              <Card className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase font-bold text-zinc-400">Total de despesas</p>
-                  <p className="text-sm text-zinc-500">Soma das despesas visiveis para voce.</p>
-                </div>
-                <p className="text-2xl font-bold">{formatCurrency(expensesTotal, settings.default_currency)}</p>
-              </Card>
-
-              <Card className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">Orçamento da viagem</p>
-                  {budgetLimit > 0 && <p className={cn("text-sm font-semibold", isOverBudget ? "text-red-600" : "text-emerald-600")}>{Math.round(budgetProgress)}%</p>}
-                </div>
-                {budgetLimit <= 0 ? (
-                  <p className="text-sm text-zinc-500">Defina um limite em Configurações para acompanhar o orçamento.</p>
-                ) : (
-                  <>
-                    <div className="w-full h-3 rounded-full bg-zinc-200 overflow-hidden">
-                      <div
-                        className={cn("h-full rounded-full transition-all", isOverBudget ? "bg-red-500" : "bg-emerald-500")}
-                        style={{ width: `${budgetProgress}%` }}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                      <p><span className="text-zinc-500">Total:</span> {formatCurrency(expensesTotal, settings.default_currency)}</p>
-                      <p><span className="text-zinc-500">Limite:</span> {formatCurrency(budgetLimit, settings.default_currency)}</p>
-                      <p>
-                        <span className="text-zinc-500">{isOverBudget ? "Excesso:" : "Restante:"}</span>{" "}
-                        <span className={isOverBudget ? "text-red-600 font-semibold" : "text-emerald-600 font-semibold"}>
-                          {formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
-                        </span>
-                      </p>
-                    </div>
-                  </>
-                )}
+              <Card>
+                <h3 className="font-bold mb-4">Adicionar despesa</h3>
+                <form
+                  className="space-y-3"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await createExpense(new FormData(e.currentTarget));
+                    (e.target as HTMLFormElement).reset();
+                  }}
+                >
+                  <input name="description" required placeholder="Descricao" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                  <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+                    <option value="">Sem categoria</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    name="amount"
+                    required
+                    placeholder="Valor"
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+                  />
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
+                  <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-3 rounded-xl text-sm font-bold min-h-[44px]">Adicionar</button>
+                </form>
               </Card>
             </motion.div>
           )}
           {activeTab === "ideas" && (
             <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <Card>
-                <h3 className="font-bold mb-4">Adicionar ideia</h3>
-                <form
-                  className="space-y-3"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    await createIdea(new FormData(e.currentTarget));
-                    (e.target as HTMLFormElement).reset();
-                  }}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input name="title" required placeholder="Título" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <input name="estimated_amount" type="number" min="0" step="0.01" placeholder="Valor estimado (opcional)" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">URLs</p>
-                    {ideaLinksDraft.map((value, index) => (
-                      <div key={`idea-link-${index}`} className="flex items-center gap-2">
-                        <input
-                          value={value}
-                          onChange={(e) => setIdeaLinksDraft((current) => current.map((entry, i) => (i === index ? e.target.value : entry)))}
-                          placeholder="https://..."
-                          className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                        />
-                        {ideaLinksDraft.length > 1 && (
-                          <button type="button" className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold" onClick={() => setIdeaLinksDraft((current) => current.filter((_, i) => i !== index))}>
-                            Remover
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setIdeaLinksDraft((current) => [...current, ""])} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">
-                      Adicionar URL
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label className="space-y-1">
-                      <span className="text-xs text-zinc-500">Anexos</span>
-                      <input ref={ideaAttachmentInputRef} type="file" multiple className="block w-full text-sm" />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs text-zinc-500">Fotos</span>
-                      <input ref={ideaPhotoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple className="block w-full text-sm" />
-                    </label>
-                  </div>
-                  <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Salvar ideia</button>
-                </form>
-              </Card>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {trip.ideas.length === 0 && <Card className="sm:col-span-2"><p className="text-sm text-zinc-500 text-center py-4">Nenhuma ideia cadastrada.</p></Card>}
                 {trip.ideas.map((idea) => {
@@ -1716,10 +1747,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                             />
                             <input
                               value={ideaDraft.estimated_amount}
-                              onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: e.target.value }))}
-                              type="number"
-                              min="0"
-                              step="0.01"
+                              onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: maskCurrency(e.target.value) }))}
                               placeholder="Valor estimado (opcional)"
                               className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
                             />
@@ -1869,6 +1897,62 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
                   );
                 })}
               </div>
+
+              <Card>
+                <h3 className="font-bold mb-4">Adicionar ideia</h3>
+                <form
+                  className="space-y-3"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await createIdea(new FormData(e.currentTarget));
+                    (e.target as HTMLFormElement).reset();
+                  }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input name="title" required placeholder="Título" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input name="maps_url" placeholder="URL do Google Maps" className="px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+                    <input
+                      name="estimated_amount"
+                      placeholder="Valor estimado (opcional)"
+                      className="px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                      onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+                    />
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">URLs</p>
+                    {ideaLinksDraft.map((value, index) => (
+                      <div key={`idea-link-${index}`} className="flex items-center gap-2">
+                        <input
+                          value={value}
+                          onChange={(e) => setIdeaLinksDraft((current) => current.map((entry, i) => (i === index ? e.target.value : entry)))}
+                          placeholder="https://..."
+                          className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                        />
+                        {ideaLinksDraft.length > 1 && (
+                          <button type="button" className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold" onClick={() => setIdeaLinksDraft((current) => current.filter((_, i) => i !== index))}>
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setIdeaLinksDraft((current) => [...current, ""])} className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold">
+                      Adicionar URL
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <span className="text-xs text-zinc-500">Anexos</span>
+                      <input ref={ideaAttachmentInputRef} type="file" multiple className="block w-full text-sm" />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-zinc-500">Fotos</span>
+                      <input ref={ideaPhotoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple className="block w-full text-sm" />
+                    </label>
+                  </div>
+                  <button className="w-full md:w-auto bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold min-h-[44px]">Salvar ideia</button>
+                </form>
+              </Card>
             </motion.div>
           )}
           {activeTab === "documents" && (
