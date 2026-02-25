@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
 import { FilePenLine, Trash2, Lock } from "lucide-react";
 import { supabase } from "../../supabase";
@@ -6,6 +6,7 @@ import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumbe
 import type { Trip, Expense, ExpenseCategory, TripMember, UserSettings, Visibility, TripBudget } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
+import { currencyService } from "../../services/currencyService";
 
 interface ExpensesTabProps {
   trip: Trip;
@@ -18,6 +19,34 @@ interface ExpensesTabProps {
 }
 
 export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onSetActiveTab }: ExpensesTabProps) {
+  const [rates, setRates] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      const data = await currencyService.getExchangeRates(settings.default_currency);
+      setRates(data.rates);
+    };
+    fetchRates();
+  }, [settings.default_currency]);
+
+  const convertedExpenses = useMemo(() => {
+    return trip.expenses.map(exp => {
+      const currency = exp.currency || settings.default_currency;
+      let convertedAmount = Number(exp.amount) || 0;
+      
+      if (currency !== settings.default_currency && rates[currency]) {
+        // rates[currency] is how many 'currency' per 1 'default_currency'
+        // so default_amount = amount / rates[currency]
+        convertedAmount = (Number(exp.amount) || 0) / rates[currency];
+      }
+
+      return {
+        ...exp,
+        convertedAmount
+      };
+    });
+  }, [trip.expenses, settings.default_currency, rates]);
+
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<{
@@ -67,7 +96,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
     setEditingExpenseId(null);
   };
 
-  const expensesTotal = trip.expenses.reduce((total, expense) => total + (Number(expense.amount) || 0), 0);
+  const expensesTotal = convertedExpenses.reduce((total, expense) => total + expense.convertedAmount, 0);
   const budgetLimit = Math.max(0, Number(tripBudget?.budget_limit) || 0);
   const budgetProgress = budgetLimit > 0 ? Math.min((expensesTotal / budgetLimit) * 100, 100) : 0;
   const budgetRemaining = budgetLimit - expensesTotal;
@@ -284,7 +313,16 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                         <span className="text-zinc-400">Geral</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
+                        {exp.currency && exp.currency !== settings.default_currency && (
+                          <span className="text-[10px] text-zinc-500">
+                            ≈ {formatCurrency(convertedExpenses.find(e => e.id === exp.id)?.convertedAmount || 0, settings.default_currency)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button type="button" onClick={() => startEditExpense(exp)} className="text-zinc-400 hover:text-zinc-700">
@@ -392,7 +430,14 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       ) : (
                         <span className="text-xs uppercase text-zinc-400">Geral</span>
                       )}
-                      <span className="font-bold text-base">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-base">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
+                        {exp.currency && exp.currency !== settings.default_currency && (
+                          <span className="text-[10px] text-zinc-500">
+                            ≈ {formatCurrency(convertedExpenses.find(e => e.id === exp.id)?.convertedAmount || 0, settings.default_currency)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
