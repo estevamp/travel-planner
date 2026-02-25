@@ -540,7 +540,7 @@ export function SettingsTab({
       <div className="pt-4">
         <button
           onClick={onNavigateToAbout}
-          className="w-full px-4 py-4 rounded-2xl border-2 border-zinc-200 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all shadow-sm"
+          className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <Info size={18} />
           Sobre o Partiu!

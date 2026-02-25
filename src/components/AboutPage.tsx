@@ -42,7 +42,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
             <h2 className="text-lg font-semibold">Suporte Técnico</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 mb-4">
-            Encontrou algum problema ou tem alguma sugestão? Entre em contato conosco.
+            Encontrou algum problema ou tem alguma sugestão? Entre em contato...
           </p>
           <a
             href="mailto:estevamp@gmail.com"
