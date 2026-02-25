@@ -38,7 +38,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const navigate = useNavigate();
   
   // Hooks customizados - toda lógica de dados encapsulada
-  const { trip, setTrip, members, invites, categories, setCategories, loading, spouseByUserId, setSpouseByUserId, reloadTrip } = useTripData(id, session.user.id);
+  const { trip, setTrip, members, invites, categories, setCategories, itineraryTypes, setItineraryTypes, loading, spouseByUserId, setSpouseByUserId, reloadTrip } = useTripData(id, session.user.id);
   const { tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency, reloadBudget } = useTripBudget(id, session.user.id);
   const { tripOptions, createTripFromSidebar, creatingTripFromSidebar, reloadTripOptions } = useTripList();
   
@@ -83,6 +83,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
       .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () => void reloadTrip())
+      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary_types" }, () => void reloadTrip())
       .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
       .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () => void reloadTrip())
       .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () => void reloadTrip())
@@ -102,9 +103,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     if (!id || !currentMember) return;
     const itineraryId = crypto.randomUUID();
     const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
-    const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
     const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const type = form.get("type") as any;
+    const type_id = form.get("type_id") as string;
     const description = (form.get("description") as string) || "";
     const location = (form.get("location") as string) || "";
     const now = new Date().toISOString();
@@ -114,14 +114,15 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       id: itineraryId,
       trip_id: id,
       created_by_member_id: currentMember.id,
-      type,
+      type_id,
+      type: itineraryTypes.find(t => t.id === type_id),
       title,
       description,
       location,
       start_time: now,
       end_time: now,
-      amount,
-      currency: itineraryCurrency,
+      amount: 0,
+      currency: settings.default_currency,
       visibility,
       photo_url: null,
     };
@@ -132,14 +133,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       id: itineraryId,
       trip_id: id,
       created_by_member_id: currentMember.id,
-      type,
+      type_id,
       title,
       description,
       location,
       start_time: now,
       end_time: now,
-      amount,
-      currency: itineraryCurrency,
+      amount: 0,
+      currency: settings.default_currency,
       visibility,
       photo_url: null,
     });
@@ -149,22 +150,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       return;
     }
 
-    if (amount > 0) {
-      await supabase.from("expenses").insert({
-        id: crypto.randomUUID(),
-        trip_id: id,
-        created_by_member_id: currentMember.id,
-        itinerary_item_id: itineraryId,
-        description: title,
-        amount,
-        currency: itineraryCurrency,
-        visibility,
-        date: new Date().toISOString().split("T")[0],
-      });
-    }
-
     closeModal();
-    setItineraryCurrency(settings.default_currency);
   };
 
   const createExpense = async (form: FormData) => {
@@ -426,6 +412,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               trip={trip}
               currentMember={currentMember}
               settings={settings}
+              itineraryTypes={itineraryTypes}
               onOpenModal={() => openModal('itinerary')}
               onTripUpdate={setTrip}
             />
@@ -488,6 +475,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               settings={settings}
               members={members}
               categories={categories}
+              itineraryTypes={itineraryTypes}
+              onSetItineraryTypes={setItineraryTypes}
               tripBudget={tripBudget}
               budgetOwnerUserId={budgetOwnerUserId}
               budgetCurrency={budgetCurrency}
@@ -519,28 +508,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             (e.target as HTMLFormElement).reset();
           }}
         >
-          <select name="type" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
-            <option value="activity">Atividade</option>
-            <option value="flight">Voo</option>
-            <option value="bus">Ônibus</option>
-            <option value="hotel">Hospedagem</option>
+          <select name="type_id" required className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+            <option value="">Selecione um tipo</option>
+            {itineraryTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
           </select>
           
           <input name="title" required placeholder="Título" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           <input name="location" placeholder="Local" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              name="amount"
-              placeholder="Valor (opcional)"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-            />
-            <CurrencySelector
-              value={itineraryCurrency}
-              onChange={setItineraryCurrency}
-            />
-          </div>
           
           <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
           

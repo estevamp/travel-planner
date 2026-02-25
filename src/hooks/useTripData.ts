@@ -6,6 +6,7 @@ import type {
   TripInvite,
   ExpenseCategory,
   ItineraryItem,
+  ItineraryType,
   Expense,
   DocumentItem,
   Idea,
@@ -18,12 +19,13 @@ export function useTripData(tripId: string | undefined, userId: string) {
   const [members, setMembers] = useState<TripMember[]>([]);
   const [invites, setInvites] = useState<TripInvite[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [itineraryTypes, setItineraryTypes] = useState<ItineraryType[]>([]);
   const [loading, setLoading] = useState(true);
   const [spouseByUserId, setSpouseByUserId] = useState<Map<string, string | null>>(new Map());
 
   const loadTrip = useCallback(async (id: string) => {
     setLoading(true);
-    const [tripRes, membersRes, itineraryRes, expensesRes, docsRes, ideasRes, categoriesRes] = await Promise.all([
+    const [tripRes, membersRes, itineraryRes, expensesRes, docsRes, ideasRes, categoriesRes, itineraryTypesRes] = await Promise.all([
       supabase.from("trips").select("*").eq("id", id).single(),
       supabase.from("trip_members").select("id,trip_id,user_id,role,display_name").eq("trip_id", id),
       supabase.from("itinerary").select("*").eq("trip_id", id).order("start_time", { ascending: true }),
@@ -31,10 +33,11 @@ export function useTripData(tripId: string | undefined, userId: string) {
       supabase.from("documents").select("*").eq("trip_id", id),
       supabase.from("ideas").select("*").eq("trip_id", id).order("created_at", { ascending: false }),
       supabase.from("expense_categories").select("*").order("name", { ascending: true }),
+      supabase.from("itinerary_types").select("*").order("name", { ascending: true }),
     ]);
 
-    if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error || !tripRes.data) {
-      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error);
+    if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error || itineraryTypesRes.error || !tripRes.data) {
+      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error || itineraryTypesRes.error);
       setTrip(null);
       setMembers([]);
       setInvites([]);
@@ -102,9 +105,16 @@ export function useTripData(tripId: string | undefined, userId: string) {
     const nextCategories = (categoriesRes.data || []) as ExpenseCategory[];
     const categoryMap = new Map(nextCategories.map(c => [c.id, c]));
 
+    const nextItineraryTypes = (itineraryTypesRes.data || []) as ItineraryType[];
+    const itineraryTypeMap = new Map(nextItineraryTypes.map(t => [t.id, t]));
+
     setTrip({
       ...(tripRes.data as Omit<Trip, "itinerary" | "expenses" | "documents" | "ideas" | "idea_links" | "idea_assets">),
-      itinerary: (itineraryRes.data || []).map((item) => ({ ...item, amount: Number(item.amount) || 0 })) as ItineraryItem[],
+      itinerary: (itineraryRes.data || []).map((item) => ({
+        ...item,
+        amount: Number(item.amount) || 0,
+        type: item.type_id ? itineraryTypeMap.get(item.type_id) : null
+      })) as ItineraryItem[],
       expenses: (expensesRes.data || []).map((item) => ({
         ...item,
         amount: Number(item.amount) || 0,
@@ -117,6 +127,7 @@ export function useTripData(tripId: string | undefined, userId: string) {
     });
 
     setCategories(nextCategories);
+    setItineraryTypes(nextItineraryTypes);
     setLoading(false);
   }, [userId]);
 
@@ -132,6 +143,8 @@ export function useTripData(tripId: string | undefined, userId: string) {
     invites,
     categories,
     setCategories,
+    itineraryTypes,
+    setItineraryTypes,
     loading,
     spouseByUserId,
     setSpouseByUserId,

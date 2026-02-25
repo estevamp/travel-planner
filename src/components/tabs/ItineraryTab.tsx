@@ -12,115 +12,37 @@ interface ItineraryTabProps {
   trip: Trip;
   currentMember: TripMember | null;
   settings: UserSettings;
+  itineraryTypes: ItineraryType[];
   onOpenModal: () => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTripUpdate }: ItineraryTabProps) {
+export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, onOpenModal, onTripUpdate }: ItineraryTabProps) {
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [itineraryDraft, setItineraryDraft] = useState<{
-    type: ItineraryType;
+    type_id: string;
     title: string;
     description: string;
     location: string;
-    amount: string;
     visibility: Visibility;
   }>({
-    type: "activity",
+    type_id: "",
     title: "",
     description: "",
     location: "",
-    amount: "0",
     visibility: "public",
   });
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const findLegacyItineraryExpenseId = async (item: Pick<ItineraryItem, "trip_id" | "created_by_member_id" | "title">) => {
-    const { data, error } = await supabase
-      .from("expenses")
-      .select("id")
-      .eq("trip_id", item.trip_id)
-      .eq("created_by_member_id", item.created_by_member_id)
-      .eq("description", item.title)
-      .is("itinerary_item_id", null)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (error) {
-      console.error(error);
-      return null;
-    }
-
-    return data?.[0]?.id || null;
-  };
-
-  const upsertItineraryExpense = async (itemId: string, sourceItem: ItineraryItem, nextData: { title: string; amount: number; visibility: Visibility }) => {
-    const { data: linkedData, error: linkedError } = await supabase
-      .from("expenses")
-      .select("id")
-      .eq("trip_id", sourceItem.trip_id)
-      .eq("itinerary_item_id", itemId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (linkedError) console.error(linkedError);
-
-    const linkedExpenseId = linkedData?.[0]?.id || null;
-    const legacyExpenseId = linkedExpenseId ? null : await findLegacyItineraryExpenseId(sourceItem);
-    const targetExpenseId = linkedExpenseId || legacyExpenseId;
-
-    if (targetExpenseId) {
-      const { error: updateError } = await supabase
-        .from("expenses")
-        .update({
-          description: nextData.title,
-          amount: nextData.amount,
-          visibility: nextData.visibility,
-          itinerary_item_id: itemId,
-        })
-        .eq("id", targetExpenseId);
-      if (updateError) console.error(updateError);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from("expenses").insert({
-      id: crypto.randomUUID(),
-      trip_id: sourceItem.trip_id,
-      created_by_member_id: sourceItem.created_by_member_id,
-      itinerary_item_id: itemId,
-      description: nextData.title,
-      amount: nextData.amount,
-      currency: settings.default_currency,
-      visibility: nextData.visibility,
-      date: new Date().toISOString().split("T")[0],
-    });
-    if (insertError) console.error(insertError);
-  };
-
-  const removeItineraryExpense = async (itemId: string, sourceItem: ItineraryItem) => {
-    const { error: linkedDeleteError } = await supabase
-      .from("expenses")
-      .delete()
-      .eq("trip_id", sourceItem.trip_id)
-      .eq("itinerary_item_id", itemId);
-    if (linkedDeleteError) console.error(linkedDeleteError);
-
-    const legacyExpenseId = await findLegacyItineraryExpenseId(sourceItem);
-    if (!legacyExpenseId) return;
-
-    const { error: legacyDeleteError } = await supabase.from("expenses").delete().eq("id", legacyExpenseId);
-    if (legacyDeleteError) console.error(legacyDeleteError);
-  };
 
   const startEditItinerary = (item: ItineraryItem) => {
     setEditingItineraryId(item.id);
     setItineraryDraft({
-      type: item.type,
+      type_id: item.type_id,
       title: item.title,
       description: item.description || "",
       location: item.location || "",
-      amount: maskCurrency(String((item.amount || 0) * 100)),
       visibility: item.visibility,
     });
   };
@@ -131,7 +53,6 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
     if (!sourceItem) return;
     const title = itineraryDraft.title.trim();
     if (!title) return;
-    const nextAmount = parseCurrencyToNumber(itineraryDraft.amount) || 0;
 
     setSavingItinerary(true);
 
@@ -142,11 +63,11 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
         item.id === itemId
           ? {
               ...item,
-              type: itineraryDraft.type,
+              type_id: itineraryDraft.type_id,
+              type: itineraryTypes.find(t => t.id === itineraryDraft.type_id),
               title,
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
-              amount: nextAmount,
               visibility: itineraryDraft.visibility,
             }
           : item
@@ -156,11 +77,10 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
     const { error } = await supabase
       .from("itinerary")
       .update({
-        type: itineraryDraft.type,
+        type_id: itineraryDraft.type_id,
         title,
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),
-        amount: nextAmount,
         visibility: itineraryDraft.visibility,
       })
       .eq("id", itemId);
@@ -169,16 +89,6 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
       setSavingItinerary(false);
       alert(getErrorMessage(error));
       return;
-    }
-
-    if (nextAmount > 0) {
-      await upsertItineraryExpense(itemId, sourceItem, {
-        title,
-        amount: nextAmount,
-        visibility: itineraryDraft.visibility,
-      });
-    } else {
-      await removeItineraryExpense(itemId, sourceItem);
     }
 
     setSavingItinerary(false);
@@ -197,8 +107,6 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
       alert(getErrorMessage(error));
       return;
     }
-
-    await removeItineraryExpense(item.id, item);
   };
 
   return (
@@ -209,24 +117,21 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
             <Card key={item.id} className="group p-0 overflow-hidden">
               {item.photo_url && <img src={item.photo_url} alt={item.title} className="w-full h-40 object-cover" />}
               <div className="p-5 flex items-start gap-3">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", item.type === "flight" && "bg-blue-50 text-blue-600", item.type === "bus" && "bg-orange-50 text-orange-600", item.type === "hotel" && "bg-purple-50 text-purple-600", item.type === "activity" && "bg-emerald-50 text-emerald-600")}>
-                  {item.type === "flight" && <Plane size={20} />}
-                  {item.type === "bus" && <Bus size={20} />}
-                  {item.type === "hotel" && <Hotel size={20} />}
-                  {item.type === "activity" && <Calendar size={20} />}
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-50 text-zinc-600")}>
+                  <Calendar size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
                   {editingItineraryId === item.id ? (
                     <div className="space-y-2">
                       <select
-                        value={itineraryDraft.type}
-                        onChange={(e) => setItineraryDraft((current) => ({ ...current, type: e.target.value as ItineraryType }))}
+                        value={itineraryDraft.type_id}
+                        onChange={(e) => setItineraryDraft((current) => ({ ...current, type_id: e.target.value }))}
                         className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                       >
-                        <option value="activity">Atividade</option>
-                        <option value="flight">Voo</option>
-                        <option value="bus">Onibus</option>
-                        <option value="hotel">Hospedagem</option>
+                        <option value="">Selecione um tipo</option>
+                        {itineraryTypes.map((type) => (
+                          <option key={type.id} value={type.id}>{type.name}</option>
+                        ))}
                       </select>
                       <input
                         value={itineraryDraft.title}
@@ -238,12 +143,6 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
                         value={itineraryDraft.location}
                         onChange={(e) => setItineraryDraft((current) => ({ ...current, location: e.target.value }))}
                         placeholder="Local"
-                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                      />
-                      <input
-                        value={itineraryDraft.amount}
-                        onChange={(e) => setItineraryDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
-                        placeholder="Valor"
                         className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                       />
                       <textarea
@@ -288,8 +187,7 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
                       <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
                         <span className="truncate max-w-[150px]">{item.location || "Sem local"}</span>
-                        <span className="font-medium">{formatCurrency(item.amount, settings.default_currency)}</span>
-                        {item.visibility === "private" && 
+                        {item.visibility === "private" &&
                         <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
                           <Lock size={12} />
                         </span>}

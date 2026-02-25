@@ -40,11 +40,18 @@ create table if not exists public.trip_invites (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.itinerary_types (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  icon text not null default 'Calendar',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.itinerary (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips(id) on delete cascade,
   created_by_member_id uuid references public.trip_members(id) on delete cascade,
-  type text not null check (type in ('flight', 'bus', 'hotel', 'activity')),
+  type_id uuid references public.itinerary_types(id) on delete set null,
   title text not null,
   description text,
   location text,
@@ -131,6 +138,7 @@ alter table public.profiles add column if not exists default_currency text not n
 alter table public.profiles add column if not exists budget_limit numeric(12,2) not null default 0;
 alter table public.profiles add column if not exists spouse_user_id uuid references auth.users(id) on delete set null;
 alter table public.itinerary add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
+alter table public.itinerary add column if not exists type_id uuid references public.itinerary_types(id) on delete set null;
 alter table public.itinerary add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
 alter table public.expenses add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
 alter table public.expenses add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));
@@ -1253,6 +1261,13 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'itinerary'
   ) then
     alter publication supabase_realtime add table public.itinerary;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'itinerary_types'
+  ) then
+    alter publication supabase_realtime add table public.itinerary_types;
   end if;
 
   if not exists (

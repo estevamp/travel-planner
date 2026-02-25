@@ -4,7 +4,7 @@ import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES } from "../../constants";
-import type { Trip, TripMember, UserSettings, ExpenseCategory, TripBudget } from "../../types";
+import type { Trip, TripMember, UserSettings, ExpenseCategory, ItineraryType, TripBudget } from "../../types";
 import { Card } from "../Card";
 
 interface SettingsTabProps {
@@ -15,6 +15,8 @@ interface SettingsTabProps {
   settings: UserSettings;
   members: TripMember[];
   categories: ExpenseCategory[];
+  itineraryTypes: ItineraryType[];
+  onSetItineraryTypes: (types: ItineraryType[]) => void;
   tripBudget: TripBudget | null;
   budgetOwnerUserId: string;
   budgetCurrency: string;
@@ -36,6 +38,8 @@ export function SettingsTab({
   settings,
   members,
   categories,
+  itineraryTypes,
+  onSetItineraryTypes,
   tripBudget,
   budgetOwnerUserId,
   budgetCurrency,
@@ -525,6 +529,85 @@ export function SettingsTab({
               <div className="sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed border-zinc-200">
                 <p className="text-sm text-zinc-500">Nenhuma categoria configurada ainda.</p>
                 <p className="text-xs text-zinc-400 mt-1">Adicione sua primeira categoria acima!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <Card className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+            <Plus size={20} className="text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">Tipos de Atividade</h3>
+            <p className="text-sm text-zinc-500">Gerencie os tipos de atividades disponíveis</p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <form
+            className="flex gap-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = new FormData(e.currentTarget);
+              const name = (form.get("name") as string).trim();
+              if (!name) return;
+              const { data, error } = await supabase.from("itinerary_types").insert({ name }).select().single();
+              if (error) {
+                alert(getErrorMessage(error));
+              } else {
+                if (data) onSetItineraryTypes([...itineraryTypes, data as ItineraryType].sort((a, b) => a.name.localeCompare(b.name)));
+                (e.target as HTMLFormElement).reset();
+              }
+            }}
+          >
+            <input
+              name="name"
+              required
+              placeholder="Novo tipo de atividade"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+            />
+            <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
+              <Plus size={16} />
+              Adicionar
+            </button>
+          </form>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {itineraryTypes.map((type) => (
+              <div
+                key={type.id}
+                className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
+                style={{
+                  backgroundColor: 'var(--card-bg)',
+                  borderColor: 'var(--card-border)'
+                }}
+              >
+                <span className="text-sm font-semibold">{type.name}</span>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm(`Excluir tipo de atividade "${type.name}"?`)) return;
+                    
+                    // Optimistic update
+                    onSetItineraryTypes(itineraryTypes.filter(t => t.id !== type.id));
+
+                    const { error } = await supabase.from("itinerary_types").delete().eq("id", type.id);
+                    if (error) {
+                      alert(getErrorMessage(error));
+                      // Rollback
+                      onSetItineraryTypes(itineraryTypes);
+                    }
+                  }}
+                  className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            {itineraryTypes.length === 0 && (
+              <div className="sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed border-zinc-200">
+                <p className="text-sm text-zinc-500">Nenhum tipo de atividade configurado ainda.</p>
               </div>
             )}
           </div>

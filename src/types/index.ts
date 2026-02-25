@@ -1,4 +1,10 @@
-export type ItineraryType = "flight" | "bus" | "hotel" | "activity";
+export interface ItineraryType {
+  id: string;
+  name: string;
+  icon: string;
+  created_at: string;
+}
+
 export type Visibility = "public" | "private";
 export type ThemePalette = "default" | "ocean" | "forest" | "sunset" | "lavender" | "midnight" | "rose";
 
@@ -22,7 +28,8 @@ export interface ItineraryItem {
   id: string;
   trip_id: string;
   created_by_member_id: string;
-  type: ItineraryType;
+  type_id: string;
+  type?: ItineraryType;
   title: string;
   description: string;
   location: string;
