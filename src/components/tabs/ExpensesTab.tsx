@@ -16,9 +16,10 @@ interface ExpensesTabProps {
   tripBudget: TripBudget | null;
   onOpenModal: () => void;
   onSetActiveTab: (tab: string) => void;
+  onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onSetActiveTab }: ExpensesTabProps) {
+export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
   const [rates, setRates] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -35,8 +36,6 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
       let convertedAmount = Number(exp.amount) || 0;
       
       if (currency !== settings.default_currency && rates[currency]) {
-        // rates[currency] is how many 'currency' per 1 'default_currency'
-        // so default_amount = amount / rates[currency]
         convertedAmount = (Number(exp.amount) || 0) / rates[currency];
       }
 
@@ -75,17 +74,37 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
     if (!editingExpenseId || editingExpenseId !== expenseId || savingExpense) return;
     const description = expenseDraft.description.trim();
     if (!description) return;
+    const nextAmount = parseCurrencyToNumber(expenseDraft.amount) || 0;
 
     setSavingExpense(true);
+
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      expenses: prev.expenses.map((exp) =>
+        exp.id === expenseId
+          ? {
+              ...exp,
+              description,
+              category_id: expenseDraft.category_id || null,
+              amount: nextAmount,
+              visibility: expenseDraft.visibility,
+              category: expenseDraft.category_id ? categories.find(c => c.id === expenseDraft.category_id) || null : null
+            }
+          : exp
+      ),
+    }));
+
     const { error } = await supabase
       .from("expenses")
       .update({
         description,
         category_id: expenseDraft.category_id || null,
-        amount: parseCurrencyToNumber(expenseDraft.amount) || 0,
+        amount: nextAmount,
         visibility: expenseDraft.visibility,
       })
       .eq("id", expenseId);
+    
     setSavingExpense(false);
 
     if (error) {
@@ -94,6 +113,22 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
     }
 
     setEditingExpenseId(null);
+  };
+
+  const deleteExpense = async (expense: Expense) => {
+    const confirmed = window.confirm(`Remover a despesa "${expense.description}"?`);
+    if (!confirmed) return;
+
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      expenses: prev.expenses.filter((exp) => exp.id !== expense.id),
+    }));
+
+    const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
+    if (error) {
+      alert(getErrorMessage(error));
+    }
   };
 
   const expensesTotal = convertedExpenses.reduce((total, expense) => total + expense.convertedAmount, 0);
@@ -329,12 +364,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                           <FilePenLine size={16} />
                         </button>
                         <button
-                          onClick={async () => {
-                            const confirmed = window.confirm(`Remover a despesa "${exp.description}"?`);
-                            if (!confirmed) return;
-                            const { error } = await supabase.from("expenses").delete().eq("id", exp.id);
-                            if (error) alert(getErrorMessage(error));
-                          }}
+                          onClick={() => void deleteExpense(exp)}
                           className="text-zinc-400 hover:text-red-500"
                         >
                           <Trash2 size={16} />
@@ -450,12 +480,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       <FilePenLine size={20} />
                     </button>
                     <button
-                      onClick={async () => {
-                        const confirmed = window.confirm(`Remover a despesa "${exp.description}"?`);
-                        if (!confirmed) return;
-                        const { error } = await supabase.from("expenses").delete().eq("id", exp.id);
-                        if (error) alert(getErrorMessage(error));
-                      }}
+                      onClick={() => void deleteExpense(exp)}
                       className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
                       aria-label="Excluir despesa"
                     >

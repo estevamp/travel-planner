@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Trash2 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage } from "../../utils";
-import type { TripMember, TripInvite, UserSettings } from "../../types";
+import type { TripMember, TripInvite, UserSettings, Trip } from "../../types";
 import { Card } from "../Card";
 
 interface PeopleTabProps {
@@ -16,6 +16,7 @@ interface PeopleTabProps {
   spouseByUserId: Map<string, string | null>;
   onSettingsChange: (next: UserSettings) => void;
   onReloadTrip: () => void;
+  onTripUpdate?: (updater: (prev: Trip) => Trip) => void;
 }
 
 export function PeopleTab({
@@ -28,6 +29,7 @@ export function PeopleTab({
   spouseByUserId,
   onSettingsChange,
   onReloadTrip,
+  onTripUpdate,
 }: PeopleTabProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
@@ -168,7 +170,23 @@ export function PeopleTab({
                   <td className="px-4 py-3">{member.display_name || member.user_id}</td>
                   <td className="px-4 py-3 text-xs uppercase">{member.role}</td>
                   <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
-                  {isAdmin && <td className="px-4 py-3 text-right">-</td>}
+                  {isAdmin && (
+                    <td className="px-4 py-3 text-right">
+                      {member.user_id !== currentMember?.user_id && (
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Remover ${member.display_name || member.user_id} da viagem?`)) return;
+                            const { error } = await supabase.from("trip_members").delete().eq("id", member.id);
+                            if (error) alert(getErrorMessage(error));
+                            else onReloadTrip();
+                          }}
+                          className="text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

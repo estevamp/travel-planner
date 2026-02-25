@@ -89,6 +89,10 @@ export function SettingsTab({
     const timeout = setTimeout(async () => {
       if (savingSettings) return;
       setSavingSettings(true);
+      
+      // Optimistic update
+      onSettingsChange({ ...settingsDraft });
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -99,9 +103,10 @@ export function SettingsTab({
       setSavingSettings(false);
       if (error) {
         alert(getErrorMessage(error));
+        // Rollback
+        onSettingsChange(settings);
         return;
       }
-      onSettingsChange({ ...settingsDraft });
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -141,6 +146,10 @@ export function SettingsTab({
     const timeout = setTimeout(async () => {
       if (updatingTrip) return;
       setUpdatingTrip(true);
+
+      // Optimistic update
+      onSetTrip({ ...trip, name, destination });
+
       const { error } = await supabase.from("trips").update({
         name,
         destination,
@@ -148,13 +157,15 @@ export function SettingsTab({
       setUpdatingTrip(false);
       if (error) {
         alert(getErrorMessage(error));
+        // Rollback
+        onSetTrip(trip);
         return;
       }
       await onReloadTripOptions();
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [tripId, trip.name, trip.destination, isAdmin, editTripName, editTripDestination, updatingTrip, onReloadTripOptions]);
+  }, [tripId, trip, isAdmin, editTripName, editTripDestination, updatingTrip, onReloadTripOptions, onSetTrip]);
 
   const setGlobalSpouse = async (spouseUserId: string | null) => {
     const { error } = await supabase.rpc("set_global_spouse", {
@@ -218,11 +229,14 @@ export function SettingsTab({
             value={maskCurrency(String((tripBudget?.budget_limit || 0) * 100))}
             onChange={(e) => {
               const masked = maskCurrency(e.target.value);
+              const nextLimit = parseCurrencyToNumber(masked);
+              
+              // Optimistic update
               onSetTripBudget({
                 id: tripBudget?.id || "",
                 trip_id: tripId,
                 owner_user_id: budgetOwnerUserId || userId,
-                budget_limit: parseCurrencyToNumber(masked),
+                budget_limit: nextLimit,
                 currency: budgetCurrency,
               });
             }}
@@ -363,15 +377,20 @@ export function SettingsTab({
                       type="button"
                       onClick={async () => {
                         if (isActive) return; // Don't update if already active
+                        
+                        // Optimistic update
+                        onSetTrip({ ...trip, theme_palette: theme });
+
                         const { error } = await supabase
                           .from("trips")
                           .update({ theme_palette: theme })
                           .eq("id", tripId);
                         if (error) {
                           alert(getErrorMessage(error));
+                          // Rollback
+                          onSetTrip(trip);
                           return;
                         }
-                        onSetTrip({ ...trip, theme_palette: theme });
                       }}
                       disabled={isActive}
                       className={cn(
@@ -483,8 +502,16 @@ export function SettingsTab({
                 <button
                   onClick={async () => {
                     if (!window.confirm(`Excluir categoria "${cat.name}"?`)) return;
+                    
+                    // Optimistic update
+                    onSetCategories(categories.filter(c => c.id !== cat.id));
+
                     const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
-                    if (error) alert(getErrorMessage(error));
+                    if (error) {
+                      alert(getErrorMessage(error));
+                      // Rollback
+                      onSetCategories(categories);
+                    }
                   }}
                   className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
                 >

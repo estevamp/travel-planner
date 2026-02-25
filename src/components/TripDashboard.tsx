@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../utils";
 import { getThemeStyles } from "../utils/theme";
-import type { UserSettings } from "../types";
+import type { UserSettings, Trip, ItineraryItem, Expense, Idea } from "../types";
 
 // Hooks customizados
 import { useTripData } from "../hooks/useTripData";
@@ -104,16 +104,38 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
     const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
     const visibility = form.get("is_private") === "on" ? "private" : "public";
+    const type = form.get("type") as any;
+    const description = (form.get("description") as string) || "";
+    const location = (form.get("location") as string) || "";
     const now = new Date().toISOString();
+
+    // Optimistic update
+    const newItem: ItineraryItem = {
+      id: itineraryId,
+      trip_id: id,
+      created_by_member_id: currentMember.id,
+      type,
+      title,
+      description,
+      location,
+      start_time: now,
+      end_time: now,
+      amount,
+      currency: itineraryCurrency,
+      visibility,
+      photo_url: null,
+    };
+
+    setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => a.start_time.localeCompare(b.start_time)) } : null);
 
     const { error } = await supabase.from("itinerary").insert({
       id: itineraryId,
       trip_id: id,
       created_by_member_id: currentMember.id,
-      type: form.get("type"),
+      type,
       title,
-      description: (form.get("description") as string) || "",
-      location: (form.get("location") as string) || "",
+      description,
+      location,
       start_time: now,
       end_time: now,
       amount,
@@ -149,15 +171,34 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     if (!id || !currentMember) return;
     const visibility = form.get("is_private") === "on" ? "private" : "public";
     const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+    const description = (form.get("description") as string) || "Despesa";
+    const category_id = (form.get("category_id") as string) || null;
+    const expenseId = crypto.randomUUID();
     
-    const { error } = await supabase.from("expenses").insert({
-      id: crypto.randomUUID(),
+    // Optimistic update
+    const newExpense: Expense = {
+      id: expenseId,
       trip_id: id,
       created_by_member_id: currentMember.id,
-      description: (form.get("description") as string) || "Despesa",
+      description,
       amount,
       currency: expenseCurrency,
-      category_id: (form.get("category_id") as string) || null,
+      category_id,
+      visibility,
+      date: new Date().toISOString().split("T")[0],
+      category: category_id ? categories.find(c => c.id === category_id) || null : null
+    };
+
+    setTrip(prev => prev ? { ...prev, expenses: [...prev.expenses, newExpense].sort((a, b) => a.date.localeCompare(b.date)) } : null);
+
+    const { error } = await supabase.from("expenses").insert({
+      id: expenseId,
+      trip_id: id,
+      created_by_member_id: currentMember.id,
+      description,
+      amount,
+      currency: expenseCurrency,
+      category_id,
       visibility,
       date: new Date().toISOString().split("T")[0],
     });
@@ -177,9 +218,25 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     const visibility = form.get("is_private") === "on" ? "private" : "public";
     const estimatedAmount = parseCurrencyToNumber(form.get("estimated_amount") as string) || 0;
     const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
+    const ideaId = crypto.randomUUID();
+
+    // Optimistic update
+    const newIdea: Idea = {
+      id: ideaId,
+      trip_id: id,
+      created_by_member_id: currentMember.id,
+      title,
+      maps_url: mapsUrl,
+      estimated_amount: estimatedAmount,
+      currency: ideaCurrency,
+      visibility,
+      created_at: new Date().toISOString(),
+    };
+
+    setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...prev.ideas] } : null);
 
     const { error } = await supabase.from("ideas").insert({
-      id: crypto.randomUUID(),
+      id: ideaId,
       trip_id: id,
       created_by_member_id: currentMember.id,
       title,
@@ -383,6 +440,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               tripBudget={tripBudget}
               onOpenModal={() => openModal('expense')}
               onSetActiveTab={setActiveTab}
+              onTripUpdate={setTrip}
             />
           )}
 
@@ -394,6 +452,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               settings={settings}
               onOpenModal={() => openModal('idea')}
               onSetActiveTab={setActiveTab}
+              onTripUpdate={setTrip}
             />
           )}
 
@@ -402,6 +461,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               trip={trip}
               currentMember={currentMember}
               tripId={id!}
+              onTripUpdate={setTrip}
             />
           )}
 

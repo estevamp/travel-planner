@@ -15,9 +15,10 @@ interface IdeasTabProps {
   settings: UserSettings;
   onOpenModal: () => void;
   onSetActiveTab: (tab: string) => void;
+  onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab }: IdeasTabProps) {
+export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [ideaDraft, setIdeaDraft] = useState<{
@@ -69,6 +70,22 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     const estimatedAmount = parseCurrencyToNumber(ideaDraft.estimated_amount) || 0;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
     
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      ideas: prev.ideas.map((idea) =>
+        idea.id === ideaId
+          ? {
+              ...idea,
+              title,
+              maps_url: mapsUrl,
+              estimated_amount: estimatedAmount,
+              visibility: ideaDraft.visibility,
+            }
+          : idea
+      ),
+    }));
+
     const { error } = await supabase
       .from("ideas")
       .update({
@@ -97,6 +114,15 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   };
 
   const deleteIdea = async (idea: Idea) => {
+    const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
+    if (!confirmed) return;
+
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      ideas: prev.ideas.filter((i) => i.id !== idea.id),
+    }));
+
     const assets = ideaAssetsByIdeaId.get(idea.id) || [];
     const paths = assets.map((asset) => asset.url);
     if (paths.length > 0) {
@@ -266,11 +292,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
-                              if (!confirmed) return;
-                              await deleteIdea(idea);
-                            }}
+                            onClick={() => void deleteIdea(idea)}
                             className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
                             aria-label="Excluir ideia"
                           >

@@ -134,6 +134,25 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
     const nextAmount = parseCurrencyToNumber(itineraryDraft.amount) || 0;
 
     setSavingItinerary(true);
+
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      itinerary: prev.itinerary.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              type: itineraryDraft.type,
+              title,
+              description: itineraryDraft.description.trim(),
+              location: itineraryDraft.location.trim(),
+              amount: nextAmount,
+              visibility: itineraryDraft.visibility,
+            }
+          : item
+      ),
+    }));
+
     const { error } = await supabase
       .from("itinerary")
       .update({
@@ -152,23 +171,6 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
       return;
     }
 
-    onTripUpdate((prev) => ({
-      ...prev,
-      itinerary: prev.itinerary.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              type: itineraryDraft.type,
-              title,
-              description: itineraryDraft.description.trim(),
-              location: itineraryDraft.location.trim(),
-              amount: nextAmount,
-              visibility: itineraryDraft.visibility,
-            }
-          : item
-      ),
-    }));
-
     if (nextAmount > 0) {
       await upsertItineraryExpense(itemId, sourceItem, {
         title,
@@ -184,6 +186,12 @@ export function ItineraryTab({ trip, currentMember, settings, onOpenModal, onTri
   };
 
   const deleteItineraryItem = async (item: ItineraryItem) => {
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      itinerary: prev.itinerary.filter((i) => i.id !== item.id),
+    }));
+
     const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
     if (error) {
       alert(getErrorMessage(error));

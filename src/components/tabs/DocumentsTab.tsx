@@ -11,10 +11,27 @@ interface DocumentsTabProps {
   trip: Trip;
   currentMember: TripMember | null;
   tripId: string;
+  onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function DocumentsTab({ trip, currentMember, tripId }: DocumentsTabProps) {
+export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: DocumentsTabProps) {
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+
+  const deleteDocument = async (docId: string, docUrl: string) => {
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      documents: prev.documents.filter((d) => d.id !== docId),
+    }));
+
+    const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([docUrl]);
+    if (storageError) {
+      alert(getErrorMessage(storageError));
+      return;
+    }
+    const { error } = await supabase.from("documents").delete().eq("id", docId);
+    if (error) alert(getErrorMessage(error));
+  };
 
   return (
     <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -67,15 +84,7 @@ export function DocumentsTab({ trip, currentMember, tripId }: DocumentsTabProps)
           </div>
           <button
             type="button"
-            onClick={async () => {
-              const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([doc.url]);
-              if (storageError) {
-                alert(getErrorMessage(storageError));
-                return;
-              }
-              const { error } = await supabase.from("documents").delete().eq("id", doc.id);
-              if (error) alert(getErrorMessage(error));
-            }}
+            onClick={() => void deleteDocument(doc.id, doc.url)}
             className="text-zinc-300 hover:text-red-500"
           >
             <Trash2 size={16} />
