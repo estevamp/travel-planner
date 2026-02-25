@@ -210,6 +210,23 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (error) alert(getErrorMessage(error));
   };
 
+  const handleDeleteLink = async (linkId: string) => {
+    if (!window.confirm("Excluir este link?")) return;
+    const { error } = await supabase.from("idea_links").delete().eq("id", linkId);
+    if (error) alert(getErrorMessage(error));
+  };
+
+  const handleDeleteAsset = async (asset: IdeaAsset) => {
+    if (!window.confirm("Excluir este arquivo?")) return;
+    const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([asset.url]);
+    if (storageError) {
+      alert(getErrorMessage(storageError));
+      return;
+    }
+    const { error: dbError } = await supabase.from("idea_assets").delete().eq("id", asset.id);
+    if (dbError) alert(getErrorMessage(dbError));
+  };
+
   return (
     <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -305,7 +322,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                         <span className="break-words">{idea.title}</span>
                         {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
                       </p>
-                      {idea.description && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap">{idea.description}</p>}
+                      {idea.description && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.description}</p>}
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
                           <MapPin size={12} />Google Maps
@@ -332,18 +349,18 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                           <button
                             type="button"
                             onClick={() => startEditIdea(idea)}
-                            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition-colors"
+                            className="p-2 text-zinc-400 hover:text-zinc-700"
                             aria-label="Editar ideia"
                           >
-                            <FilePenLine size={20} />
+                            <FilePenLine size={16} />
                           </button>
                           <button
                             type="button"
                             onClick={() => void deleteIdea(idea)}
-                            className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
+                            className="p-2 text-zinc-400 hover:text-red-500"
                             aria-label="Excluir ideia"
                           >
-                            <Trash2 size={20} />
+                            <Trash2 size={16} />
                           </button>
                         </>
                       )}
@@ -355,18 +372,27 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="text-xs uppercase font-semibold text-zinc-500">URLs</p>
                       <div className="space-y-1">
                         {links.map((link) => (
-                          <a
-                            key={link.id}
-                            href={link.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block text-sm text-blue-600 break-all hover:underline"
-                          >
-                            <span className="inline-flex items-center gap-1">
-                              <LinkIcon size={12} className="flex-shrink-0" />
-                              <span className="break-all">{link.label || link.url}</span>
-                            </span>
-                          </a>
+                          <div key={link.id} className="flex items-center justify-between gap-2 group/link">
+                            <a
+                              href={link.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-sm text-blue-600 break-all hover:underline"
+                            >
+                              <span className="inline-flex items-center gap-1">
+                                <LinkIcon size={12} className="flex-shrink-0" />
+                                <span className="break-all">{link.label || link.url}</span>
+                              </span>
+                            </a>
+                            {editingIdeaId === idea.id && (
+                              <button
+                                onClick={() => void handleDeleteLink(link.id)}
+                                className="p-1 text-zinc-400 hover:text-red-500 opacity-0 group-hover/link:opacity-100 transition-opacity"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -377,15 +403,24 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="text-xs uppercase font-semibold text-zinc-500">Anexos</p>
                       <div className="flex flex-wrap gap-2">
                         {attachments.map((asset) => (
-                          <button
-                            key={asset.id}
-                            type="button"
-                            onClick={() => void openIdeaAsset(asset)}
-                            className="px-3 py-2 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
-                          >
-                            <Paperclip size={12} />
-                            <span className="max-w-[150px] truncate">{asset.name}</span>
-                          </button>
+                          <div key={asset.id} className="relative group/asset">
+                            <button
+                              type="button"
+                              onClick={() => void openIdeaAsset(asset)}
+                              className="px-3 py-2 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                            >
+                              <Paperclip size={12} />
+                              <span className="max-w-[150px] truncate">{asset.name}</span>
+                            </button>
+                            {editingIdeaId === idea.id && (
+                              <button
+                                onClick={() => void handleDeleteAsset(asset)}
+                                className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/asset:opacity-100 transition-opacity"
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -396,14 +431,23 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
                       <div className="flex flex-wrap gap-2">
                         {photos.map((asset) => (
-                          <button
-                            key={asset.id}
-                            type="button"
-                            onClick={() => void openIdeaAsset(asset)}
-                            className="px-3 py-2 rounded-lg border border-zinc-200 text-xs hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
-                          >
-                            <span className="max-w-[150px] truncate">{asset.name}</span>
-                          </button>
+                          <div key={asset.id} className="relative group/asset">
+                            <button
+                              type="button"
+                              onClick={() => void openIdeaAsset(asset)}
+                              className="px-3 py-2 rounded-lg border border-zinc-200 text-xs hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                            >
+                              <span className="max-w-[150px] truncate">{asset.name}</span>
+                            </button>
+                            {editingIdeaId === idea.id && (
+                              <button
+                                onClick={() => void handleDeleteAsset(asset)}
+                                className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/asset:opacity-100 transition-opacity"
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
