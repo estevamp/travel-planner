@@ -28,8 +28,8 @@ export interface ItineraryItem {
   id: string;
   trip_id: string;
   created_by_member_id: string;
-  type_id: string;
-  type?: ItineraryType;
+  type_id: string | null;
+  type?: ItineraryType | null;
   title: string;
   description: string;
   location: string;

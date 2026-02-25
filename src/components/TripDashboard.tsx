@@ -104,7 +104,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     const itineraryId = crypto.randomUUID();
     const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
     const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const type_id = form.get("type_id") as string;
+    const type_id = (form.get("type_id") as string) || null;
     const description = (form.get("description") as string) || "";
     const location = (form.get("location") as string) || "";
     const start_time = (form.get("start_time") as string) || null;
@@ -116,7 +116,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       trip_id: id,
       created_by_member_id: currentMember.id,
       type_id,
-      type: itineraryTypes.find(t => t.id === type_id),
+      type: type_id ? itineraryTypes.find(t => t.id === type_id) : null,
       title,
       description,
       location,
@@ -509,8 +509,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             (e.target as HTMLFormElement).reset();
           }}
         >
-          <select name="type_id" required className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
-            <option value="">Selecione um tipo</option>
+          <select name="type_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+            <option value="">Sem tipo</option>
             {itineraryTypes.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
             ))}

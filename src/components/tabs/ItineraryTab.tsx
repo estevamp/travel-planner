@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { format } from "date-fns";
-import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus } from "lucide-react";
+import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus, Train, Ship, Car, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl } from "../../utils";
 import type { Trip, ItineraryItem, TripMember, UserSettings, Visibility, ItineraryType } from "../../types";
@@ -17,11 +17,15 @@ interface ItineraryTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
+const ICON_COMPONENTS: Record<string, any> = {
+  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase, Calendar
+};
+
 export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, onOpenModal, onTripUpdate }: ItineraryTabProps) {
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [itineraryDraft, setItineraryDraft] = useState<{
-    type_id: string;
+    type_id: string | null;
     title: string;
     description: string;
     location: string;
@@ -29,7 +33,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
     start_time: string;
     end_time: string;
   }>({
-    type_id: "",
+    type_id: null,
     title: "",
     description: "",
     location: "",
@@ -43,7 +47,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
   const startEditItinerary = (item: ItineraryItem) => {
     setEditingItineraryId(item.id);
     setItineraryDraft({
-      type_id: item.type_id,
+      type_id: item.type_id || null,
       title: item.title,
       description: item.description || "",
       location: item.location || "",
@@ -69,8 +73,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
         item.id === itemId
           ? {
               ...item,
-              type_id: itineraryDraft.type_id,
-              type: itineraryTypes.find(t => t.id === itineraryDraft.type_id),
+              type_id: itineraryDraft.type_id || null,
               title,
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
@@ -85,7 +88,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
     const { error } = await supabase
       .from("itinerary")
       .update({
-        type_id: itineraryDraft.type_id,
+        type_id: itineraryDraft.type_id || null,
         title,
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),
@@ -128,17 +131,20 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
               {item.photo_url && <img src={item.photo_url} alt={item.title} className="w-full h-40 object-cover" />}
               <div className="p-5 flex items-start gap-3">
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-50 text-zinc-600")}>
-                  <Calendar size={20} />
+                  {(() => {
+                    const Icon = (item.type?.icon && ICON_COMPONENTS[item.type.icon]) || Calendar;
+                    return <Icon size={20} />;
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   {editingItineraryId === item.id ? (
                     <div className="space-y-2">
                       <select
-                        value={itineraryDraft.type_id}
-                        onChange={(e) => setItineraryDraft((current) => ({ ...current, type_id: e.target.value }))}
+                        value={itineraryDraft.type_id || ""}
+                        onChange={(e) => setItineraryDraft((current) => ({ ...current, type_id: e.target.value || null }))}
                         className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                       >
-                        <option value="">Selecione um tipo</option>
+                        <option value="">Sem tipo</option>
                         {itineraryTypes.map((type) => (
                           <option key={type.id} value={type.id}>{type.name}</option>
                         ))}

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase, Calendar } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
-import { THEME_PALETTES } from "../../constants";
+import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
 import type { Trip, TripMember, UserSettings, ExpenseCategory, ItineraryType, TripBudget } from "../../types";
 import { Card } from "../Card";
 
@@ -29,6 +29,10 @@ interface SettingsTabProps {
   onReloadTripOptions: () => void;
   onNavigateToAbout: () => void;
 }
+
+const ICON_COMPONENTS: Record<string, any> = {
+  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase, Calendar
+};
 
 export function SettingsTab({
   trip,
@@ -547,13 +551,14 @@ export function SettingsTab({
         </div>
         <div className="space-y-4">
           <form
-            className="flex gap-3"
+            className="space-y-3"
             onSubmit={async (e) => {
               e.preventDefault();
               const form = new FormData(e.currentTarget);
               const name = (form.get("name") as string).trim();
+              const icon = (form.get("icon") as string) || "Calendar";
               if (!name) return;
-              const { data, error } = await supabase.from("itinerary_types").insert({ name }).select().single();
+              const { data, error } = await supabase.from("itinerary_types").insert({ name, icon }).select().single();
               if (error) {
                 alert(getErrorMessage(error));
               } else {
@@ -562,29 +567,54 @@ export function SettingsTab({
               }
             }}
           >
-            <input
-              name="name"
-              required
-              placeholder="Novo tipo de atividade"
-              className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
-            />
-            <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
-              <Plus size={16} />
-              Adicionar
-            </button>
+            <div className="flex gap-3">
+              <input
+                name="name"
+                required
+                placeholder="Novo tipo de atividade"
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+              />
+              <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
+                <Plus size={16} />
+                Adicionar
+              </button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-zinc-400 px-1">Ícone</label>
+              <div className="flex flex-wrap gap-2 p-3 rounded-xl border-2 border-zinc-100 max-h-40 overflow-y-auto">
+                {ACTIVITY_ICONS.map((iconName) => {
+                  const Icon = ICON_COMPONENTS[iconName] || Calendar;
+                  return (
+                    <label key={iconName} className="cursor-pointer group">
+                      <input type="radio" name="icon" value={iconName} className="hidden peer" defaultChecked={iconName === "Calendar"} />
+                      <div className="p-2 rounded-lg border-2 border-transparent peer-checked:border-[var(--accent-color)] peer-checked:bg-[var(--accent-color)]/5 hover:bg-zinc-50 transition-all">
+                        <Icon size={20} className="text-zinc-600 group-hover:text-zinc-900" />
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {itineraryTypes.map((type) => (
-              <div
-                key={type.id}
+            {itineraryTypes.map((type) => {
+              const Icon = ICON_COMPONENTS[type.icon] || Calendar;
+              return (
+                <div
+                  key={type.id}
                 className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
                 style={{
                   backgroundColor: 'var(--card-bg)',
                   borderColor: 'var(--card-border)'
                 }}
               >
-                <span className="text-sm font-semibold">{type.name}</span>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-zinc-50 text-zinc-600">
+                    <Icon size={18} />
+                  </div>
+                  <span className="text-sm font-semibold">{type.name}</span>
+                </div>
                 <button
                   onClick={async () => {
                     if (!window.confirm(`Excluir tipo de atividade "${type.name}"?`)) return;
@@ -603,8 +633,9 @@ export function SettingsTab({
                 >
                   <Trash2 size={16} />
                 </button>
-              </div>
-            ))}
+                </div>
+              );
+            })}
             {itineraryTypes.length === 0 && (
               <div className="sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed border-zinc-200">
                 <p className="text-sm text-zinc-500">Nenhum tipo de atividade configurado ainda.</p>
