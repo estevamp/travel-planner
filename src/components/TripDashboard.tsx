@@ -141,11 +141,14 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const isAdmin = currentMember?.role === "admin";
   const memberByUserId = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const themedStyles = useMemo(() => {
-    const effectiveSettings = {
+    const effectivePalette = trip?.theme_palette && trip.theme_palette !== 'default'
+      ? trip.theme_palette
+      : settings.theme_palette;
+
+    return getThemeStyles({
       ...settings,
-      theme_palette: trip?.theme_palette || settings.theme_palette
-    };
-    return getThemeStyles(effectiveSettings);
+      theme_palette: effectivePalette
+    });
   }, [settings, trip?.theme_palette]);
 
   // Modal helper functions
@@ -1132,6 +1135,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     const { data, error } = await supabase.rpc("upsert_trip_budget", {
       p_trip_id: id,
       p_budget_limit: safeBudget,
+      p_currency: budgetCurrency,
     });
     setSavingSettings(false);
 

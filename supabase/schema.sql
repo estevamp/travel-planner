@@ -681,49 +681,6 @@ begin
 end;
 $$;
 
-create or replace function public.upsert_trip_budget(
-  p_trip_id uuid,
-  p_budget_limit numeric
-)
-returns public.trip_budgets
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_uid uuid;
-  v_owner_user_id uuid;
-  v_budget public.trip_budgets;
-begin
-  v_uid := auth.uid();
-  if v_uid is null then
-    raise exception 'Authentication required';
-  end if;
-
-  if not public.is_trip_member(p_trip_id) then
-    raise exception 'Trip membership not found';
-  end if;
-
-  if p_budget_limit < 0 then
-    raise exception 'Budget limit must be >= 0';
-  end if;
-
-  v_owner_user_id := public.budget_owner_user_id(p_trip_id, v_uid);
-  if v_owner_user_id is null then
-    raise exception 'Budget owner resolution failed';
-  end if;
-
-  insert into public.trip_budgets (trip_id, owner_user_id, budget_limit)
-  values (p_trip_id, v_owner_user_id, p_budget_limit)
-  on conflict (trip_id, owner_user_id) do update
-    set budget_limit = excluded.budget_limit,
-        updated_at = now()
-  returning * into v_budget;
-
-  return v_budget;
-end;
-$$;
-
 create or replace function public.set_trip_spouse(
   p_trip_id uuid,
   p_member_id uuid,
@@ -1119,16 +1076,18 @@ for delete using (
 drop policy if exists expense_categories_select_all on public.expense_categories;
 drop policy if exists expense_categories_all_admin on public.expense_categories;
 
+
+drop policy if exists expense_categories_select_all on public.expense_categories;
 create policy expense_categories_select_all on public.expense_categories
 for select using (true);
 
+drop policy if exists expense_categories_all_authenticated on public.expense_categories;
 create policy expense_categories_all_authenticated on public.expense_categories
 for all using (
   auth.role() = 'authenticated'
 ) with check (
   auth.role() = 'authenticated'
 );
-
 insert into storage.buckets (id, name, public)
 values ('travel-documents', 'travel-documents', false)
 on conflict (id) do update set public = excluded.public;
@@ -1272,7 +1231,6 @@ revoke all on function public.cancel_trip_invite(uuid, uuid) from public;
 revoke all on function public.set_trip_spouse(uuid, uuid, uuid) from public;
 revoke all on function public.set_global_spouse(uuid) from public;
 revoke all on function public.budget_owner_user_id(uuid, uuid) from public;
-revoke all on function public.upsert_trip_budget(uuid, numeric) from public;
 
 grant execute on function public.sync_my_profile() to authenticated;
 grant execute on function public.current_member_id(uuid) to authenticated;
@@ -1287,7 +1245,6 @@ grant execute on function public.cancel_trip_invite(uuid, uuid) to authenticated
 grant execute on function public.set_trip_spouse(uuid, uuid, uuid) to authenticated;
 grant execute on function public.set_global_spouse(uuid) to authenticated;
 grant execute on function public.budget_owner_user_id(uuid, uuid) to authenticated;
-grant execute on function public.upsert_trip_budget(uuid, numeric) to authenticated;
 
 do $$
 begin
