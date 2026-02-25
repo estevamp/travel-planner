@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
-import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus } from "lucide-react";
+import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus, X } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -21,8 +21,9 @@ interface IdeasTabProps {
 export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
-  const [showLinkLabel, setShowLinkLabel] = useState<string | null>(null);
+  const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
   const [newLink, setNewLink] = useState({ label: "", url: "" });
+  const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
     notes: string;
@@ -112,7 +113,13 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       alert(getErrorMessage(error));
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    
+    // If it's a photo, show in modal
+    if (asset.asset_type === "photo") {
+      setViewingPhotoUrl(data.signedUrl);
+    } else {
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
   const deleteIdea = async (idea: Idea) => {
@@ -138,12 +145,27 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (error) alert(getErrorMessage(error));
   };
 
-  const copyIdeaToItinerary = async (idea: Idea) => {
+  const convertIdeaToActivity = async (idea: Idea) => {
     if (!trip.id || !currentMember || copyingIdeaId) return;
     setCopyingIdeaId(idea.id);
     
     const itineraryId = crypto.randomUUID();
     const now = new Date().toISOString();
+
+    // Build description from notes and maps URL
+    let description = idea.notes || "";
+    if (idea.maps_url) {
+      description += (description ? "\n\n" : "") + `Google Maps: ${idea.maps_url}`;
+    }
+
+    // Add links to description
+    const links = ideaLinksByIdeaId.get(idea.id) || [];
+    if (links.length > 0) {
+      description += (description ? "\n\n" : "") + "Links:\n";
+      links.forEach(link => {
+        description += `- ${link.label || link.url}: ${link.url}\n`;
+      });
+    }
 
     const { error } = await supabase.from("itinerary").insert({
       id: itineraryId,
@@ -151,7 +173,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       created_by_member_id: currentMember.id,
       type_id: null,
       title: idea.title,
-      description: idea.notes || (idea.maps_url ? `Google Maps: ${idea.maps_url}` : ""),
+      description: description.trim(),
       location: "",
       start_time: now,
       end_time: now,
@@ -244,7 +266,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (error) alert(getErrorMessage(error));
     else {
       setNewLink({ label: "", url: "" });
-      setShowLinkLabel(null);
+      setShowLinkForm(null);
     }
   };
 
@@ -319,7 +341,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                     />
                     
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {showLinkLabel === idea.id ? (
+                      {showLinkForm === idea.id ? (
                         <div className="w-full space-y-2 p-3 rounded-xl bg-zinc-50 border border-zinc-200">
                           <input
                             value={newLink.label}
@@ -343,7 +365,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                             </button>
                             <button
                               type="button"
-                              onClick={() => setShowLinkLabel(null)}
+                              onClick={() => setShowLinkForm(null)}
                               className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold"
                             >
                               Cancelar
@@ -353,7 +375,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       ) : (
                         <button
                           type="button"
-                          onClick={() => setShowLinkLabel(idea.id)}
+                          onClick={() => setShowLinkForm(idea.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors"
                         >
                           <LinkIcon size={14} />
@@ -363,12 +385,12 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
                         <ImagePlus size={14} />
                         Foto
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
                       </label>
                       <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
                         <Paperclip size={14} />
                         Anexo
-                        <input type="file" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
+                        <input type="file" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
                       </label>
                     </div>
 
@@ -417,11 +439,11 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
                         type="button"
-                        onClick={() => void copyIdeaToItinerary(idea)}
+                        onClick={() => void convertIdeaToActivity(idea)}
                         disabled={copyingIdeaId === idea.id}
                         className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
-                        aria-label="Copiar para atividades"
-                        title="Copiar para atividades"
+                        aria-label="Transformar em atividade"
+                        title="Transformar em atividade"
                       >
                         {copyingIdeaId === idea.id ? (
                           <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
@@ -452,9 +474,38 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                     </div>
                   </div>
 
-                  {(links.length > 0 || editingIdeaId === idea.id) && (
+                  {/* Photo Gallery */}
+                  {photos.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">URLs</p>
+                      <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {photos.map((asset) => (
+                          <div key={asset.id} className="relative group/photo aspect-square">
+                            <button
+                              type="button"
+                              onClick={() => void openIdeaAsset(asset)}
+                              className="w-full h-full rounded-lg border border-zinc-200 overflow-hidden bg-zinc-100 hover:opacity-90 transition-opacity"
+                            >
+                              <PhotoThumbnail asset={asset} />
+                            </button>
+                            {canManage && editingIdeaId === idea.id && (
+                              <button
+                                onClick={() => void handleDeleteAsset(asset)}
+                                className="absolute -top-1 -right-1 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/photo:opacity-100 transition-opacity"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Links */}
+                  {links.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-zinc-100">
+                      <p className="text-xs uppercase font-semibold text-zinc-500">Links</p>
                       <div className="space-y-1">
                         {links.map((link) => (
                           <div key={link.id} className="flex items-center justify-between gap-2 group/link">
@@ -462,29 +513,32 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                               href={link.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="block text-sm text-blue-600 break-all hover:underline"
+                              className="block text-sm text-blue-600 break-all hover:underline flex-1"
                             >
                               <span className="inline-flex items-center gap-1">
                                 <LinkIcon size={12} className="flex-shrink-0" />
                                 <span className="break-all">{link.label || link.url}</span>
                               </span>
                             </a>
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteLink(link.id)}
-                              className={cn(
-                                "p-1 text-zinc-400 hover:text-red-500 transition-opacity",
-                                editingIdeaId === idea.id ? "opacity-100" : "opacity-0 group-hover/link:opacity-100"
-                              )}
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {canManage && (
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteLink(link.id)}
+                                className={cn(
+                                  "p-1 text-zinc-400 hover:text-red-500 transition-opacity",
+                                  editingIdeaId === idea.id ? "opacity-100" : "opacity-0 group-hover/link:opacity-100"
+                                )}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
                   
+                  {/* Attachments */}
                   {attachments.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-zinc-100">
                       <p className="text-xs uppercase font-semibold text-zinc-500">Anexos</p>
@@ -499,34 +553,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                               <Paperclip size={12} />
                               <span className="max-w-[150px] truncate">{asset.name}</span>
                             </button>
-                            {editingIdeaId === idea.id && (
-                              <button
-                                onClick={() => void handleDeleteAsset(asset)}
-                                className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/asset:opacity-100 transition-opacity"
-                              >
-                                <Trash2 size={10} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {photos.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
-                      <div className="flex flex-wrap gap-2">
-                        {photos.map((asset) => (
-                          <div key={asset.id} className="relative group/asset">
-                            <button
-                              type="button"
-                              onClick={() => void openIdeaAsset(asset)}
-                              className="px-3 py-2 rounded-lg border border-zinc-200 text-xs hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
-                            >
-                              <span className="max-w-[150px] truncate">{asset.name}</span>
-                            </button>
-                            {editingIdeaId === idea.id && (
+                            {canManage && editingIdeaId === idea.id && (
                               <button
                                 onClick={() => void handleDeleteAsset(asset)}
                                 className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 opacity-0 group-hover/asset:opacity-100 transition-opacity"
@@ -547,6 +574,64 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       </div>
       
       <FloatingActionButton onClick={onOpenModal} />
+
+      {/* Photo Viewer Modal */}
+      {viewingPhotoUrl && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setViewingPhotoUrl(null)}
+        >
+          <button
+            onClick={() => setViewingPhotoUrl(null)}
+            className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg hover:bg-zinc-100 transition-colors"
+          >
+            <X size={24} />
+          </button>
+          <img 
+            src={viewingPhotoUrl} 
+            alt="Foto da ideia" 
+            className="max-w-full max-h-full rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </motion.div>
+  );
+}
+
+// Component to display photo thumbnail
+function PhotoThumbnail({ asset }: { asset: IdeaAsset }) {
+  const [signedUrl, setSignedUrl] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const loadUrl = async () => {
+      const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(asset.url, 3600);
+      if (data && !error) {
+        setSignedUrl(data.signedUrl);
+      }
+      setLoading(false);
+    };
+    void loadUrl();
+  }, [asset.url]);
+
+  if (loading) {
+    return <div className="w-full h-full flex items-center justify-center bg-zinc-100">
+      <div className="w-6 h-6 border-2 border-zinc-300 border-t-transparent rounded-full animate-spin" />
+    </div>;
+  }
+
+  if (!signedUrl) {
+    return <div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400 text-xs">
+      Erro
+    </div>;
+  }
+
+  return (
+    <img 
+      src={signedUrl} 
+      alt={asset.name} 
+      className="w-full h-full object-cover"
+    />
   );
 }
