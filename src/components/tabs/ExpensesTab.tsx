@@ -106,7 +106,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     {budgetProgress.toFixed(1)}%
                   </span>
                 </div>
-                <div className="h-4 bg-white rounded-full overflow-hidden border-2 border-zinc-200 shadow-inner">
+                <div className="h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                   <div
                     className={cn(
                       "h-full transition-all duration-500 rounded-full",
@@ -123,7 +123,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-zinc-600 uppercase">Orçamento</p>
-                  <div className="relative h-32 bg-white rounded-xl border-2 border-blue-300 overflow-hidden">
+                  <div className="relative h-32 rounded-xl border-2 border-blue-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
                     <div
                       className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-500 to-blue-400 transition-all duration-500"
                       style={{ height: '100%' }}
@@ -137,7 +137,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-zinc-600 uppercase">Despesas</p>
-                  <div className="relative h-32 bg-white rounded-xl border-2 border-zinc-300 overflow-hidden">
+                  <div className="relative h-32 rounded-xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                     <div
                       className={cn(
                         "absolute bottom-0 left-0 right-0 transition-all duration-500",
@@ -182,7 +182,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
           )}
 
           {budgetLimit === 0 && (
-            <div className="p-4 rounded-xl bg-white border-2 border-zinc-200">
+            <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
               <p className="text-sm text-zinc-600 text-center">
                 💡 Defina um orçamento nas <button
                   onClick={() => onSetActiveTab("settings")}

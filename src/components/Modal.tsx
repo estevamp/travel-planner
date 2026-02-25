@@ -64,22 +64,29 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", duration: 0.3 }}
             className={cn(
-              "relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden",
+              "relative w-full rounded-3xl shadow-2xl overflow-hidden",
               "max-h-[90vh] flex flex-col",
               sizeClasses[size],
               "md:max-h-[85vh]"
             )}
+            style={{ backgroundColor: 'var(--card-bg)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 flex-shrink-0">
-              <h2 className="text-xl font-bold text-zinc-800">{title}</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--card-border)' }}>
+              <h2 className="text-xl font-bold">{title}</h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-zinc-100 transition-colors"
+                className="p-2 rounded-full transition-colors"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: 'inherit'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 aria-label="Fechar modal"
               >
-                <X size={20} className="text-zinc-500" />
+                <X size={20} />
               </button>
             </div>
 

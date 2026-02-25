@@ -303,12 +303,19 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 initial={{ opacity: 0, y: 100 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 100 }}
-                className="w-full max-w-[95vw] bg-white rounded-3xl overflow-hidden shadow-2xl"
+                className="w-full max-w-[95vw] rounded-3xl overflow-hidden shadow-2xl"
+                style={{ backgroundColor: 'var(--card-bg)' }}
               >
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold">Minhas Viagens</h3>
-                    <button onClick={() => setShowMobileTripSelector(false)} className="p-2 rounded-full hover:bg-zinc-100">
+                    <button
+                      onClick={() => setShowMobileTripSelector(false)}
+                      className="p-2 rounded-full transition-colors"
+                      style={{ backgroundColor: 'transparent' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
                       <Plus size={20} className="rotate-45" />
                     </button>
                   </div>
@@ -324,8 +331,12 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                           "w-full text-left rounded-2xl border p-4 transition-all",
                           option.id === id
                             ? "bg-[var(--sidebar-active-bg)] border-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                            : "border-zinc-100 hover:border-zinc-200 bg-zinc-50"
+                            : ""
                         )}
+                        style={option.id !== id ? {
+                          backgroundColor: 'var(--card-bg)',
+                          borderColor: 'var(--card-border)'
+                        } : undefined}
                       >
                         <p className="font-bold truncate">{option.name}</p>
                         <p className="text-sm opacity-80 truncate">{option.destination || "Sem destino"}</p>
