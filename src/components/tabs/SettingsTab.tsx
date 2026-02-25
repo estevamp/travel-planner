@@ -229,7 +229,7 @@ export function SettingsTab({
             placeholder="0,00"
             className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
           />
-          <div className="px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200">
+          <div className="px-4 py-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <p className="text-xs text-zinc-600">
               {budgetOwnerUserId === userId
                 ? "💡 Orçamento individual nesta viagem"
@@ -289,8 +289,11 @@ export function SettingsTab({
               "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
               settingsDraft.dark_mode
                 ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
-                : "border-zinc-200 bg-gradient-to-br from-white to-zinc-50 hover:border-zinc-300 shadow-sm"
+                : "border-zinc-200 hover:border-zinc-300 shadow-sm"
             )}
+            style={!settingsDraft.dark_mode ? {
+              background: `linear-gradient(to bottom right, var(--card-bg), var(--card-bg))`
+            } : undefined}
           >
             <div className="flex items-center gap-3">
               {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
@@ -468,7 +471,14 @@ export function SettingsTab({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {categories.map((cat) => (
-              <div key={cat.id} className="flex items-center justify-between p-4 rounded-xl border-2 border-zinc-200 bg-gradient-to-br from-white to-zinc-50 hover:border-zinc-300 transition-all group">
+              <div
+                key={cat.id}
+                className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
+                style={{
+                  backgroundColor: 'var(--card-bg)',
+                  borderColor: 'var(--card-border)'
+                }}
+              >
                 <span className="text-sm font-semibold">{cat.name}</span>
                 <button
                   onClick={async () => {

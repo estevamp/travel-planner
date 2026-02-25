@@ -11,4 +11,17 @@
     max-width: 100vw;
     overflow-x: hidden;
   }
+
+  /* Dark mode support for inputs and selects */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    background-color: var(--card-bg);
+    color: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    opacity: 0.5;
+  }
 }
