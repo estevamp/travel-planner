@@ -15,6 +15,7 @@ export interface TripBudget {
   trip_id: string;
   owner_user_id: string;
   budget_limit: number;
+  currency: string;
 }
 
 export interface ItineraryItem {
@@ -28,6 +29,7 @@ export interface ItineraryItem {
   start_time: string;
   end_time: string;
   amount: number;
+  currency: string;
   visibility: Visibility;
   photo_url?: string | null;
 }
@@ -69,6 +71,7 @@ export interface Idea {
   title: string;
   maps_url: string | null;
   estimated_amount: number;
+  currency: string;
   visibility: Visibility;
   created_at: string;
 }

@@ -34,6 +34,11 @@ import type {
 } from "../types";
 import { Card } from "./Card";
 import { SidebarItem } from "./SidebarItem";
+import { Modal } from "./Modal";
+import { FloatingActionButton } from "./FloatingActionButton";
+import { CurrencySelector } from "./CurrencySelector";
+import { currencyService } from "../services/currencyService";
+import type { ExchangeRates } from "../services/currencyService";
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
@@ -118,10 +123,35 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
   const budgetAutosaveReadyRef = useRef(false);
   const tripAutosaveReadyRef = useRef(false);
 
+  // Modal control
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
+
+  // Currency states for each form
+  const [itineraryCurrency, setItineraryCurrency] = useState(settings.default_currency);
+  const [expenseCurrency, setExpenseCurrency] = useState(settings.default_currency);
+  const [ideaCurrency, setIdeaCurrency] = useState(settings.default_currency);
+  const [budgetCurrency, setBudgetCurrency] = useState(settings.default_currency);
+
+  // Exchange rates
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
+  const [loadingRates, setLoadingRates] = useState(false);
+
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
   const isAdmin = currentMember?.role === "admin";
   const memberByUserId = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const themedStyles = useMemo(() => getThemeStyles(settings), [settings]);
+
+  // Modal helper functions
+  const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
+    setModalType(type);
+    setShowAddModal(true);
+  };
+
+  const closeModal = () => {
+    setShowAddModal(false);
+    setModalType(null);
+  };
   const ideaLinksByIdeaId = useMemo(() => {
     const map = new Map<string, IdeaLink[]>();
     for (const link of trip?.idea_links || []) {
@@ -502,6 +532,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       start_time: now,
       end_time: now,
       amount,
+      currency: itineraryCurrency,
       visibility,
       photo_url: null,
     });
@@ -519,7 +550,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         itinerary_item_id: itineraryId,
         description: title,
         amount,
-        currency: settings.default_currency,
+        currency: itineraryCurrency,
         visibility,
         date: new Date().toISOString().split("T")[0],
       });
@@ -538,6 +569,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       start_time: now,
       end_time: now,
       amount,
+      currency: itineraryCurrency,
       visibility,
       photo_url: null,
     };
@@ -563,12 +595,16 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       created_by_member_id: currentMember.id,
       description: (form.get("description") as string) || "Despesa",
       amount,
-      currency: settings.default_currency,
+      currency: expenseCurrency,
       category_id: (form.get("category_id") as string) || null,
       visibility,
       date: new Date().toISOString().split("T")[0],
     });
     if (error) alert(getErrorMessage(error));
+    else {
+      closeModal();
+      setExpenseCurrency(settings.default_currency);
+    }
   };
 
   const createIdea = async (form: FormData) => {
@@ -594,6 +630,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
         title,
         maps_url: mapsUrl,
         estimated_amount: estimatedAmount,
+        currency: ideaCurrency,
         visibility,
         created_at: new Date().toISOString(),
       };
