@@ -74,6 +74,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
           ? {
               ...item,
               type_id: itineraryDraft.type_id || null,
+              type: itineraryTypes.find(t => t.id === itineraryDraft.type_id) || null,
               title,
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
