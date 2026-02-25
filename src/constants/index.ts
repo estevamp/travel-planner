@@ -191,7 +191,7 @@ export const ACTIVITY_ICONS = [
   "Footprints",
   "Bike",
   "Theater",
-  "Museum",
+  "Landmark",
   "Castle",
   "Church",
   "Stethoscope",

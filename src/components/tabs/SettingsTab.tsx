@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase, Calendar } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
@@ -31,7 +31,7 @@ interface SettingsTabProps {
 }
 
 const ICON_COMPONENTS: Record<string, any> = {
-  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase, Calendar
+  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar
 };
 
 export function SettingsTab({

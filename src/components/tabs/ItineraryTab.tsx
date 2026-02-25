@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { format } from "date-fns";
-import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus, Train, Ship, Car, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase } from "lucide-react";
+import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus, Train, Ship, Car, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl } from "../../utils";
 import type { Trip, ItineraryItem, TripMember, UserSettings, Visibility, ItineraryType } from "../../types";
@@ -18,7 +18,7 @@ interface ItineraryTabProps {
 }
 
 const ICON_COMPONENTS: Record<string, any> = {
-  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Museum, Castle, Church, Stethoscope, Briefcase, Calendar
+  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar
 };
 
 export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, onOpenModal, onTripUpdate }: ItineraryTabProps) {
