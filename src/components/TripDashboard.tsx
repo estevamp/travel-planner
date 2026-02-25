@@ -1429,6 +1429,125 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
           {activeTab === "expenses" && (
             <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              {/* Budget Overview Card */}
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-zinc-800">Orçamento da Viagem</h3>
+                      <p className="text-sm text-zinc-600 mt-1">
+                        {budgetLimit > 0
+                          ? `Limite: ${formatCurrency(budgetLimit, settings.default_currency)}`
+                          : "Nenhum orçamento definido"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-zinc-600">Total de Despesas</p>
+                      <p className="text-2xl font-bold text-zinc-800">{formatCurrency(expensesTotal, settings.default_currency)}</p>
+                    </div>
+                  </div>
+
+                  {budgetLimit > 0 && (
+                    <>
+                      {/* Progress Bar */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold">
+                          <span className="text-zinc-600">Progresso</span>
+                          <span className={cn(
+                            "font-bold",
+                            isOverBudget ? "text-red-600" : "text-emerald-600"
+                          )}>
+                            {budgetProgress.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="h-4 bg-white rounded-full overflow-hidden border-2 border-zinc-200 shadow-inner">
+                          <div
+                            className={cn(
+                              "h-full transition-all duration-500 rounded-full",
+                              isOverBudget
+                                ? "bg-gradient-to-r from-red-500 to-red-600"
+                                : "bg-gradient-to-r from-emerald-500 to-teal-500"
+                            )}
+                            style={{ width: `${Math.min(budgetProgress, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Budget vs Expenses Comparison Chart */}
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-zinc-600 uppercase">Orçamento</p>
+                          <div className="relative h-32 bg-white rounded-xl border-2 border-blue-300 overflow-hidden">
+                            <div
+                              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-500 to-blue-400 transition-all duration-500"
+                              style={{ height: '100%' }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-lg font-bold text-white drop-shadow-lg">
+                                {formatCurrency(budgetLimit, settings.default_currency)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-zinc-600 uppercase">Despesas</p>
+                          <div className="relative h-32 bg-white rounded-xl border-2 border-zinc-300 overflow-hidden">
+                            <div
+                              className={cn(
+                                "absolute bottom-0 left-0 right-0 transition-all duration-500",
+                                isOverBudget
+                                  ? "bg-gradient-to-t from-red-500 to-red-400"
+                                  : "bg-gradient-to-t from-emerald-500 to-emerald-400"
+                              )}
+                              style={{ height: `${Math.min((expensesTotal / budgetLimit) * 100, 100)}%` }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className={cn(
+                                "text-lg font-bold drop-shadow-lg",
+                                (expensesTotal / budgetLimit) > 0.5 ? "text-white" : "text-zinc-800"
+                              )}>
+                                {formatCurrency(expensesTotal, settings.default_currency)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Remaining Budget */}
+                      <div className={cn(
+                        "p-4 rounded-xl border-2",
+                        isOverBudget
+                          ? "bg-red-50 border-red-300"
+                          : "bg-emerald-50 border-emerald-300"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-zinc-700">
+                            {isOverBudget ? "Acima do orçamento" : "Restante"}
+                          </span>
+                          <span className={cn(
+                            "text-xl font-bold",
+                            isOverBudget ? "text-red-600" : "text-emerald-600"
+                          )}>
+                            {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {budgetLimit === 0 && (
+                    <div className="p-4 rounded-xl bg-white border-2 border-zinc-200">
+                      <p className="text-sm text-zinc-600 text-center">
+                        💡 Defina um orçamento nas <button
+                          onClick={() => setActiveTab("settings")}
+                          className="text-blue-600 font-semibold hover:underline"
+                        >Configurações</button> para acompanhar seus gastos
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
               {/* Desktop table view */}
               <Card className="p-0 overflow-hidden hidden md:block">
                 <table className="w-full text-left border-collapse">
