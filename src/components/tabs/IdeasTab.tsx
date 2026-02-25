@@ -23,10 +23,12 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
+    description: string;
     maps_url: string;
     visibility: Visibility;
   }>({
     title: "",
+    description: "",
     maps_url: "",
     visibility: "public",
   });
@@ -55,6 +57,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     setEditingIdeaId(idea.id);
     setIdeaDraft({
       title: idea.title,
+      description: idea.description || "",
       maps_url: idea.maps_url || "",
       visibility: idea.visibility,
     });
@@ -64,6 +67,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (!editingIdeaId || editingIdeaId !== ideaId) return;
     const title = ideaDraft.title.trim();
     if (!title) return;
+    const description = ideaDraft.description.trim() || null;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
     
     // Optimistic update
@@ -74,6 +78,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
           ? {
               ...idea,
               title,
+              description,
               maps_url: mapsUrl,
               visibility: ideaDraft.visibility,
             }
@@ -85,6 +90,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       .from("ideas")
       .update({
         title,
+        description,
         maps_url: mapsUrl,
         visibility: ideaDraft.visibility,
       })
@@ -143,7 +149,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       created_by_member_id: currentMember.id,
       type_id: null,
       title: idea.title,
-      description: idea.maps_url ? `Google Maps: ${idea.maps_url}` : "",
+      description: idea.description || (idea.maps_url ? `Google Maps: ${idea.maps_url}` : ""),
       location: "",
       start_time: now,
       end_time: now,
@@ -161,6 +167,47 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
 
     setCopyingIdeaId(null);
     onSetActiveTab("itinerary");
+  };
+
+  const handleFileUpload = async (ideaId: string, e: React.ChangeEvent<HTMLInputElement>, type: "photo" | "attachment") => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `ideas/${ideaId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(filePath, file);
+      if (uploadError) {
+        alert(getErrorMessage(uploadError));
+        continue;
+      }
+
+      const { error: dbError } = await supabase.from("idea_assets").insert({
+        idea_id: ideaId,
+        name: file.name,
+        url: filePath,
+        asset_type: type,
+      });
+
+      if (dbError) alert(getErrorMessage(dbError));
+    }
+    e.target.value = "";
+  };
+
+  const handleAddLink = async (ideaId: string) => {
+    const url = window.prompt("Digite a URL:");
+    if (!url) return;
+    const label = window.prompt("Digite um nome para o link (opcional):");
+
+    const { error } = await supabase.from("idea_links").insert({
+      idea_id: ideaId,
+      url,
+      label: label || null,
+    });
+
+    if (error) alert(getErrorMessage(error));
   };
 
   return (
@@ -188,6 +235,12 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
                       placeholder="Titulo"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                    />
+                    <textarea
+                      value={ideaDraft.description}
+                      onChange={(e) => setIdeaDraft((current) => ({ ...current, description: e.target.value }))}
+                      placeholder="Notas/Descrição"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all h-20"
                     />
                     <input
                       value={ideaDraft.maps_url}
@@ -230,6 +283,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                         <span className="break-words">{idea.title}</span>
                         {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
                       </p>
+                      {idea.description && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap">{idea.description}</p>}
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
                           <MapPin size={12} />Google Maps
@@ -253,6 +307,22 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       </button>
                       {canManage && (
                         <>
+                          <button
+                            type="button"
+                            onClick={() => void handleAddLink(idea.id)}
+                            className="p-2 rounded-lg bg-zinc-50 text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 transition-colors"
+                            title="Adicionar Link"
+                          >
+                            <LinkIcon size={20} />
+                          </button>
+                          <label className="p-2 rounded-lg bg-zinc-50 text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 transition-colors cursor-pointer" title="Adicionar Foto">
+                            <Plus size={20} />
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
+                          </label>
+                          <label className="p-2 rounded-lg bg-zinc-50 text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 transition-colors cursor-pointer" title="Adicionar Anexo">
+                            <Paperclip size={20} />
+                            <input type="file" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
+                          </label>
                           <button
                             type="button"
                             onClick={() => startEditIdea(idea)}
