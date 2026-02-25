@@ -21,6 +21,8 @@ interface IdeasTabProps {
 export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
+  const [showLinkLabel, setShowLinkLabel] = useState<string | null>(null);
+  const [newLink, setNewLink] = useState({ label: "", url: "" });
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
     notes: string;
@@ -184,7 +186,24 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
         continue;
       }
 
+      const assetId = crypto.randomUUID();
+      const newAsset: IdeaAsset = {
+        id: assetId,
+        idea_id: ideaId,
+        name: file.name,
+        url: filePath,
+        asset_type: type,
+        created_at: new Date().toISOString(),
+      };
+
+      // Optimistic update
+      onTripUpdate(prev => ({
+        ...prev,
+        idea_assets: [...(prev.idea_assets || []), newAsset]
+      }));
+
       const { error: dbError } = await supabase.from("idea_assets").insert({
+        id: assetId,
         idea_id: ideaId,
         name: file.name,
         url: filePath,
@@ -197,27 +216,60 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   };
 
   const handleAddLink = async (ideaId: string) => {
-    const url = window.prompt("Digite a URL:");
+    const url = newLink.url.trim();
     if (!url) return;
-    const label = window.prompt("Digite um nome para o link (opcional):");
-
-    const { error } = await supabase.from("idea_links").insert({
+    
+    const linkId = crypto.randomUUID();
+    const linkData: IdeaLink = {
+      id: linkId,
       idea_id: ideaId,
       url,
-      label: label || null,
+      label: newLink.label.trim() || null,
+      created_at: new Date().toISOString(),
+    };
+
+    // Optimistic update
+    onTripUpdate(prev => ({
+      ...prev,
+      idea_links: [...(prev.idea_links || []), linkData]
+    }));
+
+    const { error } = await supabase.from("idea_links").insert({
+      id: linkId,
+      idea_id: ideaId,
+      url,
+      label: linkData.label,
     });
 
     if (error) alert(getErrorMessage(error));
+    else {
+      setNewLink({ label: "", url: "" });
+      setShowLinkLabel(null);
+    }
   };
 
   const handleDeleteLink = async (linkId: string) => {
     if (!window.confirm("Excluir este link?")) return;
+    
+    // Optimistic update
+    onTripUpdate(prev => ({
+      ...prev,
+      idea_links: (prev.idea_links || []).filter(l => l.id !== linkId)
+    }));
+
     const { error } = await supabase.from("idea_links").delete().eq("id", linkId);
     if (error) alert(getErrorMessage(error));
   };
 
   const handleDeleteAsset = async (asset: IdeaAsset) => {
     if (!window.confirm("Excluir este arquivo?")) return;
+
+    // Optimistic update
+    onTripUpdate(prev => ({
+      ...prev,
+      idea_assets: (prev.idea_assets || []).filter(a => a.id !== asset.id)
+    }));
+
     const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([asset.url]);
     if (storageError) {
       alert(getErrorMessage(storageError));
@@ -267,14 +319,47 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                     />
                     
                     <div className="flex flex-wrap gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => void handleAddLink(idea.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors"
-                      >
-                        <LinkIcon size={14} />
-                        Link
-                      </button>
+                      {showLinkLabel === idea.id ? (
+                        <div className="w-full space-y-2 p-3 rounded-xl bg-zinc-50 border border-zinc-200">
+                          <input
+                            value={newLink.label}
+                            onChange={(e) => setNewLink(prev => ({ ...prev, label: e.target.value }))}
+                            placeholder="Nome do link (ex: Site oficial)"
+                            className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs"
+                          />
+                          <input
+                            value={newLink.url}
+                            onChange={(e) => setNewLink(prev => ({ ...prev, url: e.target.value }))}
+                            placeholder="URL (https://...)"
+                            className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleAddLink(idea.id)}
+                              className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--accent-color)] text-white text-xs font-bold"
+                            >
+                              Adicionar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowLinkLabel(null)}
+                              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowLinkLabel(idea.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors"
+                        >
+                          <LinkIcon size={14} />
+                          Link
+                        </button>
+                      )}
                       <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
                         <ImagePlus size={14} />
                         Foto

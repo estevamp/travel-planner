@@ -43,7 +43,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const { tripOptions, createTripFromSidebar, creatingTripFromSidebar, reloadTripOptions } = useTripList();
   
   // Estado local apenas para UI
-  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
+  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">(() => {
+    const saved = localStorage.getItem(`activeTab_${id}`);
+    return (saved as any) || "itinerary";
+  });
+
+  useEffect(() => {
+    if (id) {
+      localStorage.setItem(`activeTab_${id}`, activeTab);
+    }
+  }, [activeTab, id]);
   const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
