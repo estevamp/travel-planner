@@ -1429,35 +1429,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
 
           {activeTab === "expenses" && (
             <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <Card>
-                <h3 className="font-bold mb-4">Adicionar despesa</h3>
-                <form
-                  className="space-y-3"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    await createExpense(new FormData(e.currentTarget));
-                    (e.target as HTMLFormElement).reset();
-                  }}
-                >
-                  <input name="description" required placeholder="Descricao" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
-                  <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
-                    <option value="">Sem categoria</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    name="amount"
-                    required
-                    placeholder="Valor"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                    onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-                  />
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_private" />Marcar como privado</label>
-                  <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold">Adicionar</button>
-                </form>
-              </Card>
-
               {/* Desktop table view */}
               <Card className="p-0 overflow-hidden hidden md:block">
                 <table className="w-full text-left border-collapse">
