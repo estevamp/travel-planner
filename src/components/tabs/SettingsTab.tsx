@@ -62,6 +62,10 @@ export function SettingsTab({
   const [editTripName, setEditTripName] = useState(trip.name || "");
   const [editTripDestination, setEditTripDestination] = useState(trip.destination || "");
   const [updatingTrip, setUpdatingTrip] = useState(false);
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [editTypeName, setEditTypeName] = useState("");
+  const [editTypeIcon, setEditTypeIcon] = useState("Calendar");
+  const [savingType, setSavingType] = useState(false);
   
   const settingsAutosaveReadyRef = useRef(false);
   const spouseAutosaveReadyRef = useRef(false);
@@ -606,39 +610,130 @@ export function SettingsTab({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {itineraryTypes.map((type) => {
               const Icon = ICON_COMPONENTS[type.icon] || Calendar;
+              const isEditing = editingTypeId === type.id;
+
+              if (isEditing) {
+                return (
+                  <div
+                    key={type.id}
+                    className="sm:col-span-2 p-4 rounded-xl border-2 border-[var(--accent-color)] bg-[var(--accent-color)]/5 space-y-4"
+                  >
+                    <div className="flex gap-3">
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Nome do Tipo</label>
+                        <input
+                          value={editTypeName}
+                          onChange={(e) => setEditTypeName(e.target.value)}
+                          className="w-full px-4 py-2 rounded-lg border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] transition-all"
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <button
+                          onClick={async () => {
+                            if (!editTypeName.trim() || savingType) return;
+                            setSavingType(true);
+                            
+                            const { error } = await supabase
+                              .from("itinerary_types")
+                              .update({ name: editTypeName.trim(), icon: editTypeIcon })
+                              .eq("id", type.id);
+
+                            if (error) {
+                              alert(getErrorMessage(error));
+                            } else {
+                              onSetItineraryTypes(
+                                itineraryTypes.map((t) =>
+                                  t.id === type.id ? { ...t, name: editTypeName.trim(), icon: editTypeIcon } : t
+                                ).sort((a, b) => a.name.localeCompare(b.name))
+                              );
+                              setEditingTypeId(null);
+                            }
+                            setSavingType(false);
+                          }}
+                          disabled={savingType}
+                          className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 disabled:opacity-50"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => setEditingTypeId(null)}
+                          className="px-4 py-2 rounded-lg border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Ícone</label>
+                      <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-white border-2 border-zinc-100 max-h-32 overflow-y-auto">
+                        {ACTIVITY_ICONS.map((iconName) => {
+                          const IconComp = ICON_COMPONENTS[iconName] || Calendar;
+                          return (
+                            <button
+                              key={iconName}
+                              onClick={() => setEditTypeIcon(iconName)}
+                              className={cn(
+                                "p-2 rounded-lg border-2 transition-all",
+                                editTypeIcon === iconName
+                                  ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10"
+                                  : "border-transparent hover:bg-zinc-50"
+                              )}
+                            >
+                              <IconComp size={18} className={editTypeIcon === iconName ? "text-[var(--accent-color)]" : "text-zinc-500"} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={type.id}
-                className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
-                style={{
-                  backgroundColor: 'var(--card-bg)',
-                  borderColor: 'var(--card-border)'
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-zinc-50 text-zinc-600">
-                    <Icon size={18} />
-                  </div>
-                  <span className="text-sm font-semibold">{type.name}</span>
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!window.confirm(`Excluir tipo de atividade "${type.name}"?`)) return;
-                    
-                    // Optimistic update
-                    onSetItineraryTypes(itineraryTypes.filter(t => t.id !== type.id));
-
-                    const { error } = await supabase.from("itinerary_types").delete().eq("id", type.id);
-                    if (error) {
-                      alert(getErrorMessage(error));
-                      // Rollback
-                      onSetItineraryTypes(itineraryTypes);
-                    }
+                  className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
+                  style={{
+                    backgroundColor: 'var(--card-bg)',
+                    borderColor: 'var(--card-border)'
                   }}
-                  className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
                 >
-                  <Trash2 size={16} />
-                </button>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-zinc-50 text-zinc-600">
+                      <Icon size={18} />
+                    </div>
+                    <span className="text-sm font-semibold">{type.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingTypeId(type.id);
+                        setEditTypeName(type.name);
+                        setEditTypeIcon(type.icon);
+                      }}
+                      className="text-zinc-400 hover:text-[var(--accent-color)] transition-colors p-1 rounded-lg hover:bg-zinc-50"
+                    >
+                      <FileText size={16} />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm(`Excluir tipo de atividade "${type.name}"?`)) return;
+                        
+                        // Optimistic update
+                        onSetItineraryTypes(itineraryTypes.filter(t => t.id !== type.id));
+
+                        const { error } = await supabase.from("itinerary_types").delete().eq("id", type.id);
+                        if (error) {
+                          alert(getErrorMessage(error));
+                          // Rollback
+                          onSetItineraryTypes(itineraryTypes);
+                        }
+                      }}
+                      className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
