@@ -1,0 +1,352 @@
+import React, { useState, useRef, useMemo } from "react";
+import { motion } from "motion/react";
+import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip } from "lucide-react";
+import { supabase } from "../../supabase";
+import { getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
+import { DOCS_BUCKET } from "../../constants";
+import type { Trip, Idea, IdeaLink, IdeaAsset, TripMember, UserSettings, Visibility } from "../../types";
+import { Card } from "../Card";
+import { FloatingActionButton } from "../FloatingActionButton";
+
+interface IdeasTabProps {
+  trip: Trip;
+  currentMember: TripMember | null;
+  isAdmin: boolean;
+  settings: UserSettings;
+  onOpenModal: () => void;
+  onSetActiveTab: (tab: string) => void;
+}
+
+export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab }: IdeasTabProps) {
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
+  const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
+  const [ideaDraft, setIdeaDraft] = useState<{
+    title: string;
+    maps_url: string;
+    estimated_amount: string;
+    visibility: Visibility;
+  }>({
+    title: "",
+    maps_url: "",
+    estimated_amount: "0",
+    visibility: "public",
+  });
+
+  const ideaLinksByIdeaId = useMemo(() => {
+    const map = new Map<string, IdeaLink[]>();
+    for (const link of trip.idea_links || []) {
+      const list = map.get(link.idea_id) || [];
+      list.push(link);
+      map.set(link.idea_id, list);
+    }
+    return map;
+  }, [trip.idea_links]);
+
+  const ideaAssetsByIdeaId = useMemo(() => {
+    const map = new Map<string, IdeaAsset[]>();
+    for (const asset of trip.idea_assets || []) {
+      const list = map.get(asset.idea_id) || [];
+      list.push(asset);
+      map.set(asset.idea_id, list);
+    }
+    return map;
+  }, [trip.idea_assets]);
+
+  const startEditIdea = (idea: Idea) => {
+    setEditingIdeaId(idea.id);
+    setIdeaDraft({
+      title: idea.title,
+      maps_url: idea.maps_url || "",
+      estimated_amount: String(idea.estimated_amount || 0),
+      visibility: idea.visibility,
+    });
+  };
+
+  const saveIdeaEdit = async (ideaId: string) => {
+    if (!editingIdeaId || editingIdeaId !== ideaId) return;
+    const title = ideaDraft.title.trim();
+    if (!title) return;
+    const estimatedAmount = parseCurrencyToNumber(ideaDraft.estimated_amount) || 0;
+    const mapsUrl = ideaDraft.maps_url.trim() || null;
+    
+    const { error } = await supabase
+      .from("ideas")
+      .update({
+        title,
+        maps_url: mapsUrl,
+        estimated_amount: estimatedAmount,
+        visibility: ideaDraft.visibility,
+      })
+      .eq("id", ideaId);
+    
+    if (error) {
+      alert(getErrorMessage(error));
+      return;
+    }
+
+    setEditingIdeaId(null);
+  };
+
+  const openIdeaAsset = async (asset: IdeaAsset) => {
+    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(asset.url, 60);
+    if (error || !data) {
+      alert(getErrorMessage(error));
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const deleteIdea = async (idea: Idea) => {
+    const assets = ideaAssetsByIdeaId.get(idea.id) || [];
+    const paths = assets.map((asset) => asset.url);
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove(paths);
+      if (storageError) {
+        alert(getErrorMessage(storageError));
+        return;
+      }
+    }
+    const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
+    if (error) alert(getErrorMessage(error));
+  };
+
+  const copyIdeaToItinerary = async (idea: Idea) => {
+    if (!trip.id || !currentMember || copyingIdeaId) return;
+    setCopyingIdeaId(idea.id);
+    
+    const itineraryId = crypto.randomUUID();
+    const amount = idea.estimated_amount || 0;
+    const now = new Date().toISOString();
+
+    const { error } = await supabase.from("itinerary").insert({
+      id: itineraryId,
+      trip_id: trip.id,
+      created_by_member_id: currentMember.id,
+      type: "activity",
+      title: idea.title,
+      description: idea.maps_url ? `Google Maps: ${idea.maps_url}` : "",
+      location: "",
+      start_time: now,
+      end_time: now,
+      amount,
+      currency: settings.default_currency,
+      visibility: idea.visibility,
+      photo_url: null,
+    });
+
+    if (error) {
+      alert(getErrorMessage(error));
+      setCopyingIdeaId(null);
+      return;
+    }
+
+    if (amount > 0) {
+      const { error: expError } = await supabase.from("expenses").insert({
+        id: crypto.randomUUID(),
+        trip_id: trip.id,
+        created_by_member_id: currentMember.id,
+        itinerary_item_id: itineraryId,
+        description: idea.title,
+        amount,
+        currency: settings.default_currency,
+        visibility: idea.visibility,
+        date: new Date().toISOString().split("T")[0],
+      });
+      if (expError) console.error(expError);
+    }
+
+    setCopyingIdeaId(null);
+    onSetActiveTab("itinerary");
+  };
+
+  return (
+    <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {trip.ideas.length === 0 && (
+          <Card className="sm:col-span-2">
+            <p className="text-sm text-zinc-500 text-center py-4">Nenhuma ideia cadastrada.</p>
+          </Card>
+        )}
+        {trip.ideas.map((idea) => {
+          const links = ideaLinksByIdeaId.get(idea.id) || [];
+          const assets = ideaAssetsByIdeaId.get(idea.id) || [];
+          const attachments = assets.filter((asset) => asset.asset_type === "attachment");
+          const photos = assets.filter((asset) => asset.asset_type === "photo");
+          const canManage = currentMember?.id === idea.created_by_member_id || isAdmin;
+          
+          return (
+            <Card key={idea.id} className="space-y-3">
+              {editingIdeaId === idea.id ? (
+                <div className="space-y-3">
+                  <div className="space-y-3">
+                    <input
+                      value={ideaDraft.title}
+                      onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
+                      placeholder="Titulo"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                    />
+                    <input
+                      value={ideaDraft.maps_url}
+                      onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))}
+                      placeholder="URL do Google Maps"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                    />
+                    <input
+                      value={ideaDraft.estimated_amount}
+                      onChange={(e) => setIdeaDraft((current) => ({ ...current, estimated_amount: maskCurrency(e.target.value) }))}
+                      placeholder="Valor estimado (opcional)"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                    />
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={ideaDraft.visibility === "private"}
+                        onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
+                      />
+                      <Lock size={14} />
+                      <span>Marcar como privado</span>
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void saveIdeaEdit(idea.id)}
+                      className="flex-1 px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingIdeaId(null)}
+                      className="flex-1 px-4 py-2 rounded-xl border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold flex items-center gap-2 flex-wrap">
+                        <span className="break-words">{idea.title}</span>
+                        {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
+                      </p>
+                      <p className="text-sm text-zinc-500 mt-1">Estimado: {formatCurrency(idea.estimated_amount, settings.default_currency)}</p>
+                      {idea.maps_url && (
+                        <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
+                          <MapPin size={12} />Google Maps
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => void copyIdeaToItinerary(idea)}
+                        disabled={copyingIdeaId === idea.id}
+                        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
+                        aria-label="Copiar para atividades"
+                        title="Copiar para atividades"
+                      >
+                        {copyingIdeaId === idea.id ? (
+                          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Plus size={20} />
+                        )}
+                      </button>
+                      {canManage && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEditIdea(idea)}
+                            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition-colors"
+                            aria-label="Editar ideia"
+                          >
+                            <FilePenLine size={20} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
+                              if (!confirmed) return;
+                              await deleteIdea(idea);
+                            }}
+                            className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
+                            aria-label="Excluir ideia"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {links.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-zinc-100">
+                      <p className="text-xs uppercase font-semibold text-zinc-500">URLs</p>
+                      <div className="space-y-1">
+                        {links.map((link) => (
+                          <a
+                            key={link.id}
+                            href={link.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-sm text-blue-600 break-all hover:underline"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <LinkIcon size={12} className="flex-shrink-0" />
+                              <span className="break-all">{link.label || link.url}</span>
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {attachments.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-zinc-100">
+                      <p className="text-xs uppercase font-semibold text-zinc-500">Anexos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {attachments.map((asset) => (
+                          <button
+                            key={asset.id}
+                            type="button"
+                            onClick={() => void openIdeaAsset(asset)}
+                            className="px-3 py-2 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                          >
+                            <Paperclip size={12} />
+                            <span className="max-w-[150px] truncate">{asset.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {photos.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-zinc-100">
+                      <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {photos.map((asset) => (
+                          <button
+                            key={asset.id}
+                            type="button"
+                            onClick={() => void openIdeaAsset(asset)}
+                            className="px-3 py-2 rounded-lg border border-zinc-200 text-xs hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                          >
+                            <span className="max-w-[150px] truncate">{asset.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+      
+      <FloatingActionButton onClick={onOpenModal} />
+    </motion.div>
+  );
+}
