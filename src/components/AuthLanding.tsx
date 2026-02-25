@@ -17,7 +17,7 @@ export function AuthLanding() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
       <Card className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-3xl font-bold">Viajando</h1>
+        <h1 className="text-3xl font-bold">Partiu!</h1>
         <p className="text-zinc-500">Entre com sua conta do Google para planejar viagens em grupo.</p>
         <button
           disabled={loading}

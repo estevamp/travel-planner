@@ -1,6 +1,6 @@
 {
-  "name": "Viajando",
-  "short_name": "Viajando",
+  "name": "Partiu!",
+  "short_name": "Partiu!",
   "description": "Planejador de viagens",
   "start_url": "/",
   "display": "standalone",

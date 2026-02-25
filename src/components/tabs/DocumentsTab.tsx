@@ -55,8 +55,25 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: Docu
             const path = `${tripId}/${currentMember.id}/${crypto.randomUUID()}-${safeName}`;
             const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
             if (uploadError) throw uploadError;
-            const { error: insertError } = await supabase.from("documents").insert({ id: crypto.randomUUID(), trip_id: tripId, created_by_member_id: currentMember.id, name: file.name, url: path });
+            const docId = crypto.randomUUID();
+            const { error: insertError } = await supabase.from("documents").insert({ id: docId, trip_id: tripId, created_by_member_id: currentMember.id, name: file.name, url: path });
             if (insertError) throw insertError;
+
+            // Optimistic update
+            onTripUpdate((prev) => ({
+              ...prev,
+              documents: [
+                ...prev.documents,
+                {
+                  id: docId,
+                  trip_id: tripId,
+                  created_by_member_id: currentMember.id,
+                  name: file.name,
+                  url: path,
+                  created_at: new Date().toISOString(),
+                },
+              ],
+            }));
           } catch (error) {
             alert(getErrorMessage(error));
           }

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Info, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Mail, Info, ShieldCheck, Coffee } from "lucide-react";
 
 export function AboutPage() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export function AboutPage() {
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl font-bold">Sobre o Viajando</h1>
+          <h1 className="text-xl font-bold">Sobre o Partiu!</h1>
         </div>
       </header>
 
@@ -28,7 +28,7 @@ export function AboutPage() {
             <h2 className="text-lg font-semibold">O Aplicativo</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            O Viajando é o seu planejador de viagens colaborativo. Organize roteiros, despesas, voos e documentos em um só lugar, facilitando a coordenação com seus amigos e familiares.
+            O Partiu! é o seu planejador de viagens colaborativo. Organize roteiros, despesas, voos e documentos em um só lugar, facilitando a coordenação com seus amigos e familiares.
           </p>
         </section>
 
@@ -49,6 +49,16 @@ export function AboutPage() {
         </section>
 
         <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-4 text-amber-600 dark:text-amber-400">
+            <Coffee className="w-6 h-6" />
+            <h2 className="text-lg font-semibold">Contribua</h2>
+          </div>
+          <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+            Esse app é distribuído sem custo. Se quiser me ajudar com um cafézinho, pode fazer um pix para <span className="font-medium text-slate-900 dark:text-slate-100">estevamp@gmail.com</span>.
+          </p>
+        </section>
+
+        <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3 mb-4 text-purple-600 dark:text-purple-400">
             <ShieldCheck className="w-6 h-6" />
             <h2 className="text-lg font-semibold">Informações do Sistema</h2>
@@ -66,7 +76,7 @@ export function AboutPage() {
         </section>
 
         <footer className="text-center text-slate-500 text-sm pt-4">
-          &copy; {new Date().getFullYear()} Viajando. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Partiu!. Todos os direitos reservados.
         </footer>
       </main>
     </div>

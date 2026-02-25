@@ -1,4 +1,4 @@
-# Viajando - Vercel + Supabase
+# Partiu! - Vercel + Supabase
 
 Aplicativo de planejamento de viagens com autenticação Google, convites por link e privacidade por usuário/cônjuge.
 
