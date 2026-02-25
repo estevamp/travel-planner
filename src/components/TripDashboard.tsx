@@ -151,7 +151,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       ...settings,
       theme_palette: effectivePalette
     });
-  }, [settings.theme_palette, settings.dark_mode, trip?.theme_palette, trip?.id]);
+  }, [settings.theme_palette, settings.dark_mode, trip?.theme_palette, trip?.id, id]);
 
   // Modal helper functions
   const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
@@ -430,7 +430,6 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     const name = editTripName.trim();
     const destination = editTripDestination.trim();
     if (!name || !destination) return;
-    if (name === trip.name && destination === trip.destination && trip.theme_palette === (trip.theme_palette || 'default')) return;
 
     const timeout = setTimeout(async () => {
       if (updatingTrip) return;
@@ -438,7 +437,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
       const { error } = await supabase.from("trips").update({
         name,
         destination,
-        theme_palette: trip.theme_palette
+        theme_palette: trip.theme_palette || 'default'
       }).eq("id", id);
       setUpdatingTrip(false);
       if (error) {
@@ -449,7 +448,7 @@ function TripDashboard({ session, settings, onSettingsChange }: { session: Sessi
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [id, trip, isAdmin, editTripName, editTripDestination, updatingTrip]);
+  }, [id, trip?.name, trip?.destination, trip?.theme_palette, isAdmin, editTripName, editTripDestination, updatingTrip]);
 
   const findLegacyItineraryExpenseId = async (item: Pick<ItineraryItem, "trip_id" | "created_by_member_id" | "title">) => {
     const { data, error } = await supabase
