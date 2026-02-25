@@ -58,7 +58,6 @@ export function SettingsTab({
 }: SettingsTabProps) {
   const [settingsDraft, setSettingsDraft] = useState<UserSettings>(settings);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
   const [editTripName, setEditTripName] = useState(trip.name || "");
   const [editTripDestination, setEditTripDestination] = useState(trip.destination || "");
   const [updatingTrip, setUpdatingTrip] = useState(false);
@@ -68,7 +67,6 @@ export function SettingsTab({
   const [savingType, setSavingType] = useState(false);
   
   const settingsAutosaveReadyRef = useRef(false);
-  const spouseAutosaveReadyRef = useRef(false);
   const tripAutosaveReadyRef = useRef(false);
 
   // Sync settings draft when settings change
@@ -76,12 +74,6 @@ export function SettingsTab({
     setSettingsDraft(settings);
     settingsAutosaveReadyRef.current = false;
   }, [settings]);
-
-  // Sync spouse when settings change
-  useEffect(() => {
-    setSelfSpouseUserId(settings.spouse_user_id || "");
-    spouseAutosaveReadyRef.current = false;
-  }, [settings.spouse_user_id]);
 
   // Sync trip fields when trip changes
   useEffect(() => {
@@ -126,22 +118,6 @@ export function SettingsTab({
     return () => clearTimeout(timeout);
   }, [settingsDraft, settings, userId, onSettingsChange, savingSettings]);
 
-  // Autosave spouse
-  useEffect(() => {
-    if (!currentMember) return;
-    if (!spouseAutosaveReadyRef.current) {
-      spouseAutosaveReadyRef.current = true;
-      return;
-    }
-    if ((settings.spouse_user_id || "") === selfSpouseUserId) return;
-
-    const timeout = setTimeout(async () => {
-      await setGlobalSpouse(selfSpouseUserId || null);
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [selfSpouseUserId, settings.spouse_user_id, currentMember]);
-
   // Autosave trip name and destination only
   useEffect(() => {
     if (!tripId || !trip || !isAdmin) return;
@@ -180,18 +156,6 @@ export function SettingsTab({
 
     return () => clearTimeout(timeout);
   }, [tripId, trip, isAdmin, editTripName, editTripDestination, updatingTrip, onReloadTripOptions, onSetTrip]);
-
-  const setGlobalSpouse = async (spouseUserId: string | null) => {
-    const { error } = await supabase.rpc("set_global_spouse", {
-      p_spouse_user_id: spouseUserId,
-    });
-    if (error) {
-      alert(getErrorMessage(error));
-      return;
-    }
-    onSettingsChange({ ...settings, spouse_user_id: spouseUserId });
-    setSelfSpouseUserId(spouseUserId || "");
-  };
 
   return (
     <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
@@ -266,36 +230,6 @@ export function SettingsTab({
           </div>
         </div>
       </Card>
-
-      {currentMember && (
-        <Card className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-              <Users size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Cônjuge</h3>
-              <p className="text-sm text-zinc-500">Configuração global para todas as viagens</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <label className="text-sm font-semibold block">Selecione seu cônjuge</label>
-            <select
-              value={selfSpouseUserId}
-              onChange={(e) => setSelfSpouseUserId(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
-            >
-              <option value="">Sem cônjuge</option>
-              {members.filter((m) => m.user_id !== currentMember.user_id).map((m) => (
-                <option key={m.id} value={m.user_id}>{m.display_name || m.user_id}</option>
-              ))}
-            </select>
-            <div className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
-              <p className="text-xs text-blue-700 font-medium">✨ Salvamento automático ativado</p>
-            </div>
-          </div>
-        </Card>
-      )}
 
       <Card className="space-y-6">
         <div className="flex items-center gap-3">
