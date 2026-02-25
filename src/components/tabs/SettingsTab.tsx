@@ -123,7 +123,7 @@ export function SettingsTab({
     return () => clearTimeout(timeout);
   }, [selfSpouseUserId, settings.spouse_user_id, currentMember]);
 
-  // Autosave trip
+  // Autosave trip name and destination only
   useEffect(() => {
     if (!tripId || !trip || !isAdmin) return;
     if (!tripAutosaveReadyRef.current) {
@@ -134,6 +134,9 @@ export function SettingsTab({
     const name = editTripName.trim();
     const destination = editTripDestination.trim();
     if (!name || !destination) return;
+    
+    // Check if name or destination actually changed
+    if (name === trip.name && destination === trip.destination) return;
 
     const timeout = setTimeout(async () => {
       if (updatingTrip) return;
@@ -141,7 +144,6 @@ export function SettingsTab({
       const { error } = await supabase.from("trips").update({
         name,
         destination,
-        theme_palette: trip.theme_palette || 'default'
       }).eq("id", tripId);
       setUpdatingTrip(false);
       if (error) {
@@ -152,7 +154,7 @@ export function SettingsTab({
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [tripId, trip, isAdmin, editTripName, editTripDestination, updatingTrip, onReloadTripOptions]);
+  }, [tripId, trip.name, trip.destination, isAdmin, editTripName, editTripDestination, updatingTrip, onReloadTripOptions]);
 
   const setGlobalSpouse = async (spouseUserId: string | null) => {
     const { error } = await supabase.rpc("set_global_spouse", {
@@ -356,9 +358,21 @@ export function SettingsTab({
                     <button
                       key={theme}
                       type="button"
-                      onClick={() => onSetTrip({ ...trip, theme_palette: theme })}
+                      onClick={async () => {
+                        if (isActive) return; // Don't update if already active
+                        const { error } = await supabase
+                          .from("trips")
+                          .update({ theme_palette: theme })
+                          .eq("id", tripId);
+                        if (error) {
+                          alert(getErrorMessage(error));
+                          return;
+                        }
+                        onSetTrip({ ...trip, theme_palette: theme });
+                      }}
+                      disabled={isActive}
                       className={cn(
-                        "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105",
+                        "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
                         isActive
                           ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
                           : "border-zinc-200 hover:border-zinc-300 shadow-sm"
