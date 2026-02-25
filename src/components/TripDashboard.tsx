@@ -160,6 +160,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
     const description = (form.get("description") as string) || "Despesa";
     const category_id = (form.get("category_id") as string) || null;
+    const is_confirmed = form.get("is_confirmed") === "on";
     const expenseId = crypto.randomUUID();
     
     // Optimistic update
@@ -173,7 +174,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       category_id,
       visibility,
       date: new Date().toISOString().split("T")[0],
-      category: category_id ? categories.find(c => c.id === category_id) || null : null
+      category: category_id ? categories.find(c => c.id === category_id) || null : null,
+      is_confirmed
     };
 
     setTrip(prev => prev ? { ...prev, expenses: [...prev.expenses, newExpense].sort((a, b) => a.date.localeCompare(b.date)) } : null);
@@ -188,6 +190,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       category_id,
       visibility,
       date: new Date().toISOString().split("T")[0],
+      is_confirmed,
     });
     
     if (error) alert(getErrorMessage(error));
@@ -595,6 +598,11 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="is_private" />
             Marcar como privado
+          </label>
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="is_confirmed" />
+            Marcar como confirmada
           </label>
           
           <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">

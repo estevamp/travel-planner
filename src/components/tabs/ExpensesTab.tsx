@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
-import { FilePenLine, Trash2, Lock } from "lucide-react";
+import { FilePenLine, Trash2, Lock, CheckCircle2, Circle } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import type { Trip, Expense, ExpenseCategory, TripMember, UserSettings, Visibility, TripBudget } from "../../types";
@@ -53,11 +53,13 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
     category_id: string;
     amount: string;
     visibility: Visibility;
+    is_confirmed: boolean;
   }>({
     description: "",
     category_id: "",
     amount: "0",
     visibility: "public",
+    is_confirmed: false,
   });
 
   const startEditExpense = (expense: Expense) => {
@@ -67,6 +69,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
       category_id: expense.category_id || "",
       amount: maskCurrency(String((expense.amount || 0) * 100)),
       visibility: expense.visibility,
+      is_confirmed: expense.is_confirmed,
     });
   };
 
@@ -89,6 +92,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               category_id: expenseDraft.category_id || null,
               amount: nextAmount,
               visibility: expenseDraft.visibility,
+              is_confirmed: expenseDraft.is_confirmed,
               category: expenseDraft.category_id ? categories.find(c => c.id === expenseDraft.category_id) || null : null
             }
           : exp
@@ -102,6 +106,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
         category_id: expenseDraft.category_id || null,
         amount: nextAmount,
         visibility: expenseDraft.visibility,
+        is_confirmed: expenseDraft.is_confirmed,
       })
       .eq("id", expenseId);
     
@@ -131,11 +136,15 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
     }
   };
 
-  const expensesTotal = convertedExpenses.reduce((total, expense) => total + expense.convertedAmount, 0);
+  const confirmedTotal = convertedExpenses
+    .filter(expense => expense.is_confirmed)
+    .reduce((total, expense) => total + expense.convertedAmount, 0);
+  const predictedTotal = convertedExpenses.reduce((total, expense) => total + expense.convertedAmount, 0);
   const budgetLimit = Math.max(0, Number(tripBudget?.budget_limit) || 0);
-  const budgetProgress = budgetLimit > 0 ? Math.min((expensesTotal / budgetLimit) * 100, 100) : 0;
-  const budgetRemaining = budgetLimit - expensesTotal;
-  const isOverBudget = budgetLimit > 0 && expensesTotal > budgetLimit;
+  const confirmedProgress = budgetLimit > 0 ? Math.min((confirmedTotal / budgetLimit) * 100, 100) : 0;
+  const predictedProgress = budgetLimit > 0 ? Math.min((predictedTotal / budgetLimit) * 100, 100) : 0;
+  const budgetRemaining = budgetLimit - predictedTotal;
+  const isOverBudget = budgetLimit > 0 && predictedTotal > budgetLimit;
 
   return (
     <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
@@ -151,9 +160,15 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                   : "Nenhum orçamento definido"}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-zinc-600">Total de Despesas</p>
-              <p className="text-2xl font-bold text-zinc-800">{formatCurrency(expensesTotal, settings.default_currency)}</p>
+            <div className="text-right space-y-1">
+              <div>
+                <p className="text-xs text-zinc-500">Confirmado</p>
+                <p className="text-lg font-bold text-emerald-600">{formatCurrency(confirmedTotal, settings.default_currency)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500">Total Previsto</p>
+                <p className="text-2xl font-bold text-zinc-800">{formatCurrency(predictedTotal, settings.default_currency)}</p>
+              </div>
             </div>
           </div>
 
@@ -163,28 +178,39 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <span className="text-zinc-600">Progresso</span>
-                  <span className={cn(
-                    "font-bold",
-                    isOverBudget ? "text-red-600" : "text-emerald-600"
-                  )}>
-                    {budgetProgress.toFixed(1)}%
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-emerald-600">
+                      Confirmado: {confirmedProgress.toFixed(1)}%
+                    </span>
+                    <span className={cn(
+                      "font-bold",
+                      isOverBudget ? "text-red-600" : "text-blue-600"
+                    )}>
+                      Previsto: {predictedProgress.toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
-                <div className="h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                <div className="relative h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                  {/* Confirmed expenses bar */}
+                  <div
+                    className="absolute h-full transition-all duration-500 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
+                    style={{ width: `${Math.min(confirmedProgress, 100)}%` }}
+                  />
+                  {/* Predicted expenses bar (semi-transparent overlay) */}
                   <div
                     className={cn(
-                      "h-full transition-all duration-500 rounded-full",
+                      "absolute h-full transition-all duration-500 rounded-full opacity-40",
                       isOverBudget
                         ? "bg-gradient-to-r from-red-500 to-red-600"
-                        : "bg-gradient-to-r from-emerald-500 to-teal-500"
+                        : "bg-gradient-to-r from-blue-500 to-blue-600"
                     )}
-                    style={{ width: `${Math.min(budgetProgress, 100)}%` }}
+                    style={{ width: `${Math.min(predictedProgress, 100)}%` }}
                   />
                 </div>
               </div>
 
               {/* Budget vs Expenses Comparison Chart */}
-              <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-3 gap-4 pt-2">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-zinc-600 uppercase">Orçamento</p>
                   <div className="relative h-32 rounded-xl border-2 border-blue-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
@@ -200,23 +226,40 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-zinc-600 uppercase">Despesas</p>
+                  <p className="text-xs font-semibold text-zinc-600 uppercase">Confirmado</p>
+                  <div className="relative h-32 rounded-xl border-2 border-emerald-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
+                    <div
+                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-emerald-500 to-emerald-400 transition-all duration-500"
+                      style={{ height: `${Math.min((confirmedTotal / budgetLimit) * 100, 100)}%` }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className={cn(
+                        "text-lg font-bold drop-shadow-lg",
+                        (confirmedTotal / budgetLimit) > 0.5 ? "text-white" : "text-zinc-800"
+                      )}>
+                        {formatCurrency(confirmedTotal, settings.default_currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-zinc-600 uppercase">Previsto</p>
                   <div className="relative h-32 rounded-xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                     <div
                       className={cn(
                         "absolute bottom-0 left-0 right-0 transition-all duration-500",
                         isOverBudget
                           ? "bg-gradient-to-t from-red-500 to-red-400"
-                          : "bg-gradient-to-t from-emerald-500 to-emerald-400"
+                          : "bg-gradient-to-t from-blue-500 to-blue-400"
                       )}
-                      style={{ height: `${Math.min((expensesTotal / budgetLimit) * 100, 100)}%` }}
+                      style={{ height: `${Math.min((predictedTotal / budgetLimit) * 100, 100)}%` }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className={cn(
                         "text-lg font-bold drop-shadow-lg",
-                        (expensesTotal / budgetLimit) > 0.5 ? "text-white" : "text-zinc-800"
+                        (predictedTotal / budgetLimit) > 0.5 ? "text-white" : "text-zinc-800"
                       )}>
-                        {formatCurrency(expensesTotal, settings.default_currency)}
+                        {formatCurrency(predictedTotal, settings.default_currency)}
                       </span>
                     </div>
                   </div>
@@ -284,6 +327,19 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                           />
                           <Lock size={16} className={cn("transition-colors", expenseDraft.visibility === "private" ? "text-orange-600" : "text-zinc-300")} />
                         </label>
+                        <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Confirmada">
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            checked={expenseDraft.is_confirmed}
+                            onChange={(e) => setExpenseDraft((current) => ({ ...current, is_confirmed: e.target.checked }))}
+                          />
+                          {expenseDraft.is_confirmed ? (
+                            <CheckCircle2 size={16} className="text-emerald-600" />
+                          ) : (
+                            <Circle size={16} className="text-zinc-300" />
+                          )}
+                        </label>
                       </div>
                       <p className="text-xs text-zinc-400">{exp.date}</p>
                     </td>
@@ -335,6 +391,11 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                         <p className="font-medium">{exp.description}</p>
                         {exp.visibility === "private" && (
                           <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />
+                        )}
+                        {exp.is_confirmed ? (
+                          <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
+                        ) : (
+                          <Circle size={14} className="text-zinc-400 flex-shrink-0" title="Prevista" />
                         )}
                       </div>
                       <p className="text-xs text-zinc-400">{exp.date}</p>
@@ -413,14 +474,24 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     placeholder="Valor"
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                   />
-                  <label className="flex items-center gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={expenseDraft.visibility === "private"}
-                      onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                    />
-                    Marcar como privado
-                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={expenseDraft.visibility === "private"}
+                        onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
+                      />
+                      Marcar como privado
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={expenseDraft.is_confirmed}
+                        onChange={(e) => setExpenseDraft((current) => ({ ...current, is_confirmed: e.target.checked }))}
+                      />
+                      Marcar como confirmada
+                    </label>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -449,6 +520,11 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       <h4 className="font-bold truncate">{exp.description}</h4>
                       {exp.visibility === "private" && (
                         <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />
+                      )}
+                      {exp.is_confirmed ? (
+                        <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
+                      ) : (
+                        <Circle size={14} className="text-zinc-400 flex-shrink-0" title="Prevista" />
                       )}
                     </div>
                     <p className="text-xs text-zinc-400 mb-2">{exp.date}</p>

@@ -61,6 +61,7 @@ export interface Expense {
   category?: ExpenseCategory | null;
   date: string;
   visibility: Visibility;
+  is_confirmed: boolean;
 }
 
 export interface DocumentItem {
