@@ -646,6 +646,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             Marcar como privado
           </label>
           
+          <p className="text-[10px] text-zinc-400 px-1 italic">Dica: Você poderá adicionar fotos, anexos e links extras após salvar a ideia, editando-a.</p>
+          
           <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
             Salvar Ideia
           </button>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
-import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip } from "lucide-react";
+import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus } from "lucide-react";
 import { supabase } from "../../supabase";
 import { getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -248,6 +248,28 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       placeholder="URL do Google Maps"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
                     />
+                    
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => void handleAddLink(idea.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors"
+                      >
+                        <LinkIcon size={14} />
+                        Link
+                      </button>
+                      <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
+                        <ImagePlus size={14} />
+                        Foto
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
+                      </label>
+                      <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
+                        <Paperclip size={14} />
+                        Anexo
+                        <input type="file" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
+                      </label>
+                    </div>
+
                     <label className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -302,27 +324,11 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                         {copyingIdeaId === idea.id ? (
                           <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <Plus size={20} />
+                          <CopyPlus size={20} />
                         )}
                       </button>
                       {canManage && (
                         <>
-                          <button
-                            type="button"
-                            onClick={() => void handleAddLink(idea.id)}
-                            className="p-2 rounded-lg bg-zinc-50 text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 transition-colors"
-                            title="Adicionar Link"
-                          >
-                            <LinkIcon size={20} />
-                          </button>
-                          <label className="p-2 rounded-lg bg-zinc-50 text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 transition-colors cursor-pointer" title="Adicionar Foto">
-                            <Plus size={20} />
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
-                          </label>
-                          <label className="p-2 rounded-lg bg-zinc-50 text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 transition-colors cursor-pointer" title="Adicionar Anexo">
-                            <Paperclip size={20} />
-                            <input type="file" className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
-                          </label>
                           <button
                             type="button"
                             onClick={() => startEditIdea(idea)}
