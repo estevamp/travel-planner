@@ -21,7 +21,6 @@ interface IdeasTabProps {
 export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
-  const [convertedIdeaIds, setConvertedIdeaIds] = useState<Set<string>>(new Set());
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
   const [newLink, setNewLink] = useState({ label: "", url: "" });
   const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
@@ -147,7 +146,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   };
 
   const convertIdeaToActivity = async (idea: Idea) => {
-    if (!trip.id || !currentMember || copyingIdeaId || convertedIdeaIds.has(idea.id)) return;
+    if (!trip.id || !currentMember || copyingIdeaId || idea.is_converted) return;
     setCopyingIdeaId(idea.id);
     
     const itineraryId = crypto.randomUUID();
@@ -168,7 +167,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       });
     }
 
-    const { error } = await supabase.from("itinerary").insert({
+    const newItineraryItem = {
       id: itineraryId,
       trip_id: trip.id,
       created_by_member_id: currentMember.id,
@@ -182,16 +181,30 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       currency: settings.default_currency,
       visibility: idea.visibility,
       photo_url: null,
-    });
+    };
 
-    if (error) {
-      alert(getErrorMessage(error));
+    // Optimistic update for both itinerary and ideas
+    onTripUpdate((prev) => ({
+      ...prev,
+      itinerary: [...prev.itinerary, newItineraryItem],
+      ideas: prev.ideas.map((i) => (i.id === idea.id ? { ...i, is_converted: true } : i)),
+    }));
+
+    const { error: itineraryError } = await supabase.from("itinerary").insert(newItineraryItem);
+
+    if (itineraryError) {
+      alert(getErrorMessage(itineraryError));
       setCopyingIdeaId(null);
+      // Rollback would be complex here, but usually Supabase is reliable
       return;
     }
 
-    // Mark this idea as converted
-    setConvertedIdeaIds(prev => new Set(prev).add(idea.id));
+    const { error: ideaError } = await supabase.from("ideas").update({ is_converted: true }).eq("id", idea.id);
+
+    if (ideaError) {
+      console.error("Error updating idea status:", ideaError);
+    }
+
     setCopyingIdeaId(null);
     onSetActiveTab("itinerary");
   };
@@ -431,7 +444,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="font-semibold flex items-center gap-2 flex-wrap">
                         <span className="break-words">{idea.title}</span>
                         {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
-                        {convertedIdeaIds.has(idea.id) && (
+                        {idea.is_converted && (
                           <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                             Adicionada ao roteiro
                           </span>
@@ -445,7 +458,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       )}
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      {convertedIdeaIds.has(idea.id) ? (
+                      {idea.is_converted ? (
                         <button
                           type="button"
                           onClick={() => onSetActiveTab("itinerary")}

@@ -82,6 +82,7 @@ export interface Idea {
   estimated_amount: number;
   currency: string;
   visibility: Visibility;
+  is_converted: boolean;
   created_at: string;
 }
 
