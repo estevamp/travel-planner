@@ -54,6 +54,11 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
   
+  // Estados de submissão para evitar múltiplos cliques
+  const [isSubmittingItinerary, setIsSubmittingItinerary] = useState(false);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+  const [isSubmittingIdea, setIsSubmittingIdea] = useState(false);
+  
   // Moedas para cada formulário
   const [itineraryCurrency, setItineraryCurrency] = useState(settings.default_currency);
   const [expenseCurrency, setExpenseCurrency] = useState(settings.default_currency);
@@ -107,47 +112,50 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   // Funções de criação (mantidas aqui pois são usadas nos modais)
   const createItinerary = async (form: FormData) => {
     if (!id || !currentMember) return;
-    const itineraryId = crypto.randomUUID();
-    const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
-    const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const type_id = (form.get("type_id") as string) || null;
-    const description = (form.get("description") as string) || "";
-    const location = (form.get("location") as string) || "";
-    const start_time = (form.get("start_time") as string) || null;
-    const end_time = (form.get("end_time") as string) || null;
-    const photoFile = form.get("photo") as File;
-    let photo_url = null;
+    
+    setIsSubmittingItinerary(true);
+    try {
+      const itineraryId = crypto.randomUUID();
+      const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
+      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const type_id = (form.get("type_id") as string) || null;
+      const description = (form.get("description") as string) || "";
+      const location = (form.get("location") as string) || "";
+      const start_time = (form.get("start_time") as string) || null;
+      const end_time = (form.get("end_time") as string) || null;
+      const photoFile = form.get("photo") as File;
+      let photo_url = null;
 
-    if (photoFile && photoFile.size > 0) {
-      try {
-        photo_url = await resizeImage(photoFile);
-      } catch (err) {
-        console.error("Error resizing photo:", err);
+      if (photoFile && photoFile.size > 0) {
+        try {
+          photo_url = await resizeImage(photoFile);
+        } catch (err) {
+          console.error("Error resizing photo:", err);
+        }
       }
-    }
 
-    // Optimistic update
-    const newItem: ItineraryItem = {
-      id: itineraryId,
-      trip_id: id,
-      created_by_member_id: currentMember.id,
-      type_id,
-      type: type_id ? itineraryTypes.find(t => t.id === type_id) : null,
-      title,
-      description,
-      location,
-      start_time,
-      end_time,
-      amount: 0,
-      currency: settings.default_currency,
-      visibility,
-      photo_url,
-    };
+      // Optimistic update
+      const newItem: ItineraryItem = {
+        id: itineraryId,
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        type_id,
+        type: type_id ? itineraryTypes.find(t => t.id === type_id) : null,
+        title,
+        description,
+        location,
+        start_time,
+        end_time,
+        amount: 0,
+        currency: settings.default_currency,
+        visibility,
+        photo_url,
+      };
 
-    setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")) } : null);
+      setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")) } : null);
 
-    const { error } = await supabase.from("itinerary").insert({
-      id: itineraryId,
+      const { error } = await supabase.from("itinerary").insert({
+        id: itineraryId,
       trip_id: id,
       created_by_member_id: currentMember.id,
       type_id,
@@ -162,103 +170,119 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       photo_url,
     });
 
-    if (error) {
-      alert(getErrorMessage(error));
-      return;
+      if (error) {
+        alert(getErrorMessage(error));
+      } else {
+        closeModal();
+      }
+    } finally {
+      setIsSubmittingItinerary(false);
     }
-
-    closeModal();
   };
 
   const createExpense = async (form: FormData) => {
     if (!id || !currentMember) return;
-    const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
-    const description = (form.get("description") as string) || "Despesa";
-    const category_id = (form.get("category_id") as string) || null;
-    const is_confirmed = form.get("is_confirmed") === "on";
-    const expenseId = crypto.randomUUID();
     
-    // Optimistic update
-    const newExpense: Expense = {
-      id: expenseId,
-      trip_id: id,
-      created_by_member_id: currentMember.id,
-      description,
-      amount,
-      currency: expenseCurrency,
-      category_id,
-      visibility,
-      date: new Date().toISOString().split("T")[0],
-      category: category_id ? categories.find(c => c.id === category_id) || null : null,
-      is_confirmed
-    };
+    setIsSubmittingExpense(true);
+    try {
+      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+      const description = (form.get("description") as string) || "Despesa";
+      const category_id = (form.get("category_id") as string) || null;
+      const is_confirmed = form.get("is_confirmed") === "on";
+      const expenseId = crypto.randomUUID();
+      
+      // Optimistic update
+      const newExpense: Expense = {
+        id: expenseId,
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        description,
+        amount,
+        currency: expenseCurrency,
+        category_id,
+        visibility,
+        date: new Date().toISOString().split("T")[0],
+        category: category_id ? categories.find(c => c.id === category_id) || null : null,
+        is_confirmed
+      };
 
-    setTrip(prev => prev ? { ...prev, expenses: [...prev.expenses, newExpense].sort((a, b) => a.date.localeCompare(b.date)) } : null);
+      setTrip(prev => prev ? { ...prev, expenses: [...prev.expenses, newExpense].sort((a, b) => a.date.localeCompare(b.date)) } : null);
 
-    const { error } = await supabase.from("expenses").insert({
-      id: expenseId,
-      trip_id: id,
-      created_by_member_id: currentMember.id,
-      description,
-      amount,
-      currency: expenseCurrency,
-      category_id,
-      visibility,
-      date: new Date().toISOString().split("T")[0],
-      is_confirmed,
-    });
-    
-    if (error) alert(getErrorMessage(error));
-    else {
-      closeModal();
-      setExpenseCurrency(settings.default_currency);
+      const { error } = await supabase.from("expenses").insert({
+        id: expenseId,
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        description,
+        amount,
+        currency: expenseCurrency,
+        category_id,
+        visibility,
+        date: new Date().toISOString().split("T")[0],
+        is_confirmed,
+      });
+      
+      if (error) {
+        alert(getErrorMessage(error));
+      } else {
+        closeModal();
+        setExpenseCurrency(settings.default_currency);
+      }
+    } finally {
+      setIsSubmittingExpense(false);
     }
   };
 
   const createIdea = async (form: FormData) => {
     if (!id || !currentMember) return;
-    const title = ((form.get("title") as string) || "").trim();
-    if (!title) return;
     
-    const visibility = form.get("is_private") === "on" ? "private" : "public";
-    const notes = ((form.get("notes") as string) || "").trim() || null;
-    const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
-    const ideaId = crypto.randomUUID();
+    setIsSubmittingIdea(true);
+    try {
+      const title = ((form.get("title") as string) || "").trim();
+      if (!title) return;
+      
+      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const notes = ((form.get("notes") as string) || "").trim() || null;
+      const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
+      const ideaId = crypto.randomUUID();
 
-    // Optimistic update
-    const newIdea: Idea = {
-      id: ideaId,
-      trip_id: id,
-      created_by_member_id: currentMember.id,
-      title,
-      notes,
-      maps_url: mapsUrl,
-      estimated_amount: 0,
-      currency: ideaCurrency,
-      visibility,
-      created_at: new Date().toISOString(),
-    };
+      // Optimistic update
+      const newIdea: Idea = {
+        id: ideaId,
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        title,
+        notes,
+        maps_url: mapsUrl,
+        estimated_amount: 0,
+        currency: ideaCurrency,
+        visibility,
+        created_at: new Date().toISOString(),
+      };
 
-    setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...prev.ideas] } : null);
+      setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...prev.ideas] } : null);
 
-    const { error } = await supabase.from("ideas").insert({
-      id: ideaId,
-      trip_id: id,
-      created_by_member_id: currentMember.id,
-      title,
-      notes,
-      maps_url: mapsUrl,
-      estimated_amount: 0,
-      currency: ideaCurrency,
-      visibility,
-      created_at: new Date().toISOString(),
-    });
+      const { error } = await supabase.from("ideas").insert({
+        id: ideaId,
+        trip_id: id,
+        created_by_member_id: currentMember.id,
+        title,
+        notes,
+        maps_url: mapsUrl,
+        estimated_amount: 0,
+        currency: ideaCurrency,
+        visibility,
+        created_at: new Date().toISOString(),
+      });
 
-    if (error) alert(getErrorMessage(error));
-    else {
-      closeModal();
-      setIdeaCurrency(settings.default_currency);
+      if (error) {
+        alert(getErrorMessage(error));
+      } else {
+        closeModal();
+        setIdeaCurrency(settings.default_currency);
+      }
+    } finally {
+      setIsSubmittingIdea(false);
     }
   };
 
@@ -560,7 +584,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             (e.target as HTMLFormElement).reset();
           }}
         >
-          <select name="type_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+          <select name="type_id" disabled={isSubmittingItinerary} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
             <option value="">Sem tipo</option>
             {itineraryTypes.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
@@ -569,38 +593,38 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
-            <input name="title" required placeholder="Ex: Jantar no restaurante" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            <input name="title" disabled={isSubmittingItinerary} required placeholder="Ex: Jantar no restaurante" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Local</label>
-            <input name="location" placeholder="Ex: Rua Augusta, 123" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            <input name="location" disabled={isSubmittingItinerary} placeholder="Ex: Rua Augusta, 123" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
-              <input type="datetime-local" name="start_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none" />
+              <input type="datetime-local" name="start_time" disabled={isSubmittingItinerary} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
-              <input type="datetime-local" name="end_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none" />
+              <input type="datetime-local" name="end_time" disabled={isSubmittingItinerary} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" />
             </div>
           </div>
           
-          <textarea name="description" placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
+          <textarea name="description" disabled={isSubmittingItinerary} placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed" />
           
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_private" />
+            <input type="checkbox" name="is_private" disabled={isSubmittingItinerary} />
             Marcar como privado
           </label>
 
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Foto</label>
-            <input type="file" name="photo" accept="image/*" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            <input type="file" name="photo" accept="image/*" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={isSubmittingItinerary} />
           </div>
           
-          <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
-            Adicionar
+          <button disabled={isSubmittingItinerary} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            {isSubmittingItinerary ? "Salvando..." : "Adicionar"}
           </button>
         </form>
       </Modal>
@@ -621,10 +645,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         >
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
-            <input name="description" required placeholder="Ex: Almoço" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            <input name="description" disabled={isSubmittingExpense} required placeholder="Ex: Almoço" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           
-          <select name="category_id" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm">
+          <select name="category_id" disabled={isSubmittingExpense} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
             <option value="">Sem categoria</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -636,30 +660,32 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Valor</label>
               <input
                 name="amount"
+                disabled={isSubmittingExpense}
                 required
                 placeholder="0,00"
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
               />
             </div>
             <CurrencySelector
               value={expenseCurrency}
               onChange={setExpenseCurrency}
+              disabled={isSubmittingExpense}
             />
           </div>
           
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_private" />
+            <input type="checkbox" name="is_private" disabled={isSubmittingExpense} />
             Marcar como privado
           </label>
           
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_confirmed" />
+            <input type="checkbox" name="is_confirmed" disabled={isSubmittingExpense} />
             Marcar como confirmada
           </label>
           
-          <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
-            Adicionar
+          <button disabled={isSubmittingExpense} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            {isSubmittingExpense ? "Salvando..." : "Adicionar"}
           </button>
         </form>
       </Modal>
@@ -680,27 +706,27 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         >
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
-            <input name="title" required placeholder="Ex: Museu do Louvre" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            <input name="title" disabled={isSubmittingIdea} required placeholder="Ex: Museu do Louvre" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Notas</label>
-            <textarea name="notes" placeholder="Detalhes da ideia..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20" />
+            <textarea name="notes" disabled={isSubmittingIdea} placeholder="Detalhes da ideia..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL do Google Maps</label>
-            <input name="maps_url" placeholder="https://goo.gl/maps/..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+            <input name="maps_url" disabled={isSubmittingIdea} placeholder="https://goo.gl/maps/..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           
           
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_private" />
+            <input type="checkbox" name="is_private" disabled={isSubmittingIdea} />
             Marcar como privado
           </label>
           
           <p className="text-[10px] text-zinc-400 px-1 italic">Dica: Você poderá adicionar fotos, anexos e links extras após salvar a ideia, editando-a.</p>
           
-          <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
-            Salvar Ideia
+          <button disabled={isSubmittingIdea} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            {isSubmittingIdea ? "Salvando..." : "Salvar Ideia"}
           </button>
         </form>
       </Modal>
