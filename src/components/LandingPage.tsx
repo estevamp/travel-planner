@@ -51,7 +51,7 @@ export function LandingPage({ session, settings }: { session: Session; settings:
   };
 
   return (
-    <div className="min-h-screen p-6 md:p-10 bg-[var(--bg-color)]" style={getThemeStyles(settings)}>
+    <div className="min-h-screen p-6 md:p-10 bg-[var(--bg-color)]" style={{ ...getThemeStyles(settings), ["--bg-color" as string]: getThemeStyles(settings).backgroundColor } as React.CSSProperties}>
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

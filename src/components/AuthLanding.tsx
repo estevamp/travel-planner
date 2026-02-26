@@ -16,10 +16,10 @@ export function AuthLanding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5FF] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
       <Card className="max-w-md w-full text-center space-y-6 p-8">
         <div className="flex justify-center">
-          <div className="bg-[#793bf6] p-4 rounded-2xl shadow-lg shadow-purple-200">
+          <div className="bg-[#0A2342] p-4 rounded-2xl shadow-lg shadow-blue-900/20">
             <MapPin className="w-12 h-12 text-white" />
           </div>
         </div>
@@ -39,7 +39,7 @@ export function AuthLanding() {
               setLoading(false);
             }
           }}
-          className="w-full bg-[#793bf6] hover:bg-[#672ee3] text-white py-4 rounded-xl font-semibold transition-colors shadow-md shadow-purple-100"
+          className="w-full bg-[#0A2342] hover:bg-[#0D2D54] text-white py-4 rounded-xl font-semibold transition-colors shadow-md shadow-blue-900/10"
         >
           {loading ? "Redirecionando..." : "Entrar com Google"}
         </button>
