@@ -168,7 +168,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               </div>
               <div>
                 <p className="text-xs text-zinc-500">Total Previsto</p>
-                <p className="text-xl font-bold text-zinc-600">{formatCurrency(predictedTotal, settings.default_currency)}</p>
+                <p className="text-lg font-bold text-zinc-800">{formatCurrency(predictedTotal, settings.default_currency)}</p>
               </div>
             </div>
           </div>
