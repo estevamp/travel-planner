@@ -152,13 +152,13 @@ export function PeopleTab({
       )}
 
       <Card className="p-0 overflow-hidden">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-zinc-50">
-              <th className="px-4 py-3 text-xs uppercase">Pessoa</th>
-              <th className="px-4 py-3 text-xs uppercase">Papel</th>
-              <th className="px-4 py-3 text-xs uppercase">Cônjuge</th>
-              {isAdmin && <th className="px-4 py-3 text-xs uppercase text-right">Ação</th>}
+              <th className="px-4 py-3 uppercase">Pessoa</th>
+              <th className="px-4 py-3 uppercase">Papel</th>
+              <th className="px-4 py-3 uppercase">Cônjuge</th>
+              {isAdmin && <th className="px-4 py-3 uppercase text-right"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
@@ -168,7 +168,7 @@ export function PeopleTab({
               return (
                 <tr key={member.id}>
                   <td className="px-4 py-3">{member.display_name || member.user_id}</td>
-                  <td className="px-4 py-3 text-xs uppercase">{member.role}</td>
+                  <td className="px-4 py-3 uppercase">{member.role}</td>
                   <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">

@@ -298,8 +298,26 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                       if (!file) return;
                       try {
                         const photo = await resizeImage(file);
+                        
+                        // Optimistic update
+                        onTripUpdate((prev) => ({
+                          ...prev,
+                          itinerary: prev.itinerary.map((i) =>
+                            i.id === item.id ? { ...i, photo_url: photo } : i
+                          ),
+                        }));
+
                         const { error } = await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
-                        if (error) throw error;
+                        if (error) {
+                          // Rollback on error
+                          onTripUpdate((prev) => ({
+                            ...prev,
+                            itinerary: prev.itinerary.map((i) =>
+                              i.id === item.id ? { ...i, photo_url: item.photo_url } : i
+                            ),
+                          }));
+                          throw error;
+                        }
                       } catch (error) {
                         alert(getErrorMessage(error));
                       }
