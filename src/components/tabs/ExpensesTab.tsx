@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
-import { FilePenLine, Trash2, Lock, CheckCircle2, Circle } from "lucide-react";
+import { FilePenLine, Trash2, Lock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import type { Trip, Expense, ExpenseCategory, TripMember, UserSettings, Visibility, TripBudget } from "../../types";
@@ -21,6 +21,7 @@ interface ExpensesTabProps {
 
 export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
   const [rates, setRates] = useState<Record<string, number>>({});
+  const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
 
   useEffect(() => {
     const fetchRates = async () => {
@@ -167,13 +168,30 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               </div>
               <div>
                 <p className="text-xs text-zinc-500">Total Previsto</p>
-                <p className="text-2xl font-bold text-zinc-800">{formatCurrency(predictedTotal, settings.default_currency)}</p>
+                <p className="text-xl font-bold text-zinc-800">{formatCurrency(predictedTotal, settings.default_currency)}</p>
               </div>
             </div>
           </div>
 
           {budgetLimit > 0 && (
-            <>
+            <button
+              onClick={() => setIsBudgetExpanded(!isBudgetExpanded)}
+              className="w-full flex items-center justify-center gap-2 py-1 text-zinc-400 hover:text-zinc-600 transition-colors border-t border-blue-100 mt-2"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                {isBudgetExpanded ? "Recolher Detalhes" : "Ver Detalhes do Orçamento"}
+              </span>
+              {isBudgetExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          )}
+
+          {budgetLimit > 0 && isBudgetExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden space-y-4 pt-2"
+            >
               {/* Progress Bar */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
@@ -315,7 +333,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                   </span>
                 </div>
               </div>
-            </>
+            </motion.div>
           )}
 
           {budgetLimit === 0 && (
