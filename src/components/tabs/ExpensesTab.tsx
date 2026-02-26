@@ -154,10 +154,10 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-zinc-800">Orçamento da Viagem</h3>
-              <p className="text-sm text-zinc-500 mt-1">
+              <h3 className="text-lg font-bold text-zinc-600">Orçamento da Viagem</h3>
+              <p className="text-sm text-zinc-400 mt-1">
                 {budgetLimit > 0
-                  ? `Limite: ${formatCurrency(budgetLimit, settings.default_currency)}`
+                  ? `${formatCurrency(budgetLimit, settings.default_currency)}`
                   : "Nenhum orçamento definido"}
               </p>
             </div>
