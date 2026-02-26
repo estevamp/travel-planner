@@ -329,12 +329,21 @@ export function SettingsTab({
                 required
               />
             </div>
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                type="button"
+                onClick={onDeleteTrip}
+                disabled={updatingTrip}
+                className="px-4 py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+                Excluir Viagem
+              </button>
               <button
                 type="button"
                 onClick={handleSaveTripInfo}
                 disabled={updatingTrip || (editTripName.trim() === trip.name && editTripDestination.trim() === trip.destination)}
-                className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
+                className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {updatingTrip ? "Salvando..." : "Salvar Alterações"}
               </button>
@@ -412,17 +421,6 @@ export function SettingsTab({
                   );
                 })}
               </div>
-            </div>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={onDeleteTrip}
-                disabled={updatingTrip}
-                className="w-full px-4 py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all disabled:opacity-50"
-              >
-                <Trash2 size={16} />
-                Excluir Viagem Permanentemente
-              </button>
             </div>
           </div>
         </Card>
