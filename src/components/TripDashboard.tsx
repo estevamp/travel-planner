@@ -334,7 +334,12 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
+              <h2
+                onClick={() => setActiveTab("itinerary")}
+                className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {trip.name}
+              </h2>
               <div className="flex items-center gap-2">
                 {isAdmin && (
                   <div className="px-2 py-1 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
