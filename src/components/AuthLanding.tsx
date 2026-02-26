@@ -25,7 +25,7 @@ export function AuthLanding() {
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-zinc-900">Partiu!</h1>
-          <p className="text-zinc-500">Entre com sua conta do Google para planejar viagens em grupo.</p>
+          <p className="text-zinc-500">E aí? Vamos começar a planejar sua viagem?</p>
         </div>
         <button
           disabled={loading}

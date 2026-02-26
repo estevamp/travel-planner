@@ -342,7 +342,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               </h2>
               <div className="flex items-center gap-2">
                 {isAdmin && (
-                  <div className="px-2 py-1 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
+                  <div className="md:hidden px-2 py-1 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
                     <Shield size={10} />
                     Admin
                   </div>
