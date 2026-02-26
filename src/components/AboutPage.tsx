@@ -21,6 +21,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
+          <img src="/favicon.svg" alt="Partiu!" className="w-8 h-8" />
           <h1 className="text-xl font-bold">Sobre o Partiu!</h1>
         </div>
       </header>

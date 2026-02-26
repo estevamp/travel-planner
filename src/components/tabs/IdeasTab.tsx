@@ -21,6 +21,7 @@ interface IdeasTabProps {
 export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
+  const [convertedIdeaIds, setConvertedIdeaIds] = useState<Set<string>>(new Set());
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
   const [newLink, setNewLink] = useState({ label: "", url: "" });
   const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
@@ -146,7 +147,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   };
 
   const convertIdeaToActivity = async (idea: Idea) => {
-    if (!trip.id || !currentMember || copyingIdeaId) return;
+    if (!trip.id || !currentMember || copyingIdeaId || convertedIdeaIds.has(idea.id)) return;
     setCopyingIdeaId(idea.id);
     
     const itineraryId = crypto.randomUUID();
@@ -189,6 +190,8 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       return;
     }
 
+    // Mark this idea as converted
+    setConvertedIdeaIds(prev => new Set(prev).add(idea.id));
     setCopyingIdeaId(null);
     onSetActiveTab("itinerary");
   };
@@ -428,6 +431,11 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       <p className="font-semibold flex items-center gap-2 flex-wrap">
                         <span className="break-words">{idea.title}</span>
                         {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
+                        {convertedIdeaIds.has(idea.id) && (
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                            Adicionada ao roteiro
+                          </span>
+                        )}
                       </p>
                       {idea.notes && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.notes}</p>}
                       {idea.maps_url && (
@@ -437,20 +445,32 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       )}
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => void convertIdeaToActivity(idea)}
-                        disabled={copyingIdeaId === idea.id}
-                        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
-                        aria-label="Transformar em atividade"
-                        title="Transformar em atividade"
-                      >
-                        {copyingIdeaId === idea.id ? (
-                          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                        ) : (
+                      {convertedIdeaIds.has(idea.id) ? (
+                        <button
+                          type="button"
+                          onClick={() => onSetActiveTab("itinerary")}
+                          className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                          aria-label="Ver no roteiro"
+                          title="Ver no roteiro"
+                        >
                           <CopyPlus size={20} />
-                        )}
-                      </button>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void convertIdeaToActivity(idea)}
+                          disabled={copyingIdeaId === idea.id}
+                          className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
+                          aria-label="Transformar em atividade"
+                          title="Transformar em atividade"
+                        >
+                          {copyingIdeaId === idea.id ? (
+                            <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <CopyPlus size={20} />
+                          )}
+                        </button>
+                      )}
                       {canManage && (
                         <>
                           <button
