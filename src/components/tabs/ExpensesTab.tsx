@@ -210,13 +210,12 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               </div>
 
               {/* Budget vs Expenses Comparison Chart */}
-              <div className="grid grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-zinc-600 uppercase">Orçamento</p>
-                  <div className="relative h-32 rounded-xl border-2 border-blue-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
+                  <div className="relative h-16 sm:h-32 rounded-xl border-2 border-blue-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
                     <div
-                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-500 to-blue-400 transition-all duration-500"
-                      style={{ height: '100%' }}
+                      className="absolute inset-0 bg-gradient-to-r sm:bg-gradient-to-t from-blue-500 to-blue-400 transition-all duration-500"
                     />
                     <div className="absolute inset-0 flex items-center justify-center p-1">
                       <span className="text-sm font-bold text-white drop-shadow-lg text-center break-all">
@@ -227,10 +226,28 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-zinc-600 uppercase">Confirmado</p>
-                  <div className="relative h-32 rounded-xl border-2 border-emerald-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
+                  <div className="relative h-16 sm:h-32 rounded-xl border-2 border-emerald-300 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)' }}>
                     <div
-                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-emerald-500 to-emerald-400 transition-all duration-500"
-                      style={{ height: `${Math.min((confirmedTotal / budgetLimit) * 100, 100)}%` }}
+                      className="absolute inset-y-0 left-0 sm:inset-x-0 sm:bottom-0 bg-gradient-to-r sm:bg-gradient-to-t from-emerald-500 to-emerald-400 transition-all duration-500"
+                      style={{ width: `var(--progress-mobile, ${Math.min((confirmedTotal / budgetLimit) * 100, 100)}%)`, height: `var(--progress-desktop, 100%)` }}
+                    />
+                    {/* CSS variables to handle responsive bar direction */}
+                    <style dangerouslySetInnerHTML={{ __html: `
+                      @media (max-width: 639px) {
+                        .confirmed-bar { --progress-mobile: ${Math.min((confirmedTotal / budgetLimit) * 100, 100)}%; --progress-desktop: 100%; }
+                      }
+                      @media (min-width: 640px) {
+                        .confirmed-bar { --progress-mobile: 100%; --progress-desktop: ${Math.min((confirmedTotal / budgetLimit) * 100, 100)}%; }
+                      }
+                    `}} />
+                    <div
+                      className="confirmed-bar absolute inset-0 bg-gradient-to-r sm:bg-gradient-to-t from-emerald-500 to-emerald-400 transition-all duration-500"
+                      style={{
+                        width: 'var(--progress-mobile)',
+                        height: 'var(--progress-desktop)',
+                        bottom: 0,
+                        left: 0
+                      }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center p-1">
                       <span className={cn(
@@ -244,15 +261,28 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-zinc-600 uppercase">Previsto</p>
-                  <div className="relative h-32 rounded-xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                  <div className="relative h-16 sm:h-32 rounded-xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                    <style dangerouslySetInnerHTML={{ __html: `
+                      @media (max-width: 639px) {
+                        .predicted-bar { --progress-mobile: ${Math.min((predictedTotal / budgetLimit) * 100, 100)}%; --progress-desktop: 100%; }
+                      }
+                      @media (min-width: 640px) {
+                        .predicted-bar { --progress-mobile: 100%; --progress-desktop: ${Math.min((predictedTotal / budgetLimit) * 100, 100)}%; }
+                      }
+                    `}} />
                     <div
                       className={cn(
-                        "absolute bottom-0 left-0 right-0 transition-all duration-500",
+                        "predicted-bar absolute inset-0 transition-all duration-500",
                         isOverBudget
-                          ? "bg-gradient-to-t from-red-500 to-red-400"
-                          : "bg-gradient-to-t from-blue-500 to-blue-400"
+                          ? "bg-gradient-to-r sm:bg-gradient-to-t from-red-500 to-red-400"
+                          : "bg-gradient-to-r sm:bg-gradient-to-t from-blue-500 to-blue-400"
                       )}
-                      style={{ height: `${Math.min((predictedTotal / budgetLimit) * 100, 100)}%` }}
+                      style={{
+                        width: 'var(--progress-mobile)',
+                        height: 'var(--progress-desktop)',
+                        bottom: 0,
+                        left: 0
+                      }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center p-1">
                       <span className={cn(
