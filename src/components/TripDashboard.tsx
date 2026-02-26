@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Bus, LayoutDashboard, Lightbulb, LogOut, MapPin, Plane, Plus, Shield, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Plane, Plus, Shield, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../utils";
@@ -43,10 +43,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const { tripOptions, createTripFromSidebar, creatingTripFromSidebar, reloadTripOptions } = useTripList();
   
   // Estado local apenas para UI
-  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">(() => {
-    const saved = localStorage.getItem(`activeTab_${id}`);
-    return (saved as any) || "itinerary";
-  });
+  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
 
   useEffect(() => {
     if (id) {
@@ -330,10 +327,11 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               <h2 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
               <button
                 onClick={() => setShowMobileTripSelector(true)}
-                className="md:hidden p-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px]"
                 aria-label="Trocar viagem"
               >
-                <Bus size={20} />
+                <Briefcase size={20} />
+                <span className="text-[10px] font-bold uppercase">Viagens</span>
               </button>
             </div>
             <div className="flex items-center gap-2 text-zinc-500 mt-2 text-sm md:text-base">
@@ -341,6 +339,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 <MapPin size={14} className="text-white" />
               </div>
               <span className="truncate font-medium">{trip.destination}</span>
+            </div>
+            <div className="mt-4 md:mt-6">
+              <h3 className="text-lg md:text-xl font-bold text-zinc-800">
+                {activeTab === "itinerary" && "Atividades"}
+                {activeTab === "expenses" && "Despesas"}
+                {activeTab === "ideas" && "Ideias"}
+                {activeTab === "documents" && "Documentos"}
+                {activeTab === "people" && "Pessoas"}
+                {activeTab === "settings" && "Configurações"}
+              </h3>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -666,29 +674,23 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       {/* Mobile Navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
         <div className="grid grid-cols-6">
-          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
-            <LayoutDashboard size={16} />
-            <span className="text-[11px] font-medium">Atividades</span>
+          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
+            <LayoutDashboard size={24} />
           </button>
-          <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
-            <DollarSign size={16} />
-            <span className="text-[11px] font-medium">Despesas</span>
+          <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
+            <DollarSign size={24} />
           </button>
-          <button type="button" onClick={() => setActiveTab("ideas")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "ideas" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
-            <Lightbulb size={16} />
-            <span className="text-[11px] font-medium">Ideias</span>
+          <button type="button" onClick={() => setActiveTab("ideas")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "ideas" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
+            <Lightbulb size={24} />
           </button>
-          <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "documents" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
-            <FileText size={16} />
-            <span className="text-[11px] font-medium">Docs</span>
+          <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "documents" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
+            <FileText size={24} />
           </button>
-          <button type="button" onClick={() => setActiveTab("people")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "people" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
-            <Users size={16} />
-            <span className="text-[11px] font-medium">Pessoas</span>
+          <button type="button" onClick={() => setActiveTab("people")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "people" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
+            <Users size={24} />
           </button>
-          <button type="button" onClick={() => setActiveTab("settings")} className={cn("flex flex-col items-center justify-center gap-1 py-2", activeTab === "settings" ? "text-[var(--sidebar-active-bg)] font-semibold" : "text-[var(--sidebar-text)]")}>
-            <Settings size={16} />
-            <span className="text-[11px] font-medium">Config</span>
+          <button type="button" onClick={() => setActiveTab("settings")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "settings" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
+            <Settings size={24} />
           </button>
         </div>
       </nav>
