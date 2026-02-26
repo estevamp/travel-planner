@@ -4,7 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Plane, Plus, Shield, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
-import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../utils";
+import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
 import { getThemeStyles } from "../utils/theme";
 import type { UserSettings, Trip, ItineraryItem, Expense, Idea } from "../types";
 
@@ -115,6 +115,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     const location = (form.get("location") as string) || "";
     const start_time = (form.get("start_time") as string) || null;
     const end_time = (form.get("end_time") as string) || null;
+    const photoFile = form.get("photo") as File;
+    let photo_url = null;
+
+    if (photoFile && photoFile.size > 0) {
+      try {
+        photo_url = await resizeImage(photoFile);
+      } catch (err) {
+        console.error("Error resizing photo:", err);
+      }
+    }
 
     // Optimistic update
     const newItem: ItineraryItem = {
@@ -131,7 +141,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       amount: 0,
       currency: settings.default_currency,
       visibility,
-      photo_url: null,
+      photo_url,
     };
 
     setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")) } : null);
@@ -149,7 +159,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       amount: 0,
       currency: settings.default_currency,
       visibility,
-      photo_url: null,
+      photo_url,
     });
 
     if (error) {

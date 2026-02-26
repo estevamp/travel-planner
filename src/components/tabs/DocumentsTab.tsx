@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { supabase } from "../../supabase";
-import { getErrorMessage } from "../../utils";
+import { getErrorMessage, resizeImage } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
 import type { Trip, TripMember } from "../../types";
 import { Card } from "../Card";
@@ -51,9 +51,20 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: Docu
           const file = e.target.files?.[0];
           if (!file || !tripId || !currentMember) return;
           try {
+            let fileToUpload: File | Blob = file;
+            if (file.type.startsWith("image/")) {
+              try {
+                const resizedDataUrl = await resizeImage(file);
+                const response = await fetch(resizedDataUrl);
+                fileToUpload = await response.blob();
+              } catch (err) {
+                console.error("Error resizing document image:", err);
+              }
+            }
+
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
             const path = `${tripId}/${currentMember.id}/${crypto.randomUUID()}-${safeName}`;
-            const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
+            const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(path, fileToUpload, { contentType: file.type || undefined, upsert: false });
             if (uploadError) throw uploadError;
             const docId = crypto.randomUUID();
             const { error: insertError } = await supabase.from("documents").insert({ id: docId, trip_id: tripId, created_by_member_id: currentMember.id, name: file.name, url: path });

@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { format } from "date-fns";
 import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus, Train, Ship, Car, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase } from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl } from "../../utils";
+import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
 import type { Trip, ItineraryItem, TripMember, UserSettings, Visibility, ItineraryType } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
@@ -209,8 +209,26 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                             type="button"
                             onClick={async () => {
                               if (!window.confirm("Remover foto?")) return;
+                              
+                              // Optimistic update
+                              onTripUpdate((prev) => ({
+                                ...prev,
+                                itinerary: prev.itinerary.map((i) =>
+                                  i.id === item.id ? { ...i, photo_url: null } : i
+                                ),
+                              }));
+
                               const { error } = await supabase.from("itinerary").update({ photo_url: null }).eq("id", item.id);
-                              if (error) alert(getErrorMessage(error));
+                              if (error) {
+                                alert(getErrorMessage(error));
+                                // Rollback if needed (optional, but good practice)
+                                onTripUpdate((prev) => ({
+                                  ...prev,
+                                  itinerary: prev.itinerary.map((i) =>
+                                    i.id === item.id ? { ...i, photo_url: item.photo_url } : i
+                                  ),
+                                }));
+                              }
                             }}
                             className="text-[10px] font-bold uppercase text-red-400 text-left"
                           >
@@ -279,7 +297,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                       const file = e.target.files?.[0];
                       if (!file) return;
                       try {
-                        const photo = await fileToDataUrl(file);
+                        const photo = await resizeImage(file);
                         const { error } = await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
                         if (error) throw error;
                       } catch (error) {
