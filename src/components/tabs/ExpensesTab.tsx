@@ -218,8 +218,8 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-500 to-blue-400 transition-all duration-500"
                       style={{ height: '100%' }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-lg font-bold text-white drop-shadow-lg">
+                    <div className="absolute inset-0 flex items-center justify-center p-1">
+                      <span className="text-sm font-bold text-white drop-shadow-lg text-center break-all">
                         {formatCurrency(budgetLimit, settings.default_currency)}
                       </span>
                     </div>
@@ -232,9 +232,9 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-emerald-500 to-emerald-400 transition-all duration-500"
                       style={{ height: `${Math.min((confirmedTotal / budgetLimit) * 100, 100)}%` }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center p-1">
                       <span className={cn(
-                        "text-lg font-bold drop-shadow-lg",
+                        "text-sm font-bold drop-shadow-lg text-center break-all",
                         (confirmedTotal / budgetLimit) > 0.5 ? "text-white" : "text-zinc-800"
                       )}>
                         {formatCurrency(confirmedTotal, settings.default_currency)}
@@ -254,9 +254,9 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       )}
                       style={{ height: `${Math.min((predictedTotal / budgetLimit) * 100, 100)}%` }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center p-1">
                       <span className={cn(
-                        "text-lg font-bold drop-shadow-lg",
+                        "text-sm font-bold drop-shadow-lg text-center break-all",
                         (predictedTotal / budgetLimit) > 0.5 ? "text-white" : "text-zinc-800"
                       )}>
                         {formatCurrency(predictedTotal, settings.default_currency)}
@@ -546,21 +546,19 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="flex flex-col items-center gap-1">
                     <button
                       type="button"
                       onClick={() => startEditExpense(exp)}
-                      className="p-2 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 active:bg-zinc-300 transition-colors"
-                      aria-label="Editar despesa"
+                      className="p-2 text-zinc-400 hover:text-zinc-700"
                     >
-                      <FilePenLine size={20} />
+                      <FilePenLine size={16} />
                     </button>
                     <button
                       onClick={() => void deleteExpense(exp)}
-                      className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200 transition-colors"
-                      aria-label="Excluir despesa"
+                      className="p-2 text-zinc-400 hover:text-red-500"
                     >
-                      <Trash2 size={20} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
