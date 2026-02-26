@@ -353,9 +353,15 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               </div>
             </div>
             <div className="flex items-center gap-2 text-zinc-500 mt-2 text-sm md:text-base">
-              <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.destination || "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0 hover:scale-110 transition-transform cursor-pointer"
+                title="Ver no Google Maps"
+              >
                 <MapPin size={14} className="text-white" />
-              </div>
+              </a>
               <span className="truncate font-medium">{trip.destination}</span>
             </div>
             <div className="mt-4 md:mt-6">

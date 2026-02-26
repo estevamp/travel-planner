@@ -281,9 +281,25 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                         </div>
                       </div>
                       <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
-                        <span className="truncate max-w-[150px]">{item.location || "Sem local"}</span>
-                      </div>
+                      {item.location && (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs text-zinc-500">
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                            title="Ver no Google Maps"
+                          >
+                            <MapPin size={12} />
+                            <span className="truncate max-w-[150px]">{item.location}</span>
+                          </a>
+                        </div>
+                      )}
+                      {!item.location && (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
+                          <span className="truncate max-w-[150px]">Sem local</span>
+                        </div>
+                      )}
                     </>
                   )}
                   <input
