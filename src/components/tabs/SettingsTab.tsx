@@ -65,6 +65,8 @@ export function SettingsTab({
   const [editTypeName, setEditTypeName] = useState("");
   const [editTypeIcon, setEditTypeIcon] = useState("Calendar");
   const [savingType, setSavingType] = useState(false);
+  const [savingBudget, setSavingBudget] = useState(false);
+  const [budgetDraft, setBudgetDraft] = useState<number | null>(null);
   
   const settingsAutosaveReadyRef = useRef(false);
   const tripAutosaveReadyRef = useRef(false);
@@ -118,13 +120,9 @@ export function SettingsTab({
     return () => clearTimeout(timeout);
   }, [settingsDraft, settings, userId, onSettingsChange, savingSettings]);
 
-  // Autosave trip name and destination only
-  useEffect(() => {
-    if (!tripId || !trip || !isAdmin) return;
-    if (!tripAutosaveReadyRef.current) {
-      tripAutosaveReadyRef.current = true;
-      return;
-    }
+  // Manual save trip name and destination
+  const handleSaveTripInfo = async () => {
+    if (!tripId || !trip || !isAdmin || updatingTrip) return;
 
     const name = editTripName.trim();
     const destination = editTripDestination.trim();
@@ -133,29 +131,25 @@ export function SettingsTab({
     // Check if name or destination actually changed
     if (name === trip.name && destination === trip.destination) return;
 
-    const timeout = setTimeout(async () => {
-      if (updatingTrip) return;
-      setUpdatingTrip(true);
+    setUpdatingTrip(true);
 
-      // Optimistic update
-      onSetTrip({ ...trip, name, destination });
+    // Optimistic update
+    onSetTrip({ ...trip, name, destination });
 
-      const { error } = await supabase.from("trips").update({
-        name,
-        destination,
-      }).eq("id", tripId);
-      setUpdatingTrip(false);
-      if (error) {
-        alert(getErrorMessage(error));
-        // Rollback
-        onSetTrip(trip);
-        return;
-      }
-      await onReloadTripOptions();
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [tripId, trip, isAdmin, editTripName, editTripDestination, updatingTrip, onReloadTripOptions, onSetTrip]);
+    const { error } = await supabase.from("trips").update({
+      name,
+      destination,
+    }).eq("id", tripId);
+    
+    setUpdatingTrip(false);
+    if (error) {
+      alert(getErrorMessage(error));
+      // Rollback
+      onSetTrip(trip);
+      return;
+    }
+    await onReloadTripOptions();
+  };
 
   return (
     <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
@@ -203,24 +197,56 @@ export function SettingsTab({
         </div>
         <div className="space-y-4">
           <label className="text-sm font-semibold block">Limite de Orçamento</label>
-          <input
-            value={maskCurrency(String((tripBudget?.budget_limit || 0) * 100))}
-            onChange={(e) => {
-              const masked = maskCurrency(e.target.value);
-              const nextLimit = parseCurrencyToNumber(masked);
-              
-              // Optimistic update
-              onSetTripBudget({
-                id: tripBudget?.id || "",
-                trip_id: tripId,
-                owner_user_id: budgetOwnerUserId || userId,
-                budget_limit: nextLimit,
-                currency: budgetCurrency,
-              });
-            }}
-            placeholder="0,00"
-            className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
-          />
+          <div className="flex gap-3">
+            <input
+              value={maskCurrency(String((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100))}
+              onChange={(e) => {
+                const masked = maskCurrency(e.target.value);
+                const nextLimit = parseCurrencyToNumber(masked);
+                setBudgetDraft(nextLimit);
+              }}
+              placeholder="0,00"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+            />
+            <button
+              onClick={async () => {
+                if (budgetDraft === null || savingBudget) return;
+                setSavingBudget(true);
+                
+                // Optimistic update
+                onSetTripBudget({
+                  id: tripBudget?.id || "",
+                  trip_id: tripId,
+                  owner_user_id: budgetOwnerUserId || userId,
+                  budget_limit: budgetDraft,
+                  currency: budgetCurrency,
+                });
+
+                const { error } = await supabase
+                  .from("trip_budgets")
+                  .upsert({
+                    id: tripBudget?.id || undefined,
+                    trip_id: tripId,
+                    owner_user_id: budgetOwnerUserId || userId,
+                    budget_limit: budgetDraft,
+                    currency: budgetCurrency,
+                  });
+
+                setSavingBudget(false);
+                if (error) {
+                  alert(getErrorMessage(error));
+                  // Rollback
+                  onSetTripBudget(tripBudget);
+                } else {
+                  setBudgetDraft(null);
+                }
+              }}
+              disabled={budgetDraft === null || savingBudget}
+              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
+            >
+              {savingBudget ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
           <div className="px-4 py-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <p className="text-xs text-zinc-600">
               {budgetOwnerUserId === userId
@@ -303,6 +329,16 @@ export function SettingsTab({
                 required
               />
             </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleSaveTripInfo}
+                disabled={updatingTrip || (editTripName.trim() === trip.name && editTripDestination.trim() === trip.destination)}
+                className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {updatingTrip ? "Salvando..." : "Salvar Alterações"}
+              </button>
+            </div>
             <div className="space-y-3">
               <label className="text-sm font-semibold block">Tema da Viagem</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -377,11 +413,6 @@ export function SettingsTab({
                 })}
               </div>
             </div>
-            {updatingTrip && (
-              <div className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
-                <p className="text-xs text-blue-700 font-medium">💾 Salvando alterações automaticamente...</p>
-              </div>
-            )}
             <div className="pt-2">
               <button
                 type="button"
