@@ -335,14 +335,22 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent">{trip.name}</h2>
-              <button
-                onClick={() => setShowMobileTripSelector(true)}
-                className="md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px]"
-                aria-label="Trocar viagem"
-              >
-                <Briefcase size={20} />
-                <span className="text-[10px] font-bold uppercase">Viagens</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <div className="px-2 py-1 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
+                    <Shield size={10} />
+                    Admin
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowMobileTripSelector(true)}
+                  className="md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px]"
+                  aria-label="Trocar viagem"
+                >
+                  <Briefcase size={20} />
+                  <span className="text-[10px] font-bold uppercase">Viagens</span>
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-zinc-500 mt-2 text-sm md:text-base">
               <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0">
@@ -361,10 +369,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               </h3>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {isAdmin && (
-              <div className="px-4 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xs font-bold uppercase flex items-center gap-2 shadow-lg">
-                <Shield size={14} />
+              <div className="px-3 py-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1.5 shadow-md">
+                <Shield size={12} />
                 Admin
               </div>
             )}
