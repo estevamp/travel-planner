@@ -169,7 +169,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                             type="datetime-local"
                             value={itineraryDraft.start_time}
                             onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
-                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
                           />
                         </div>
                         <div className="space-y-1">
@@ -178,7 +178,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                             type="datetime-local"
                             value={itineraryDraft.end_time}
                             onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
-                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
                           />
                         </div>
                       </div>
@@ -196,6 +196,28 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                         />
                         Marcar como privado (você + cônjuge)
                       </label>
+                      <div className="flex flex-col gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => photoInputRefs.current[item.id]?.click()}
+                          className="text-[10px] font-bold uppercase text-zinc-400 text-left"
+                        >
+                          {item.photo_url ? "Trocar foto" : "Adicionar foto"}
+                        </button>
+                        {item.photo_url && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!window.confirm("Remover foto?")) return;
+                              const { error } = await supabase.from("itinerary").update({ photo_url: null }).eq("id", item.id);
+                              if (error) alert(getErrorMessage(error));
+                            }}
+                            className="text-[10px] font-bold uppercase text-red-400 text-left"
+                          >
+                            Remover foto
+                          </button>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
@@ -217,9 +239,16 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                     </div>
                   ) : (
                     <>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <h4 className="font-bold truncate">{item.title}</h4>
-                        <div className="flex flex-col items-end">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold truncate">{item.title}</h4>
+                          {item.visibility === "private" && (
+                            <span className="text-orange-600" title="Privado">
+                              <Lock size={14} />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-start">
                           {item.start_time && (
                             <span className="text-xs text-zinc-400 whitespace-nowrap">
                               {format(new Date(item.start_time), "dd/MM HH:mm")}
@@ -236,14 +265,9 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                       <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
                         <span className="truncate max-w-[150px]">{item.location || "Sem local"}</span>
-                        {item.visibility === "private" &&
-                        <span className="inline-flex items-center gap-1 text-orange-600" title="Privado">
-                          <Lock size={12} />
-                        </span>}
                       </div>
                     </>
                   )}
-                  <button onClick={() => photoInputRefs.current[item.id]?.click()} className="text-[10px] font-bold uppercase text-zinc-400 mt-3">{item.photo_url ? "Trocar foto" : "Add foto"}</button>
                   <input
                     ref={(el) => {
                       photoInputRefs.current[item.id] = el;

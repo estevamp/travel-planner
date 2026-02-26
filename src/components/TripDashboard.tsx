@@ -547,14 +547,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             <input name="location" placeholder="Ex: Rua Augusta, 123" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
           </div>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
-              <input type="datetime-local" name="start_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+              <input type="datetime-local" name="start_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none" />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
-              <input type="datetime-local" name="end_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+              <input type="datetime-local" name="end_time" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none" />
             </div>
           </div>
           
@@ -564,6 +564,11 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             <input type="checkbox" name="is_private" />
             Marcar como privado
           </label>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Foto</label>
+            <input type="file" name="photo" accept="image/*" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm" />
+          </div>
           
           <button className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold">
             Adicionar
