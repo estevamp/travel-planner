@@ -2,10 +2,13 @@ import { useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 
 interface RealtimeTripCallbacks {
-  onTripDataChange: () => void;       // itinerary, expenses, documents, members, invites, ideas
-  onBudgetChange: () => void;         // trip_budgets
-  onBalanceChange: () => void;        // expense_splits, settlements (usado pelo PeopleTab)
-  onGlobalCatalogChange: () => void;  // expense_categories, itinerary_types (tabelas globais)
+  onItineraryChange: () => void;     // tabela: itinerary
+  onExpensesChange: () => void;      // tabelas: expenses, expense_splits, settlements
+  onDocumentsChange: () => void;     // tabela: documents
+  onIdeasChange: () => void;         // tabelas: ideas, idea_links, idea_assets
+  onMembersChange: () => void;       // tabelas: trip_members, trip_invites
+  onBudgetChange: () => void;        // tabela: trip_budgets
+  onGlobalCatalogChange: () => void; // tabelas: expense_categories, itinerary_types (full reload)
 }
 
 export function useRealtimeTrip(
@@ -32,48 +35,43 @@ export function useRealtimeTrip(
 
     const channel = supabase
       .channel(`trip-realtime-${tripId}`)
-      // onTripDataChange
-      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${tripId}` }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("itinerary", () => callbacksRef.current.onItineraryChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${tripId}` }, () => {
-        debounced("tripData", () => callbacksRef.current.onTripDataChange());
-        debounced("balance", () => callbacksRef.current.onBalanceChange());
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `trip_id=eq.${tripId}` }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("expenses", () => callbacksRef.current.onExpensesChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${tripId}` }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "expense_splits" }, () =>
+        debounced("expenses", () => callbacksRef.current.onExpensesChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${tripId}` }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "settlements", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("expenses", () => callbacksRef.current.onExpensesChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "trip_invites", filter: `trip_id=eq.${tripId}` }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("documents", () => callbacksRef.current.onDocumentsChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("ideas", () => callbacksRef.current.onIdeasChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () => 
-        debounced("tripData", () => callbacksRef.current.onTripDataChange())
+      .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () =>
+        debounced("ideas", () => callbacksRef.current.onIdeasChange())
       )
-      // onBudgetChange
-      .on("postgres_changes", { event: "*", schema: "public", table: "trip_budgets", filter: `trip_id=eq.${tripId}` }, () => 
+      .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () =>
+        debounced("ideas", () => callbacksRef.current.onIdeasChange())
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("members", () => callbacksRef.current.onMembersChange())
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "trip_invites", filter: `trip_id=eq.${tripId}` }, () =>
+        debounced("members", () => callbacksRef.current.onMembersChange())
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "trip_budgets", filter: `trip_id=eq.${tripId}` }, () =>
         debounced("budget", () => callbacksRef.current.onBudgetChange())
       )
-      // onBalanceChange
-      .on("postgres_changes", { event: "*", schema: "public", table: "expense_splits" }, () => 
-        debounced("balance", () => callbacksRef.current.onBalanceChange())
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "settlements", filter: `trip_id=eq.${tripId}` }, () => 
-        debounced("balance", () => callbacksRef.current.onBalanceChange())
-      )
-      // onGlobalCatalogChange
-      .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () => 
+      .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () =>
         debounced("global", () => callbacksRef.current.onGlobalCatalogChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary_types" }, () => 
+      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary_types" }, () =>
         debounced("global", () => callbacksRef.current.onGlobalCatalogChange())
       )
       .subscribe();

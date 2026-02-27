@@ -44,7 +44,12 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const navigate = useNavigate();
   
   // Hooks customizados - toda lógica de dados encapsulada
-  const { trip, setTrip, members, invites, categories, setCategories, itineraryTypes, setItineraryTypes, loading, spouseByUserId, setSpouseByUserId, reloadTrip } = useTripData(id, session.user.id);
+  const {
+    trip, setTrip, members, invites, categories, setCategories,
+    itineraryTypes, setItineraryTypes, loading, spouseByUserId,
+    setSpouseByUserId, reloadTrip,
+    reloadItinerary, reloadExpenses, reloadDocuments, reloadIdeas, reloadMembers,
+  } = useTripData(id, session.user.id);
   const { tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency, reloadBudget } = useTripBudget(id, session.user.id);
   const { tripOptions, createTripFromSidebar, creatingTripFromSidebar, reloadTripOptions } = useTripList();
   const { toast } = useToast();
@@ -181,9 +186,12 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
   // Realtime subscriptions centralizadas
   useRealtimeTrip(id, {
-    onTripDataChange: reloadTrip,
+    onItineraryChange: reloadItinerary,
+    onExpensesChange: reloadExpenses,
+    onDocumentsChange: reloadDocuments,
+    onIdeasChange: reloadIdeas,
+    onMembersChange: reloadMembers,
     onBudgetChange: reloadBudget,
-    onBalanceChange: reloadTrip,
     onGlobalCatalogChange: reloadTrip,
   });
 

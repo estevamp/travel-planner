@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../supabase";
 import type {
   Trip,
@@ -22,6 +22,13 @@ export function useTripData(tripId: string | undefined, userId: string) {
   const [itineraryTypes, setItineraryTypes] = useState<ItineraryType[]>([]);
   const [loading, setLoading] = useState(true);
   const [spouseByUserId, setSpouseByUserId] = useState<Map<string, string | null>>(new Map());
+
+  const categoriesRef = useRef<ExpenseCategory[]>([]);
+  const itineraryTypesRef = useRef<ItineraryType[]>([]);
+
+  // Sincronizar refs com o estado a cada render
+  useEffect(() => { categoriesRef.current = categories; }, [categories]);
+  useEffect(() => { itineraryTypesRef.current = itineraryTypes; }, [itineraryTypes]);
 
   const loadTrip = useCallback(async (id: string) => {
     setLoading(true);
@@ -131,6 +138,143 @@ export function useTripData(tripId: string | undefined, userId: string) {
     setLoading(false);
   }, [userId]);
 
+  const reloadItinerary = useCallback(async (id: string) => {
+    const { data, error } = await supabase
+      .from("itinerary")
+      .select("*")
+      .eq("trip_id", id)
+      .order("start_time", { ascending: true });
+
+    if (error || !data) return;
+
+    const typeMap = new Map(itineraryTypesRef.current.map(t => [t.id, t]));
+
+    setTrip(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        itinerary: data.map(item => ({
+          ...item,
+          amount: Number(item.amount) || 0,
+          type: item.type_id ? typeMap.get(item.type_id) ?? null : null,
+        })) as ItineraryItem[],
+      };
+    });
+  }, []);
+
+  const reloadExpenses = useCallback(async (id: string) => {
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("*")
+      .eq("trip_id", id)
+      .order("date", { ascending: true });
+
+    if (error || !data) return;
+
+    const catMap = new Map(categoriesRef.current.map(c => [c.id, c]));
+
+    setTrip(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        expenses: data.map(item => ({
+          ...item,
+          amount: Number(item.amount) || 0,
+          category: item.category_id ? catMap.get(item.category_id) ?? null : null,
+        })) as Expense[],
+      };
+    });
+  }, []);
+
+  const reloadDocuments = useCallback(async (id: string) => {
+    const { data, error } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("trip_id", id);
+
+    if (error || !data) return;
+
+    setTrip(prev => {
+      if (!prev) return prev;
+      return { ...prev, documents: data as DocumentItem[] };
+    });
+  }, []);
+
+  const reloadIdeas = useCallback(async (id: string) => {
+    const { data: ideasData, error: ideasError } = await supabase
+      .from("ideas")
+      .select("*")
+      .eq("trip_id", id)
+      .order("created_at", { ascending: false });
+
+    if (ideasError || !ideasData) return;
+
+    const ideaIds = ideasData.map(idea => idea.id as string);
+    let ideaLinksData: IdeaLink[] = [];
+    let ideaAssetsData: IdeaAsset[] = [];
+
+    if (ideaIds.length > 0) {
+      const [linksRes, assetsRes] = await Promise.all([
+        supabase.from("idea_links").select("*").in("idea_id", ideaIds),
+        supabase.from("idea_assets").select("*").in("idea_id", ideaIds),
+      ]);
+      if (!linksRes.error && linksRes.data) ideaLinksData = linksRes.data as IdeaLink[];
+      if (!assetsRes.error && assetsRes.data) ideaAssetsData = assetsRes.data as IdeaAsset[];
+    }
+
+    setTrip(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        ideas: ideasData.map(item => ({
+          ...item,
+          estimated_amount: Number(item.estimated_amount) || 0,
+        })) as Idea[],
+        idea_links: ideaLinksData,
+        idea_assets: ideaAssetsData,
+      };
+    });
+  }, []);
+
+  const reloadMembers = useCallback(async (id: string) => {
+    const { data: membersData, error: membersError } = await supabase
+      .from("trip_members")
+      .select("id,trip_id,user_id,role,display_name")
+      .eq("trip_id", id);
+
+    if (membersError || !membersData) return;
+
+    const nextMembers = membersData as TripMember[];
+    setMembers(nextMembers);
+
+    // Atualizar dados de cônjuge
+    const userIds = nextMembers.map(m => m.user_id);
+    if (userIds.length > 0) {
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("user_id,spouse_user_id")
+        .in("user_id", userIds);
+
+      if (profileRows) {
+        const entries = new Map<string, string | null>();
+        profileRows.forEach(row => entries.set(row.user_id as string, (row.spouse_user_id as string | null) || null));
+        setSpouseByUserId(entries);
+      }
+    }
+
+    // Verificar se o usuário atual é admin para buscar invites
+    const me = nextMembers.find(m => m.user_id === userId);
+    if (me?.role === "admin") {
+      const { data: invitesData } = await supabase
+        .from("trip_invites")
+        .select("id,email,token,accepted_at,created_at")
+        .eq("trip_id", id)
+        .order("created_at", { ascending: false });
+
+      setInvites((invitesData || []) as TripInvite[]);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (!tripId) return;
     void loadTrip(tripId);
@@ -149,5 +293,11 @@ export function useTripData(tripId: string | undefined, userId: string) {
     spouseByUserId,
     setSpouseByUserId,
     reloadTrip: tripId ? () => loadTrip(tripId) : () => {},
+    // Novas funções granulares — retornam () => {} se tripId não existir
+    reloadItinerary: tripId ? () => reloadItinerary(tripId) : () => {},
+    reloadExpenses:  tripId ? () => reloadExpenses(tripId)  : () => {},
+    reloadDocuments: tripId ? () => reloadDocuments(tripId) : () => {},
+    reloadIdeas:     tripId ? () => reloadIdeas(tripId)     : () => {},
+    reloadMembers:   tripId ? () => reloadMembers(tripId)   : () => {},
   };
 }
