@@ -59,6 +59,9 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
   const [isSubmittingIdea, setIsSubmittingIdea] = useState(false);
   
+  // Feature: Dia Todo (All Day)
+  const [itineraryAllDay, setItineraryAllDay] = useState(false);
+  
   // Moedas para cada formulário
   const [itineraryCurrency, setItineraryCurrency] = useState(settings.default_currency);
   const [expenseCurrency, setExpenseCurrency] = useState(settings.default_currency);
@@ -79,11 +82,15 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
     setModalType(type);
     setShowAddModal(true);
+    if (type === 'itinerary') {
+      setItineraryAllDay(false);
+    }
   };
 
   const closeModal = () => {
     setShowAddModal(false);
     setModalType(null);
+    setItineraryAllDay(false);
   };
 
   // Realtime subscriptions (mantidas aqui para centralizar)
@@ -121,8 +128,22 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       const type_id = (form.get("type_id") as string) || null;
       const description = (form.get("description") as string) || "";
       const location = (form.get("location") as string) || "";
-      const start_time = (form.get("start_time") as string) || null;
-      const end_time = (form.get("end_time") as string) || null;
+      
+      // Handle all-day events
+      let start_time: string | null = null;
+      let end_time: string | null = null;
+      
+      if (itineraryAllDay) {
+        const start_date = (form.get("start_date") as string) || null;
+        const end_date = (form.get("end_date") as string) || null;
+        // Store as dates only (00:00:00)
+        start_time = start_date ? `${start_date}T00:00:00` : null;
+        end_time = end_date ? `${end_date}T00:00:00` : null;
+      } else {
+        start_time = (form.get("start_time") as string) || null;
+        end_time = (form.get("end_time") as string) || null;
+      }
+      
       const photoFile = form.get("photo") as File;
       let photo_url = null;
 
@@ -146,6 +167,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         location,
         start_time,
         end_time,
+        is_all_day: itineraryAllDay,
         amount: 0,
         currency: settings.default_currency,
         visibility,
@@ -164,6 +186,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       location,
       start_time,
       end_time,
+      is_all_day: itineraryAllDay,
       amount: 0,
       currency: settings.default_currency,
       visibility,
@@ -600,14 +623,56 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             <input name="location" disabled={isSubmittingItinerary} placeholder="Ex: Rua Augusta, 123" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
           </div>
           
+          <label className="flex items-center gap-2 text-sm">
+            <input 
+              type="checkbox" 
+              disabled={isSubmittingItinerary} 
+              checked={itineraryAllDay}
+              onChange={(e) => setItineraryAllDay(e.target.checked)}
+            />
+            Dia todo
+          </label>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
-              <input type="datetime-local" name="start_time" disabled={isSubmittingItinerary} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" />
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
+                {itineraryAllDay ? "Data de Início" : "Início"}
+              </label>
+              {itineraryAllDay ? (
+                <input 
+                  type="date" 
+                  name="start_date" 
+                  disabled={isSubmittingItinerary} 
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                />
+              ) : (
+                <input 
+                  type="datetime-local" 
+                  name="start_time" 
+                  disabled={isSubmittingItinerary} 
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                />
+              )}
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
-              <input type="datetime-local" name="end_time" disabled={isSubmittingItinerary} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" />
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
+                {itineraryAllDay ? "Data de Fim" : "Fim"}
+              </label>
+              {itineraryAllDay ? (
+                <input 
+                  type="date" 
+                  name="end_date" 
+                  disabled={isSubmittingItinerary} 
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                />
+              ) : (
+                <input 
+                  type="datetime-local" 
+                  name="end_time" 
+                  disabled={isSubmittingItinerary} 
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                />
+              )}
             </div>
           </div>
           

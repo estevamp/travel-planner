@@ -35,6 +35,7 @@ export interface ItineraryItem {
   location: string;
   start_time: string | null;
   end_time: string | null;
+  is_all_day?: boolean;
   amount: number;
   currency: string;
   visibility: Visibility;

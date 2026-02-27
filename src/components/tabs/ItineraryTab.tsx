@@ -32,6 +32,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
     visibility: Visibility;
     start_time: string;
     end_time: string;
+    is_all_day: boolean;
   }>({
     type_id: null,
     title: "",
@@ -40,20 +41,31 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
     visibility: "public",
     start_time: "",
     end_time: "",
+    is_all_day: false,
   });
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
 
   const startEditItinerary = (item: ItineraryItem) => {
     setEditingItineraryId(item.id);
+    const isAllDay = item.is_all_day || false;
     setItineraryDraft({
       type_id: item.type_id || null,
       title: item.title,
       description: item.description || "",
       location: item.location || "",
       visibility: item.visibility,
-      start_time: item.start_time ? item.start_time.slice(0, 16) : "",
-      end_time: item.end_time ? item.end_time.slice(0, 16) : "",
+      start_time: item.start_time 
+        ? isAllDay 
+          ? item.start_time.split("T")[0]
+          : item.start_time.slice(0, 16)
+        : "",
+      end_time: item.end_time 
+        ? isAllDay 
+          ? item.end_time.split("T")[0]
+          : item.end_time.slice(0, 16)
+        : "",
+      is_all_day: isAllDay,
     });
   };
 
@@ -65,6 +77,20 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
     if (!title) return;
 
     setSavingItinerary(true);
+
+    // Prepare start/end times based on all_day flag
+    let start_time: string | null = null;
+    let end_time: string | null = null;
+
+    if (itineraryDraft.is_all_day) {
+      // For all-day events, convert dates to full timestamps
+      start_time = itineraryDraft.start_time ? `${itineraryDraft.start_time}T00:00:00` : null;
+      end_time = itineraryDraft.end_time ? `${itineraryDraft.end_time}T00:00:00` : null;
+    } else {
+      // For regular events, use datetime-local values
+      start_time = itineraryDraft.start_time || null;
+      end_time = itineraryDraft.end_time || null;
+    }
 
     // Optimistic update
     onTripUpdate((prev) => ({
@@ -79,8 +105,9 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
               visibility: itineraryDraft.visibility,
-              start_time: itineraryDraft.start_time || null,
-              end_time: itineraryDraft.end_time || null,
+              start_time,
+              end_time,
+              is_all_day: itineraryDraft.is_all_day,
             }
           : item
       ),
@@ -94,8 +121,9 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
         description: itineraryDraft.description.trim(),
         location: itineraryDraft.location.trim(),
         visibility: itineraryDraft.visibility,
-        start_time: itineraryDraft.start_time || null,
-        end_time: itineraryDraft.end_time || null,
+        start_time,
+        end_time,
+        is_all_day: itineraryDraft.is_all_day,
       })
       .eq("id", itemId);
 
@@ -162,24 +190,54 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                         placeholder="Local"
                         className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                       />
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={itineraryDraft.is_all_day}
+                          onChange={(e) => setItineraryDraft((current) => ({ ...current, is_all_day: e.target.checked }))}
+                        />
+                        Dia todo
+                      </label>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
-                          <input
-                            type="datetime-local"
-                            value={itineraryDraft.start_time}
-                            onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
-                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
-                          />
+                          <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
+                            {itineraryDraft.is_all_day ? "Data de Início" : "Início"}
+                          </label>
+                          {itineraryDraft.is_all_day ? (
+                            <input
+                              type="date"
+                              value={itineraryDraft.start_time}
+                              onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
+                            />
+                          ) : (
+                            <input
+                              type="datetime-local"
+                              value={itineraryDraft.start_time}
+                              onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
+                            />
+                          )}
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
-                          <input
-                            type="datetime-local"
-                            value={itineraryDraft.end_time}
-                            onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
-                            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
-                          />
+                          <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
+                            {itineraryDraft.is_all_day ? "Data de Fim" : "Fim"}
+                          </label>
+                          {itineraryDraft.is_all_day ? (
+                            <input
+                              type="date"
+                              value={itineraryDraft.end_time}
+                              onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
+                            />
+                          ) : (
+                            <input
+                              type="datetime-local"
+                              value={itineraryDraft.end_time}
+                              onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
+                            />
+                          )}
                         </div>
                       </div>
                       <textarea
@@ -269,11 +327,19 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                         <div className="flex flex-col items-start">
                           {item.start_time && (
                             <span className="text-xs text-zinc-400 whitespace-nowrap">
-                              {format(new Date(item.start_time), "dd/MM HH:mm")}
-                              {item.end_time && ` - ${format(new Date(item.end_time), "HH:mm")}`}
+                              {item.is_all_day 
+                                ? format(new Date(item.start_time), "dd/MM") 
+                                : format(new Date(item.start_time), "dd/MM HH:mm")}
+                              {item.end_time && !item.is_all_day && ` - ${format(new Date(item.end_time), "HH:mm")}`}
+                              {item.is_all_day && item.end_time && ` - ${format(new Date(item.end_time), "dd/MM")}`}
                             </span>
                           )}
-                          {item.end_time && item.start_time && format(new Date(item.start_time), "dd/MM") !== format(new Date(item.end_time), "dd/MM") && (
+                          {item.is_all_day && (
+                            <span className="text-[10px] text-zinc-400 whitespace-nowrap">
+                              Dia todo
+                            </span>
+                          )}
+                          {item.end_time && item.start_time && !item.is_all_day && format(new Date(item.start_time), "dd/MM") !== format(new Date(item.end_time), "dd/MM") && (
                             <span className="text-[10px] text-zinc-400 whitespace-nowrap">
                               até {format(new Date(item.end_time), "dd/MM")}
                             </span>
