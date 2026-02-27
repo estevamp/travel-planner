@@ -209,17 +209,18 @@ export function PeopleTab({
       {currentMember && (
         <Card>
           <h3 className="font-bold mb-4">Saldos da Viagem</h3>
-          <BalancesSummary
-            balances={balances}
-            currentUserId={currentMember.user_id}
-            members={members}
-            currency={settings.default_currency}
-            onSettleClick={() => {
-              const simplified = simplifyDebts(balances, settings.default_currency);
-              setTransfers(simplified);
-              setShowSettlement(true);
-            }}
-          />
+            <BalancesSummary
+              balances={balances}
+              currentUserId={currentMember.user_id}
+              members={members}
+              currency={settings.default_currency}
+              isDark={Boolean(settings.dark_mode)}             // <<< add isto
+              onSettleClick={() => {
+                const simplified = simplifyDebts(balances, settings.default_currency);
+                setTransfers(simplified);
+                setShowSettlement(true);
+              }}
+            />
         </Card>
       )}
       
