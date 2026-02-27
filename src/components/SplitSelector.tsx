@@ -129,7 +129,7 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50"
+              className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-100 border border-zinc-100 dark:border-zinc-200"
             >
               <input
                 type="checkbox"
@@ -137,7 +137,7 @@ export function SplitSelector({
                 onChange={() => toggleMember(member.id)}
                 className="w-5 h-5 text-[var(--accent-color)] rounded-lg focus:ring-2 focus:ring-[var(--accent-color)]/20"
               />
-              <span className="flex-1 text-[10px] font-bold uppercase text-zinc-400">
+              <span className="flex-1 text-sm font-medium text-zinc-900 dark:text-zinc-900">
                 {displayName}
               </span>
 

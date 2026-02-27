@@ -995,7 +995,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio da Despesa</h3>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
             
             <PayerSelector
               members={members}
@@ -1113,7 +1113,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio da Despesa</h3>
+            <h3 className="text-lg font-bold uppercase text-zinc-800 px-1">Rateio</h3>
             
             <PayerSelector
               members={members}
@@ -1154,7 +1154,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           }}
         >
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Qual a ideia?</label>
             <input
               name="title"
               disabled={isSubmittingIdea}

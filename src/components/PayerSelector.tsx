@@ -43,7 +43,7 @@ export function PayerSelector({
         )}
 
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-xs font-bold text-zinc-400 uppercase whitespace-nowrap">Outra pessoa:</span>
+          <span className="text-[9px] font-bold text-zinc-400 uppercase whitespace-nowrap">Outra pessoa:</span>
           <select
             value={isOtherPersonSelected ? selectedPayerId : ""}
             onChange={(e) => onSelect(e.target.value)}
@@ -52,7 +52,7 @@ export function PayerSelector({
               ${
                 isOtherPersonSelected
                   ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] border-transparent font-bold"
-                  : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  : "bg-white dark:bg-zinc-100 border-zinc-200 dark:border-zinc-300 text-zinc-900 dark:text-zinc-900"
               }
             `}
           >
