@@ -5,8 +5,8 @@ import { getThemeStyles } from "../utils/theme";
 
 export function AboutPage({ settings }: { settings?: UserSettings }) {
   const navigate = useNavigate();
-  const version = "1.0.0";
-  const build = "20260224.1";
+  const version = import.meta.env.VITE_APP_VERSION || "1.0.0";
+  const build = import.meta.env.VITE_APP_BUILD || "20260227.1";
 
   const themedStyles = settings ? getThemeStyles(settings) : {};
 
