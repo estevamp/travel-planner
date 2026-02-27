@@ -142,3 +142,6 @@ export interface TripSummary {
   destination: string;
   created_at: string;
 }
+
+// Export splitting types
+export * from './splitting';

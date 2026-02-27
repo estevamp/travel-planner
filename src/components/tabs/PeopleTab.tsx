@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { UserPlus, Trash2 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage } from "../../utils";
-import type { TripMember, TripInvite, UserSettings, Trip } from "../../types";
+import type { TripMember, TripInvite, UserSettings, Trip, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
 import { Card } from "../Card";
+import { BalancesSummary } from "../BalancesSummary";
+import { TripSettlementModal } from "../TripSettlementModal";
+import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
 
 interface PeopleTabProps {
   tripId: string;
@@ -14,6 +17,7 @@ interface PeopleTabProps {
   isAdmin: boolean;
   settings: UserSettings;
   spouseByUserId: Map<string, string | null>;
+  trip: Trip;
   onSettingsChange: (next: UserSettings) => void;
   onReloadTrip: () => void;
   onTripUpdate?: (updater: (prev: Trip) => Trip) => void;
@@ -27,6 +31,7 @@ export function PeopleTab({
   isAdmin,
   settings,
   spouseByUserId,
+  trip,
   onSettingsChange,
   onReloadTrip,
   onTripUpdate,
@@ -34,8 +39,63 @@ export function PeopleTab({
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
+  
+  // Estados para rateio e saldos
+  const [expensesWithSplits, setExpensesWithSplits] = useState<ExpenseWithSplits[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [balances, setBalances] = useState<MemberBalance[]>([]);
+  const [showSettlement, setShowSettlement] = useState(false);
+  const [transfers, setTransfers] = useState<SimplifiedTransfer[]>([]);
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
+  
+  // Buscar despesas com splits e settlements
+  useEffect(() => {
+    const fetchBalanceData = async () => {
+      // Buscar despesas com splits
+      const { data: expensesData } = await supabase
+        .from("expenses")
+        .select("*, expense_splits(*)")
+        .eq("trip_id", tripId)
+        .eq("visibility", "public")
+        .eq("is_confirmed", true);
+      
+      // Buscar settlements
+      const { data: settlementsData } = await supabase
+        .from("settlements")
+        .select("*")
+        .eq("trip_id", tripId);
+      
+      if (expensesData) {
+        // Transformar para ExpenseWithSplits
+        const expensesWithSplitsData: ExpenseWithSplits[] = expensesData.map((exp: any) => ({
+          ...exp,
+          splits: exp.expense_splits || [],
+        }));
+        setExpensesWithSplits(expensesWithSplitsData);
+      }
+      
+      if (settlementsData) {
+        setSettlements(settlementsData);
+      }
+    };
+    
+    fetchBalanceData();
+  }, [tripId, trip.expenses]); // Recarregar quando despesas mudarem
+  
+  // Calcular saldos
+  useEffect(() => {
+    if (expensesWithSplits.length > 0 || settlements.length > 0) {
+      const calculatedBalances = calculateNetBalances(
+        expensesWithSplits,
+        settlements,
+        members
+      );
+      setBalances(calculatedBalances);
+    } else {
+      setBalances([]);
+    }
+  }, [expensesWithSplits, settlements, members]);
 
   const createInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
@@ -94,6 +154,24 @@ export function PeopleTab({
 
   return (
     <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+      {/* Seção de Saldos */}
+      {currentMember && (
+        <Card>
+          <h3 className="font-bold mb-4">Saldos da Viagem</h3>
+          <BalancesSummary
+            balances={balances}
+            currentUserId={currentMember.user_id}
+            members={members}
+            currency={settings.default_currency}
+            onSettleClick={() => {
+              const simplified = simplifyDebts(balances, settings.default_currency);
+              setTransfers(simplified);
+              setShowSettlement(true);
+            }}
+          />
+        </Card>
+      )}
+      
       {currentMember && (
         <Card>
           <h3 className="font-bold mb-4">Seu cônjuge (global)</h3>
@@ -228,6 +306,61 @@ export function PeopleTab({
             ))}
           </div>
         </Card>
+      )}
+      
+      {/* Modal de Quitação */}
+      {showSettlement && (
+        <TripSettlementModal
+          transfers={transfers}
+          currency={settings.default_currency}
+          onClose={() => setShowSettlement(false)}
+          onMarkComplete={async (fromId, toId) => {
+            const transfer = transfers.find(
+              t => t.from_member_id === fromId && t.to_member_id === toId
+            );
+            if (transfer) {
+              const { error } = await supabase.from("settlements").insert({
+                trip_id: tripId,
+                from_member_id: fromId,
+                to_member_id: toId,
+                amount: transfer.amount,
+                currency: settings.default_currency,
+                date: new Date().toISOString(),
+                is_confirmed: true,
+              });
+              
+              if (error) {
+                alert(getErrorMessage(error));
+              } else {
+                // Recarregar settlements
+                const { data: settlementsData } = await supabase
+                  .from("settlements")
+                  .select("*")
+                  .eq("trip_id", tripId);
+                if (settlementsData) {
+                  setSettlements(settlementsData);
+                }
+              }
+            }
+          }}
+          onFinalize={async () => {
+            const { error } = await supabase
+              .from("trip_settlement_status")
+              .upsert({
+                trip_id: tripId,
+                is_settled: true,
+                settled_at: new Date().toISOString(),
+              });
+            
+            if (error) {
+              alert(getErrorMessage(error));
+            } else {
+              setShowSettlement(false);
+              alert("Viagem quitada com sucesso! 🎉");
+              onReloadTrip();
+            }
+          }}
+        />
       )}
     </motion.div>
   );

@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
 import { getThemeStyles } from "../utils/theme";
-import type { UserSettings, Trip, ItineraryItem, Expense, Idea } from "../types";
+import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType } from "../types";
 
 // Hooks customizados
 import { useTripData } from "../hooks/useTripData";
@@ -26,6 +26,8 @@ import { Card } from "./Card";
 import { SidebarItem } from "./SidebarItem";
 import { Modal } from "./Modal";
 import { CurrencySelector } from "./CurrencySelector";
+import { PayerSelector } from "./PayerSelector";
+import { SplitSelector } from "./SplitSelector";
 
 interface TripDashboardProps {
   session: Session;
@@ -66,6 +68,12 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [itineraryCurrency, setItineraryCurrency] = useState(settings.default_currency);
   const [expenseCurrency, setExpenseCurrency] = useState(settings.default_currency);
   const [ideaCurrency, setIdeaCurrency] = useState(settings.default_currency);
+  
+  // Estados para rateio de despesas
+  const [expensePayerId, setExpensePayerId] = useState<string>("");
+  const [expenseSplits, setExpenseSplits] = useState<CreateExpenseSplitInput[]>([]);
+  const [expenseSplitType, setExpenseSplitType] = useState<SplitType>("equal");
+  const [expenseAmount, setExpenseAmount] = useState<string>("0");
 
   // Computed values
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
@@ -85,12 +93,24 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     if (type === 'itinerary') {
       setItineraryAllDay(false);
     }
+    if (type === 'expense' && currentMember) {
+      // Inicializar pagador como o usuário atual
+      setExpensePayerId(currentMember.id);
+      setExpenseSplits([]);
+      setExpenseSplitType("equal");
+      setExpenseAmount("0");
+    }
   };
 
   const closeModal = () => {
     setShowAddModal(false);
     setModalType(null);
     setItineraryAllDay(false);
+    // Resetar estados de rateio
+    setExpensePayerId("");
+    setExpenseSplits([]);
+    setExpenseSplitType("equal");
+    setExpenseAmount("0");
   };
 
   // Realtime subscriptions (mantidas aqui para centralizar)
@@ -243,11 +263,30 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         visibility,
         date: new Date().toISOString().split("T")[0],
         is_confirmed,
+        paid_by_member_id: expensePayerId || currentMember.id,
+        split_type: expenseSplitType,
       });
       
       if (error) {
         alert(getErrorMessage(error));
       } else {
+        // Salvar splits se houver
+        if (expenseSplits.length > 0 && visibility === "public") {
+          const { error: splitsError } = await supabase.from("expense_splits").insert(
+            expenseSplits.map(split => ({
+              expense_id: expenseId,
+              member_id: split.member_id,
+              amount: split.amount || 0,
+              percentage: split.percentage,
+            }))
+          );
+          
+          if (splitsError) {
+            console.error("Erro ao salvar splits:", splitsError);
+            alert("Despesa criada, mas houve erro ao salvar o rateio: " + getErrorMessage(splitsError));
+          }
+        }
+        
         closeModal();
         setExpenseCurrency(settings.default_currency);
       }
@@ -560,6 +599,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               isAdmin={isAdmin}
               settings={settings}
               spouseByUserId={spouseByUserId}
+              trip={trip}
               onSettingsChange={onSettingsChange}
               onReloadTrip={reloadTrip}
             />
@@ -694,7 +734,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         isOpen={showAddModal && modalType === 'expense'}
         onClose={closeModal}
         title="Nova Despesa"
-        size="md"
+        size="lg"
       >
         <form
           className="space-y-4"
@@ -724,8 +764,13 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 disabled={isSubmittingExpense}
                 required
                 placeholder="0,00"
+                value={expenseAmount}
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
+                onChange={(e) => {
+                  const masked = maskCurrency(e.target.value);
+                  setExpenseAmount(masked);
+                  e.target.value = masked;
+                }}
               />
             </div>
             <CurrencySelector
@@ -744,6 +789,28 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             <input type="checkbox" name="is_confirmed" disabled={isSubmittingExpense} />
             Marcar como confirmada
           </label>
+          
+          {/* Seção de Rateio */}
+          <div className="border-t pt-4 space-y-4">
+            <h3 className="text-sm font-bold text-zinc-700">Rateio da Despesa</h3>
+            
+            <PayerSelector
+              members={members}
+              selectedPayerId={expensePayerId}
+              currentUserId={session.user.id}
+              onSelect={setExpensePayerId}
+            />
+            
+            <SplitSelector
+              members={members}
+              totalAmount={parseCurrencyToNumber(expenseAmount) || 0}
+              currentUserId={session.user.id}
+              onSplitsChange={(splits, splitType) => {
+                setExpenseSplits(splits);
+                setExpenseSplitType(splitType);
+              }}
+            />
+          </div>
           
           <button disabled={isSubmittingExpense} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
             {isSubmittingExpense ? "Salvando..." : "Adicionar"}
