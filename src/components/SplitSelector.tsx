@@ -2,7 +2,7 @@ import { TripMember } from "../types";
 import { CreateExpenseSplitInput, SplitType } from "../types/splitting";
 import { calculateEqualSplits, validateUnequalSplits } from "../utils/splitting";
 import { useState, useEffect } from "react";
-import { maskCurrency, parseCurrencyToNumber } from "../utils";
+import { cn, maskCurrency, parseCurrencyToNumber } from "../utils";
 
 interface SplitSelectorProps {
   members: TripMember[];
@@ -99,7 +99,7 @@ export function SplitSelector({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
+        <label className="text-sm font-semibold block required-indicator">
           Dividir despesa
         </label>
         <div className="flex gap-2">
@@ -143,7 +143,10 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-100 border border-zinc-100 dark:border-zinc-200"
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                "bg-white border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
+              )}
             >
               <input
                 type="checkbox"

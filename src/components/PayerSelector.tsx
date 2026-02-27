@@ -1,5 +1,6 @@
 import React from "react";
 import { TripMember } from "../types";
+import { cn } from "../utils";
 
 interface PayerSelectorProps {
   members: TripMember[];
@@ -21,7 +22,7 @@ export function PayerSelector({
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-bold text-zinc-400 px-1">
+      <label className="text-sm font-semibold block required-indicator">
         Quem pagou?
       </label>
       <div className="flex items-center gap-3">
@@ -43,18 +44,22 @@ export function PayerSelector({
         )}
 
         <div className="flex-1 flex items-center gap-2">
-          <span cclassName="text-[10px] font-bold text-zinc-400 px-1">Outra pessoa:</span>
+          <span className="text-sm font-semibold block required-indicator">Outra pessoa:</span>
           <select
             value={isOtherPersonSelected ? selectedPayerId : ""}
             onChange={(e) => onSelect(e.target.value)}
-            className={`
-              flex-1 px-3 py-2 rounded-xl border text-sm transition-all
-              ${
-                isOtherPersonSelected
-                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] border-transparent font-bold"
-                  : "bg-white dark:bg-zinc-100 border-zinc-200 dark:border-zinc-300 text-zinc-900 dark:text-zinc-900"
-              }
-            `}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-xl border-2",
+              "text-sm font-medium",
+              "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20",
+              "transition-all duration-200",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+            style={{
+              backgroundColor: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'inherit'
+            }}
           >
             <option value="" disabled>Selecione...</option>
             {otherMembers.map((member) => (
