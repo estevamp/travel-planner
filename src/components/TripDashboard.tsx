@@ -74,6 +74,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [expenseSplits, setExpenseSplits] = useState<CreateExpenseSplitInput[]>([]);
   const [expenseSplitType, setExpenseSplitType] = useState<SplitType>("equal");
   const [expenseAmount, setExpenseAmount] = useState<string>("0");
+  const [isExpenseSplitValid, setIsExpenseSplitValid] = useState(true);
 
   // Estados para rateio de despesas (Edição)
   const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
@@ -83,6 +84,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [editExpenseSplitType, setEditExpenseSplitType] = useState<SplitType>("equal");
   const [editExpenseAmount, setEditExpenseAmount] = useState<string>("0");
   const [editExpenseCurrency, setEditExpenseCurrency] = useState(settings.default_currency);
+  const [isEditExpenseSplitValid, setIsEditExpenseSplitValid] = useState(true);
 
   // Computed values
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
@@ -1008,14 +1010,18 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               members={members}
               totalAmount={parseCurrencyToNumber(expenseAmount) || 0}
               currentUserId={session.user.id}
-              onSplitsChange={(splits, splitType) => {
+              onSplitsChange={(splits, splitType, isValid) => {
                 setExpenseSplits(splits);
                 setExpenseSplitType(splitType);
+                setIsExpenseSplitValid(isValid);
               }}
             />
           </div>
           
-          <button disabled={isSubmittingExpense} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+          <button
+            disabled={isSubmittingExpense || !isExpenseSplitValid}
+            className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {isSubmittingExpense ? "Salvando..." : "Adicionar"}
           </button>
         </form>
@@ -1126,14 +1132,18 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               members={members}
               totalAmount={parseCurrencyToNumber(editExpenseAmount) || 0}
               currentUserId={session.user.id}
-              onSplitsChange={(splits, splitType) => {
+              onSplitsChange={(splits, splitType, isValid) => {
                 setEditExpenseSplits(splits);
                 setEditExpenseSplitType(splitType);
+                setIsEditExpenseSplitValid(isValid);
               }}
             />
           </div>
           
-          <button disabled={isSubmittingExpense} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+          <button
+            disabled={isSubmittingExpense || !isEditExpenseSplitValid}
+            className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {isSubmittingExpense ? "Salvando..." : "Salvar Alterações"}
           </button>
         </form>

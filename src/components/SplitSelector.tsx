@@ -7,7 +7,7 @@ interface SplitSelectorProps {
   members: TripMember[];
   totalAmount: number;
   currentUserId: string;
-  onSplitsChange: (splits: CreateExpenseSplitInput[], splitType: SplitType) => void;
+  onSplitsChange: (splits: CreateExpenseSplitInput[], splitType: SplitType, isValid: boolean) => void;
 }
 
 export function SplitSelector({
@@ -32,7 +32,7 @@ export function SplitSelector({
   // Calculate and emit splits whenever dependencies change
   useEffect(() => {
     if (selectedMembers.size === 0 || totalAmount <= 0) {
-      onSplitsChange([], splitType);
+      onSplitsChange([], splitType, true);
       return;
     }
 
@@ -41,7 +41,7 @@ export function SplitSelector({
     if (splitType === "equal") {
       const splits = calculateEqualSplits(totalAmount, participantIds);
       setValidationError("");
-      onSplitsChange(splits, splitType);
+      onSplitsChange(splits, splitType, true);
     } else {
       // Unequal split
       const splits: CreateExpenseSplitInput[] = participantIds.map((member_id) => ({
@@ -58,9 +58,22 @@ export function SplitSelector({
         setValidationError("");
       }
 
-      onSplitsChange(splits, splitType);
+      onSplitsChange(splits, splitType, validation.isValid);
     }
   }, [selectedMembers, splitType, customAmounts, totalAmount, onSplitsChange]);
+
+  // Initialize unequal split values with equal split amounts when switching to unequal
+  const handleSetSplitType = (type: SplitType) => {
+    if (type === "unequal" && splitType === "equal") {
+      const equalAmount = getEqualAmount();
+      const newCustomAmounts: Record<string, number> = {};
+      selectedMembers.forEach(id => {
+        newCustomAmounts[id] = Number(equalAmount.toFixed(2));
+      });
+      setCustomAmounts(newCustomAmounts);
+    }
+    setSplitType(type);
+  };
 
   const toggleMember = (memberId: string) => {
     const newSelected = new Set(selectedMembers);
@@ -91,7 +104,7 @@ export function SplitSelector({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setSplitType("equal")}
+            onClick={() => handleSetSplitType("equal")}
             className={`
               px-3 py-1 rounded-md text-sm font-medium transition-all
               ${
@@ -105,7 +118,7 @@ export function SplitSelector({
           </button>
           <button
             type="button"
-            onClick={() => setSplitType("unequal")}
+            onClick={() => handleSetSplitType("unequal")}
             className={`
               px-3 py-1 rounded-md text-sm font-medium transition-all
               ${
@@ -155,7 +168,7 @@ export function SplitSelector({
                       value={customAmounts[member.id] || ""}
                       onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
                       placeholder="0.00"
-                      className="w-24 px-2 py-1 text-sm border rounded-md bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                      className="w-24 px-2 py-1 text-sm border rounded-md bg-white dark:bg-zinc-100 border-zinc-200 dark:border-zinc-300 text-zinc-900 dark:text-zinc-900"
                     />
                   )}
                 </div>
