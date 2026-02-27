@@ -56,29 +56,29 @@ export function PeopleTab({
     const fetchBalanceData = async () => {
       // Buscar TODAS as despesas confirmadas (públicas e privadas)
       // A filtragem de privadas será feita na função calculateNetBalances
-      const { data: expensesData } = await supabase
+      const { data: expensesData, error: expError } = await supabase
         .from("expenses")
         .select("*, expense_splits(*)")
         .eq("trip_id", tripId)
         .eq("is_confirmed", true);
       
       // Buscar settlements
-      const { data: settlementsData } = await supabase
+      const { data: settlementsData, error: setError } = await supabase
         .from("settlements")
         .select("*")
         .eq("trip_id", tripId);
       
-      if (expensesData) {
+      if (!expError) {
         // Transformar para ExpenseWithSplits
-        const expensesWithSplitsData: ExpenseWithSplits[] = expensesData.map((exp: any) => ({
+        const expensesWithSplitsData: ExpenseWithSplits[] = (expensesData || []).map((exp: any) => ({
           ...exp,
           splits: exp.expense_splits || [],
         }));
         setExpensesWithSplits(expensesWithSplitsData);
       }
       
-      if (settlementsData) {
-        setSettlements(settlementsData);
+      if (!setError) {
+        setSettlements(settlementsData || []);
       }
     };
     
