@@ -57,11 +57,19 @@ export function validateUnequalSplits(
  * Calculate net balances for all members in a trip
  * Positive balance = member is owed money
  * Negative balance = member owes money
+ *
+ * @param expenses - List of expenses with splits
+ * @param settlements - List of settlements
+ * @param members - List of trip members
+ * @param targetCurrency - Currency to convert all amounts to
+ * @param exchangeRates - Exchange rates relative to target currency
  */
 export function calculateNetBalances(
   expenses: ExpenseWithSplits[],
   settlements: Settlement[],
-  members: TripMember[]
+  members: TripMember[],
+  targetCurrency?: string,
+  exchangeRates?: Record<string, number>
 ): MemberBalance[] {
   const balances: Record<string, number> = {};
 
@@ -70,17 +78,34 @@ export function calculateNetBalances(
     balances[member.id] = 0;
   });
 
+  // Helper function to convert amount to target currency
+  const convertAmount = (amount: number, fromCurrency: string): number => {
+    if (!targetCurrency || !exchangeRates || fromCurrency === targetCurrency) {
+      return amount;
+    }
+    const rate = exchangeRates[fromCurrency];
+    if (!rate) {
+      console.warn(`No exchange rate found for ${fromCurrency}, using original amount`);
+      return amount;
+    }
+    return amount / rate;
+  };
+
   // Process confirmed public expenses only
   expenses.forEach((expense) => {
     if (!expense.is_confirmed || expense.visibility === "private") return;
 
-    // Add to payer's credit (they paid the full amount)
+    const expenseCurrency = expense.currency || targetCurrency || "BRL";
+    
+    // Add to payer's credit (they paid the full amount) - converted to target currency
+    const convertedExpenseAmount = convertAmount(expense.amount, expenseCurrency);
     balances[expense.paid_by_member_id] =
-      (balances[expense.paid_by_member_id] || 0) + expense.amount;
+      (balances[expense.paid_by_member_id] || 0) + convertedExpenseAmount;
 
-    // Subtract from each participant's debt (what they owe)
+    // Subtract from each participant's debt (what they owe) - converted to target currency
     expense.splits.forEach((split) => {
-      balances[split.member_id] = (balances[split.member_id] || 0) - split.amount;
+      const convertedSplitAmount = convertAmount(split.amount, expenseCurrency);
+      balances[split.member_id] = (balances[split.member_id] || 0) - convertedSplitAmount;
     });
   });
 
@@ -88,13 +113,16 @@ export function calculateNetBalances(
   settlements.forEach((settlement) => {
     if (!settlement.is_confirmed) return;
 
+    const settlementCurrency = settlement.currency || targetCurrency || "BRL";
+    const convertedSettlementAmount = convertAmount(settlement.amount, settlementCurrency);
+
     // Debtor paid, so their balance increases (they owe less)
     balances[settlement.from_member_id] =
-      (balances[settlement.from_member_id] || 0) + settlement.amount;
+      (balances[settlement.from_member_id] || 0) + convertedSettlementAmount;
 
     // Creditor received, so their balance decreases (they are owed less)
     balances[settlement.to_member_id] =
-      (balances[settlement.to_member_id] || 0) - settlement.amount;
+      (balances[settlement.to_member_id] || 0) - convertedSettlementAmount;
   });
 
   // Convert to array with member names

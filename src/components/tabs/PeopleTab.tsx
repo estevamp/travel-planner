@@ -8,6 +8,7 @@ import { Card } from "../Card";
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
 import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
+import { currencyService } from "../../services/currencyService";
 
 interface PeopleTabProps {
   tripId: string;
@@ -46,6 +47,7 @@ export function PeopleTab({
   const [balances, setBalances] = useState<MemberBalance[]>([]);
   const [showSettlement, setShowSettlement] = useState(false);
   const [transfers, setTransfers] = useState<SimplifiedTransfer[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   
@@ -121,19 +123,30 @@ export function PeopleTab({
     };
   }, [tripId]); // Removido trip.expenses da dependência, usando realtime ao invés
   
-  // Calcular saldos
+  // Buscar taxas de câmbio
+  useEffect(() => {
+    const fetchRates = async () => {
+      const data = await currencyService.getExchangeRates(settings.default_currency);
+      setExchangeRates(data.rates);
+    };
+    fetchRates();
+  }, [settings.default_currency]);
+  
+  // Calcular saldos com conversão de moedas
   useEffect(() => {
     if (expensesWithSplits.length > 0 || settlements.length > 0) {
       const calculatedBalances = calculateNetBalances(
         expensesWithSplits,
         settlements,
-        members
+        members,
+        settings.default_currency,
+        exchangeRates
       );
       setBalances(calculatedBalances);
     } else {
       setBalances([]);
     }
-  }, [expensesWithSplits, settlements, members]);
+  }, [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
 
   const createInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
