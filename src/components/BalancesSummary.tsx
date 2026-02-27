@@ -55,7 +55,7 @@ export function BalancesSummary({
         }`}
       >
         <div className="text-center">
-          <p className="text-sm text-gray-800 dark:text-gray-300 mb-2">Seu saldo</p>
+          <p className="text-sm text-slate-950 dark:text-gray-300 mb-2">Seu saldo</p>
           <p
             className={`text-3xl font-bold ${
               netBalance > 0
@@ -67,7 +67,7 @@ export function BalancesSummary({
           >
             {formatCurrency(Math.abs(netBalance), currency)}
           </p>
-          <p className="text-sm text-gray-800 dark:text-gray-300 mt-1">
+          <p className="text-sm text-slate-950 dark:text-gray-300 mt-1">
             {netBalance > 0
               ? "Você tem a receber"
               : netBalance < 0
@@ -99,7 +99,7 @@ export function BalancesSummary({
                     {balance.member_name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-50">
+                    <p className="font-medium text-slate-950 dark:text-gray-50">
                       {balance.member_name}
                     </p>
                     <p
@@ -125,16 +125,16 @@ export function BalancesSummary({
       {hasBalances && (
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
-            <p className="text-xs text-green-800 dark:text-green-300 mb-1">
+            <p className="text-xs text-slate-950 dark:text-green-300 mb-1">
               Total a receber
             </p>
-            <p className="text-lg font-bold text-green-900 dark:text-green-200">
+            <p className="text-lg font-bold text-emerald-950 dark:text-green-200">
               {formatCurrency(totalOwed, currency)}
             </p>
           </div>
           <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
-            <p className="text-xs text-red-800 dark:text-red-300 mb-1">Total a pagar</p>
-            <p className="text-lg font-bold text-red-900 dark:text-red-200">
+            <p className="text-xs text-slate-950 dark:text-red-300 mb-1">Total a pagar</p>
+            <p className="text-lg font-bold text-red-950 dark:text-red-200">
               {formatCurrency(totalOwing, currency)}
             </p>
           </div>
