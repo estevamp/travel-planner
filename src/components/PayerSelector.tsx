@@ -14,35 +14,56 @@ export function PayerSelector({
   currentUserId,
   onSelect,
 }: PayerSelectorProps) {
+  const currentUserMember = members.find(m => m.user_id === currentUserId);
+  const otherMembers = members.filter(m => m.user_id !== currentUserId);
+  const isCurrentUserSelected = currentUserMember?.id === selectedPayerId;
+  const isOtherPersonSelected = !isCurrentUserSelected && selectedPayerId !== "";
+
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
         Quem pagou?
       </label>
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {members.map((member) => {
-          const isCurrentUser = member.user_id === currentUserId;
-          const isSelected = member.id === selectedPayerId;
-          const displayName = isCurrentUser ? "Eu" : member.display_name || "Membro";
+      <div className="flex items-center gap-3">
+        {currentUserMember && (
+          <button
+            type="button"
+            onClick={() => onSelect(currentUserMember.id)}
+            className={`
+              flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
+              ${
+                isCurrentUserSelected
+                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
+                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300 hover:opacity-80 border border-transparent"
+              }
+            `}
+          >
+            Eu
+          </button>
+        )}
 
-          return (
-            <button
-              key={member.id}
-              type="button"
-              onClick={() => onSelect(member.id)}
-              className={`
-                flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-all
-                ${
-                  isSelected
-                    ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
-                    : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300 hover:opacity-80"
-                }
-              `}
-            >
-              {displayName}
-            </button>
-          );
-        })}
+        <div className="flex-1 flex items-center gap-2">
+          <span className="text-xs font-bold text-zinc-400 uppercase whitespace-nowrap">Outra pessoa:</span>
+          <select
+            value={isOtherPersonSelected ? selectedPayerId : ""}
+            onChange={(e) => onSelect(e.target.value)}
+            className={`
+              flex-1 px-3 py-2 rounded-xl border text-sm transition-all
+              ${
+                isOtherPersonSelected
+                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] border-transparent font-bold"
+                  : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+              }
+            `}
+          >
+            <option value="" disabled>Selecione...</option>
+            {otherMembers.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.display_name || "Membro"}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );

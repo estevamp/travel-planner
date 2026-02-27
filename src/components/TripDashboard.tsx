@@ -995,7 +995,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className={cn("text-sm font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>Rateio da Despesa</h3>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio da Despesa</h3>
             
             <PayerSelector
               members={members}
@@ -1113,7 +1113,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className={cn("text-sm font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>Rateio da Despesa</h3>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio da Despesa</h3>
             
             <PayerSelector
               members={members}

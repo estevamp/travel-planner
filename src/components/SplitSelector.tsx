@@ -85,7 +85,7 @@ export function SplitSelector({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
           Dividir despesa
         </label>
         <div className="flex gap-2">
@@ -101,7 +101,7 @@ export function SplitSelector({
               }
             `}
           >
-            Igual
+            Dividir igualmente
           </button>
           <button
             type="button"
@@ -115,7 +115,7 @@ export function SplitSelector({
               }
             `}
           >
-            Desigual
+            Divisão desigual
           </button>
         </div>
       </div>
@@ -129,15 +129,15 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800"
+              className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50"
             >
               <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => toggleMember(member.id)}
-                className="w-5 h-5 text-[var(--accent-color)] rounded focus:ring-2 focus:ring-[var(--accent-color)]/20"
+                className="w-5 h-5 text-[var(--accent-color)] rounded-lg focus:ring-2 focus:ring-[var(--accent-color)]/20"
               />
-              <span className="flex-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              <span className="flex-1 text-[10px] font-bold uppercase text-zinc-400">
                 {displayName}
               </span>
 
