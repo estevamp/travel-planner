@@ -143,10 +143,12 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
-                "bg-white border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
-              )}
+              className="flex items-center gap-3 p-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+              style={{
+                backgroundColor: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'inherit'
+              }}
             >
               <input
                 type="checkbox"
@@ -154,14 +156,14 @@ export function SplitSelector({
                 onChange={() => toggleMember(member.id)}
                 className="w-5 h-5 text-[var(--accent-color)] rounded-lg focus:ring-2 focus:ring-[var(--accent-color)]/20"
               />
-              <span className="flex-1 text-sm font-medium text-zinc-900 dark:text-zinc-900">
+              <span className="flex-1 text-sm font-medium">
                 {displayName}
               </span>
 
               {isSelected && (
                 <div className="flex items-center gap-2">
                   {splitType === "equal" ? (
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    <span className="text-sm opacity-70">
                       {maskCurrency((getEqualAmount() * 100).toFixed(0))}
                     </span>
                   ) : (
@@ -171,7 +173,12 @@ export function SplitSelector({
                       value={customAmounts[member.id] ? maskCurrency((customAmounts[member.id] * 100).toFixed(0)) : ""}
                       onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
                       placeholder="0,00"
-                      className="w-24 px-2 py-1 text-sm border rounded-md bg-white dark:bg-zinc-100 border-zinc-200 dark:border-zinc-300 text-zinc-900 dark:text-zinc-900"
+                      className="w-24 px-2 py-1 text-sm border rounded-md"
+                      style={{
+                        backgroundColor: 'var(--card-bg)',
+                        borderColor: 'var(--card-border)',
+                        color: 'inherit'
+                      }}
                     />
                   )}
                 </div>
@@ -182,13 +189,13 @@ export function SplitSelector({
       </div>
 
       {validationError && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div className="p-3 rounded-lg border-2 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
           <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
         </div>
       )}
 
       {selectedMembers.size > 0 && (
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg">
+        <div className="p-3 rounded-lg border-2 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
           <p className="text-sm text-blue-600 dark:text-blue-400">
             {selectedMembers.size} {selectedMembers.size === 1 ? "pessoa" : "pessoas"}{" "}
             selecionada{selectedMembers.size === 1 ? "" : "s"}

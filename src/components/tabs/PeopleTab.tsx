@@ -230,7 +230,10 @@ export function PeopleTab({
             <select
               value={selfSpouseUserId}
               onChange={(e) => setSelfSpouseUserId(e.target.value)}
-              className="md:col-span-2 px-4 py-2 rounded-xl border border-zinc-200 text-sm"
+              className={cn(
+                "md:col-span-2 px-4 py-2 rounded-xl border text-sm",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
             >
               <option value="">Sem cônjuge</option>
               {members
@@ -262,7 +265,10 @@ export function PeopleTab({
               onChange={(e) => setInviteEmail(e.target.value)}
               type="email"
               placeholder="email@exemplo.com"
-              className="flex-1 px-4 py-2 rounded-xl border border-zinc-200 text-sm"
+              className={cn(
+                "flex-1 px-4 py-2 rounded-xl border text-sm",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
             />
             <button
               onClick={createInvite}
@@ -273,7 +279,10 @@ export function PeopleTab({
             </button>
           </div>
           {generatedLink && (
-            <div className="mt-3 p-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs break-all">
+            <div className={cn(
+              "mt-3 p-3 rounded-xl border text-xs break-all",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
+            )}>
               {generatedLink}
             </div>
           )}

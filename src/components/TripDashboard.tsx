@@ -996,8 +996,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           </label>
           
           {/* Seção de Rateio */}
-          <div className="border-t pt-4 space-y-4">
-            <h3 className="text-[10px] font-bold text-zinc-400 px-1">Rateio</h3>
+          <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
             
             <PayerSelector
               members={members}
@@ -1118,8 +1118,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           </label>
           
           {/* Seção de Rateio */}
-          <div className="border-t pt-4 space-y-4">
-            <h3 className="text-lg font-bold uppercase text-zinc-800 px-1">Rateio</h3>
+          <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
             
             <PayerSelector
               members={members}
