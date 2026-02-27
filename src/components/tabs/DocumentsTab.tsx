@@ -13,9 +13,10 @@ interface DocumentsTabProps {
   currentMember: TripMember | null;
   tripId: string;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
+  isDark?: boolean;
 }
 
-export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: DocumentsTabProps) {
+export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark = false }: DocumentsTabProps) {
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<{ name: string; url: string } | null>(null);
 
@@ -148,6 +149,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate }: Docu
           onClose={() => setSelectedDoc(null)}
           docName={selectedDoc.name}
           docUrl={selectedDoc.url}
+          isDark={isDark}
         />
       )}
     </motion.div>

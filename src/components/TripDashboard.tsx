@@ -720,6 +720,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               currentMember={currentMember}
               tripId={id!}
               onTripUpdate={setTrip}
+              isDark={settings.dark_mode}
             />
           )}
 
@@ -771,6 +772,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         onClose={closeModal}
         title="Nova Atividade"
         size="md"
+        isDark={settings.dark_mode}
       >
         <form
           className="space-y-4"
@@ -921,6 +923,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         onClose={closeModal}
         title="Nova Despesa"
         size="lg"
+        isDark={settings.dark_mode}
       >
         <form
           className="space-y-4"
@@ -1038,6 +1041,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         onClose={closeEditExpenseModal}
         title="Editar Despesa"
         size="lg"
+        isDark={settings.dark_mode}
       >
         <form
           className="space-y-4"
@@ -1166,6 +1170,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         onClose={closeModal}
         title="Nova Ideia"
         size="lg"
+        isDark={settings.dark_mode}
       >
         <form
           className="space-y-4"

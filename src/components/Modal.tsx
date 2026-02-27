@@ -9,9 +9,10 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
+  isDark?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = "md", isDark = false }: ModalProps) {
   // Close on ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -73,7 +74,8 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
               "relative w-full rounded-3xl shadow-2xl overflow-hidden",
               "max-h-[90vh] flex flex-col",
               sizeClasses[size],
-              "md:max-h-[85vh]"
+              "md:max-h-[85vh]",
+              isDark ? "text-white" : "text-zinc-900"
             )}
             style={{ backgroundColor: 'var(--card-bg)' }}
             onClick={(e) => e.stopPropagation()}

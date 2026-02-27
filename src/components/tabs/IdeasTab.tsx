@@ -610,19 +610,22 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
 
       {/* Photo Viewer Modal */}
       {viewingPhotoUrl && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           onClick={() => setViewingPhotoUrl(null)}
         >
           <button
             onClick={() => setViewingPhotoUrl(null)}
-            className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg hover:bg-zinc-100 transition-colors"
+            className={cn(
+              "absolute top-4 right-4 p-2 rounded-full shadow-lg transition-colors",
+              settings.dark_mode ? "bg-zinc-800 text-white hover:bg-zinc-700" : "bg-white text-zinc-900 hover:bg-zinc-100"
+            )}
           >
             <X size={24} />
           </button>
-          <img 
-            src={viewingPhotoUrl} 
-            alt="Foto da ideia" 
+          <img
+            src={viewingPhotoUrl}
+            alt="Foto da ideia"
             className="max-w-full max-h-full rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />

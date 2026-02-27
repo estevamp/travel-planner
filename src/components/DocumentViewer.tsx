@@ -7,9 +7,10 @@ interface DocumentViewerProps {
   onClose: () => void;
   docName: string;
   docUrl: string;
+  isDark?: boolean;
 }
 
-export function DocumentViewer({ isOpen, onClose, docName, docUrl }: DocumentViewerProps) {
+export function DocumentViewer({ isOpen, onClose, docName, docUrl, isDark = false }: DocumentViewerProps) {
   const getFileType = (name: string) => {
     const extension = name.split(".").pop()?.toLowerCase();
     if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || "")) return "image";
@@ -77,7 +78,7 @@ export function DocumentViewer({ isOpen, onClose, docName, docUrl }: DocumentVie
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={docName} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={docName} size="xl" isDark={isDark}>
       <div className="flex flex-col gap-4">
         {renderContent()}
         

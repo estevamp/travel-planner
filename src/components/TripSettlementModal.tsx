@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SimplifiedTransfer } from "../types/splitting";
 import { formatCurrency } from "../utils/splitting";
+import { cn } from "../utils";
 
 interface TripSettlementModalProps {
   transfers: SimplifiedTransfer[];
@@ -8,6 +9,7 @@ interface TripSettlementModalProps {
   onClose: () => void;
   onMarkComplete: (fromId: string, toId: string) => void;
   onFinalize: () => void;
+  isDark?: boolean;
 }
 
 export function TripSettlementModal({
@@ -16,6 +18,7 @@ export function TripSettlementModal({
   onClose,
   onMarkComplete,
   onFinalize,
+  isDark = false,
 }: TripSettlementModalProps) {
   const [completedTransfers, setCompletedTransfers] = useState<Set<string>>(
     new Set()
@@ -48,13 +51,13 @@ export function TripSettlementModal({
   if (transfers.length === 0) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
+        <div className={cn("rounded-2xl max-w-md w-full p-6", isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900")}>
           <div className="text-center">
             <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <h2 className={cn("text-2xl font-bold mb-2", isDark ? "text-gray-100" : "text-gray-900")}>
               Tudo acertado!
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className={cn("mb-6", isDark ? "text-gray-400" : "text-gray-600")}>
               Nenhum acerto necessário. Todos os saldos estão zerados!
             </p>
             <button
@@ -71,16 +74,16 @@ export function TripSettlementModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className={cn("rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col", isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900")}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className={cn("p-6 border-b", isDark ? "border-gray-700" : "border-gray-200")}>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className={cn("text-2xl font-bold", isDark ? "text-gray-100" : "text-gray-900")}>
               Quitar viagem
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className={cn("text-gray-400", isDark ? "hover:text-gray-300" : "hover:text-gray-600")}
             >
               <svg
                 className="w-6 h-6"
@@ -97,7 +100,7 @@ export function TripSettlementModal({
               </svg>
             </button>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          <p className={cn("text-sm mt-2", isDark ? "text-gray-400" : "text-gray-600")}>
             Transferências necessárias para zerar todos os saldos
           </p>
         </div>
@@ -111,11 +114,11 @@ export function TripSettlementModal({
             return (
               <div
                 key={key}
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={cn("p-4 rounded-lg border-2 transition-all",
                   isCompleted
-                    ? "bg-green-50 dark:bg-green-900/20 border-green-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                }`}
+                    ? (isDark ? "bg-green-900/20 border-green-500" : "bg-green-50 border-green-500")
+                    : (isDark ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200")
+                )}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 mt-1">
@@ -123,7 +126,7 @@ export function TripSettlementModal({
                       className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
                         isCompleted
                           ? "bg-green-500 text-white"
-                          : "bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
+                          : (isDark ? "bg-gray-600 text-gray-300" : "bg-gray-300 text-gray-700")
                       }`}
                     >
                       {index + 1}
@@ -132,7 +135,7 @@ export function TripSettlementModal({
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      <span className={cn("font-semibold", isDark ? "text-gray-100" : "text-gray-900")}>
                         {transfer.from_member_name}
                       </span>
                       <svg
@@ -148,12 +151,12 @@ export function TripSettlementModal({
                           d="M17 8l4 4m0 0l-4 4m4-4H3"
                         />
                       </svg>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      <span className={cn("font-semibold", isDark ? "text-gray-100" : "text-gray-900")}>
                         {transfer.to_member_name}
                       </span>
                     </div>
 
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-3">
+                    <p className={cn("text-2xl font-bold mb-3", isDark ? "text-blue-400" : "text-blue-600")}>
                       {formatCurrency(transfer.amount, currency)}
                     </p>
 
@@ -175,13 +178,13 @@ export function TripSettlementModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+        <div className={cn("p-6 border-t", isDark ? "border-gray-700" : "border-gray-200")}>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className={cn("text-sm", isDark ? "text-gray-400" : "text-gray-600")}>
               {completedTransfers.size} de {transfers.length} transferências concluídas
             </span>
             {allCompleted && (
-              <span className="text-green-600 dark:text-green-400 font-semibold">
+              <span className={cn("font-semibold", isDark ? "text-green-400" : "text-green-600")}>
                 ✓ Tudo pago!
               </span>
             )}
@@ -193,7 +196,7 @@ export function TripSettlementModal({
             className={`w-full py-3 px-4 font-semibold rounded-lg transition-all ${
               allCompleted
                 ? "bg-green-500 hover:bg-green-600 text-white"
-                : "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                : (isDark ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-gray-300 text-gray-500 cursor-not-allowed")
             }`}
           >
             {allCompleted ? "Finalizar quitação" : "Marque todas as transferências"}

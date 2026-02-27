@@ -388,6 +388,7 @@ export function PeopleTab({
           transfers={transfers}
           currency={settings.default_currency}
           onClose={() => setShowSettlement(false)}
+          isDark={settings.dark_mode}
           onMarkComplete={async (fromId, toId) => {
             const transfer = transfers.find(
               t => t.from_member_id === fromId && t.to_member_id === toId
