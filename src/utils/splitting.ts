@@ -91,9 +91,9 @@ export function calculateNetBalances(
     return amount / rate;
   };
 
-  // Process confirmed public expenses only
+  // Process confirmed expenses only
   expenses.forEach((expense) => {
-    if (!expense.is_confirmed || expense.visibility === "private") return;
+    if (!expense.is_confirmed) return;
 
     const expenseCurrency = expense.currency || targetCurrency || "BRL";
     
@@ -208,9 +208,9 @@ export function getBalanceBetweenMembers(
 ): number {
   let balance = 0;
 
-  // Process confirmed public expenses
+  // Process confirmed expenses
   expenses.forEach((expense) => {
-    if (!expense.is_confirmed || expense.visibility === "private") return;
+    if (!expense.is_confirmed) return;
 
     // If current user paid
     if (expense.paid_by_member_id === currentUserId) {

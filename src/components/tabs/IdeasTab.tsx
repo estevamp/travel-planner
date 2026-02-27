@@ -410,15 +410,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                       </label>
                     </div>
 
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={ideaDraft.visibility === "private"}
-                        onChange={(e) => setIdeaDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                      />
-                      <Lock size={14} />
-                      <span>Marcar como privado</span>
-                    </label>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -443,7 +434,6 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold flex items-center gap-2 flex-wrap">
                         <span className="break-words">{idea.title}</span>
-                        {idea.visibility === "private" && <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />}
                         {idea.is_converted && (
                           <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                             Adicionada ao roteiro

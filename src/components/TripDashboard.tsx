@@ -203,7 +203,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     try {
       const itineraryId = crypto.randomUUID();
       const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
-      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const visibility = "public";
       const type_id = (form.get("type_id") as string) || null;
       const description = (form.get("description") as string) || "";
       const location = (form.get("location") as string) || "";
@@ -287,7 +287,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     
     setIsSubmittingExpense(true);
     try {
-      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const visibility = "public";
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
       const description = (form.get("description") as string) || "Despesa";
       const category_id = (form.get("category_id") as string) || null;
@@ -359,7 +359,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     
     setIsSubmittingExpense(true);
     try {
-      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const visibility = "public";
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
       const description = (form.get("description") as string) || "Despesa";
       const category_id = (form.get("category_id") as string) || null;
@@ -435,7 +435,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       const title = ((form.get("title") as string) || "").trim();
       if (!title) return;
       
-      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const visibility = "public";
       const notes = ((form.get("notes") as string) || "").trim() || null;
       const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
       const ideaId = crypto.randomUUID();
@@ -893,11 +893,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             )}
           />
           
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_private" disabled={isSubmittingItinerary} />
-            Marcar como privado
-          </label>
-
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Foto</label>
             <input
@@ -990,11 +985,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               />
             </div>
           </div>
-          
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_private" disabled={isSubmittingExpense} />
-            Marcar como privado
-          </label>
           
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="is_confirmed" disabled={isSubmittingExpense} />
@@ -1113,16 +1103,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              name="is_private"
-              disabled={isSubmittingExpense}
-              defaultChecked={editingExpense?.visibility === "private"}
-            />
-            Marcar como privado
-          </label>
-          
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
               name="is_confirmed"
               disabled={isSubmittingExpense}
               defaultChecked={editingExpense?.is_confirmed}
@@ -1218,11 +1198,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             />
           </div>
           
-          
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_private" disabled={isSubmittingIdea} />
-            Marcar como privado
-          </label>
           
           <p className="text-[10px] text-zinc-400 px-1 italic">Dica: Você poderá adicionar fotos, anexos e links extras após salvar a ideia, editando-a.</p>
           

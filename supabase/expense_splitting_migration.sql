@@ -181,7 +181,10 @@ SELECT
   tm.id AS member_id,
   tm.trip_id,
   tm.display_name AS member_name,
-  COALESCE(paid.total_paid, 0) - COALESCE(owed.total_owed, 0) + COALESCE(settled.net_settled, 0) AS net_balance
+  CASE
+    WHEN paid.total_paid IS NULL AND owed.total_owed IS NULL AND settled.has_settlements IS NULL THEN 0
+    ELSE COALESCE(paid.total_paid, 0) - COALESCE(owed.total_owed, 0) + COALESCE(settled.net_settled, 0)
+  END AS net_balance
 FROM trip_members tm
 LEFT JOIN (
   -- Total paid by member
@@ -201,9 +204,10 @@ LEFT JOIN (
 LEFT JOIN (
   -- Net settlements (paid - received)
   SELECT
-    tm.id AS member_id,
-    COALESCE(paid_out.total, 0) - COALESCE(received.total, 0) AS net_settled
-  FROM trip_members tm
+   tm.id AS member_id,
+   COALESCE(paid_out.total, 0) - COALESCE(received.total, 0) AS net_settled,
+   CASE WHEN paid_out.total IS NOT NULL OR received.total IS NOT NULL THEN TRUE ELSE NULL END as has_settlements
+ FROM trip_members tm
   LEFT JOIN (
     SELECT from_member_id, SUM(amount) AS total
     FROM settlements

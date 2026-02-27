@@ -292,15 +292,6 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                           placeholder="Descricao"
                           className={cn("flex-1 px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                         />
-                        <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Privado">
-                          <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={expenseDraft.visibility === "private"}
-                            onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                          />
-                          <Lock size={16} className={cn("transition-colors", expenseDraft.visibility === "private" ? "text-orange-600" : "text-zinc-300")} />
-                        </label>
                         <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Confirmada">
                           <input
                             type="checkbox"
@@ -363,9 +354,6 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{exp.description}</p>
-                        {exp.visibility === "private" && (
-                          <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />
-                        )}
                         {exp.is_confirmed ? (
                           <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
                         ) : (
@@ -452,14 +440,6 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     <label className="flex items-center gap-2 text-xs">
                       <input
                         type="checkbox"
-                        checked={expenseDraft.visibility === "private"}
-                        onChange={(e) => setExpenseDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                      />
-                      Marcar como privado
-                    </label>
-                    <label className="flex items-center gap-2 text-xs">
-                      <input
-                        type="checkbox"
                         checked={expenseDraft.is_confirmed}
                         onChange={(e) => setExpenseDraft((current) => ({ ...current, is_confirmed: e.target.checked }))}
                       />
@@ -492,9 +472,6 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-bold truncate">{exp.description}</h4>
-                      {exp.visibility === "private" && (
-                        <Lock size={14} className="text-orange-600 flex-shrink-0" title="Privado" />
-                      )}
                       {exp.is_confirmed ? (
                         <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
                       ) : (

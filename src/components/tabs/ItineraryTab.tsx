@@ -216,15 +216,6 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                     <option key={type.id} value={type.id}>{type.name}</option>
                   ))}
                 </select>
-                <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Privado">
-                  <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={itineraryDraft.visibility === "private"}
-                    onChange={(e) => setItineraryDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                  />
-                  <Lock size={16} className={cn("transition-colors", itineraryDraft.visibility === "private" ? "text-orange-600" : "text-zinc-300")} />
-                </label>
               </div>
               <input
                 value={itineraryDraft.title}
@@ -390,11 +381,6 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <h4 className={cn("font-bold truncate", item.is_completed && "line-through text-zinc-400")}>{item.title}</h4>
-                  {item.visibility === "private" && (
-                    <span className="text-orange-600" title="Privado">
-                      <Lock size={14} />
-                    </span>
-                  )}
                 </div>
                 <div className="flex flex-col items-start">
                   {item.start_time && (
