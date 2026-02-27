@@ -138,7 +138,8 @@ export function calculateNetBalances(
     .map(balance => ({
       ...balance,
       net_balance: Math.abs(balance.net_balance) < 0.01 ? 0 : balance.net_balance
-    }));
+    }))
+    .filter((balance) => Math.abs(balance.net_balance) > 0.01); // Filter out zero balances for display
 }
 
 /**
