@@ -95,6 +95,14 @@ export function calculateNetBalances(
   expenses.forEach((expense) => {
     if (!expense.is_confirmed) return;
 
+    // Skip expenses with no splits or only the payer in splits
+    if (!expense.splits || expense.splits.length === 0) return;
+    
+    // Check if only the payer is in the splits
+    const onlyPayerInSplits = expense.splits.length === 1 &&
+                               expense.splits[0].member_id === expense.paid_by_member_id;
+    if (onlyPayerInSplits) return;
+
     const expenseCurrency = expense.currency || targetCurrency || "BRL";
     
     // Add to payer's credit (they paid the full amount) - converted to target currency
@@ -211,6 +219,13 @@ export function getBalanceBetweenMembers(
   // Process confirmed expenses
   expenses.forEach((expense) => {
     if (!expense.is_confirmed) return;
+
+    // Skip expenses with no splits or only the payer in splits
+    if (!expense.splits || expense.splits.length === 0) return;
+    
+    const onlyPayerInSplits = expense.splits.length === 1 &&
+                               expense.splits[0].member_id === expense.paid_by_member_id;
+    if (onlyPayerInSplits) return;
 
     // If current user paid
     if (expense.paid_by_member_id === currentUserId) {

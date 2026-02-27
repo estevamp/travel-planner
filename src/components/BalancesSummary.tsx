@@ -125,19 +125,15 @@ export function BalancesSummary({
         </div>
       </div>
 
-      {/* Individual Balances */}
+      {/* Individual Balances - Only show debts (negative balances) */}
       {hasBalances && (
         <div className="space-y-3">
           <h3 className={`font-bold mb-4 ${textNeutralMain}`}>Detalhamento</h3>
 
-            {individualBalances.map((balance) => {
+            {individualBalances
+              .filter((balance) => balance.net_balance < 0) // Only show when you owe someone
+              .map((balance) => {
               const amount = Math.abs(balance.net_balance);
-              const isPositive = balance.net_balance > 0; // they owe current user
-              
-              // When owing: "Você → Fulano". When owed: "Fulano → Você"
-              const avatarLetter = isPositive
-                ? balance.member_name.charAt(0).toUpperCase()  // they owe you → show them
-                : "V"; // you owe them → show "Você" first
 
               return (
                 <div
@@ -146,29 +142,16 @@ export function BalancesSummary({
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${chipBg(isPositive)}`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${chipBg(false)}`}
                     >
-                      {avatarLetter}
+                      V
                     </div>
 
                     <div>
-                      {isPositive ? (
-                        // "Fulano deve R$ X para você"
-                        <>
-                          <p className={`font-medium ${textNeutralMain}`}>{balance.member_name}</p>
-                          <p className={`text-sm ${lineText(true)}`}>
-                            deve {formatCurrency(amount, currency)} para <strong>você</strong>
-                          </p>
-                        </>
-                      ) : (
-                        // "Você deve R$ X para Fulano"
-                        <>
-                          <p className={`font-medium ${textNeutralMain}`}>Você</p>
-                          <p className={`text-sm ${lineText(false)}`}>
-                            deve {formatCurrency(amount, currency)} para <strong>{balance.member_name}</strong>
-                          </p>
-                        </>
-                      )}
+                      <p className={`font-medium ${textNeutralMain}`}>Você</p>
+                      <p className={`text-sm ${lineText(false)}`}>
+                        deve {formatCurrency(amount, currency)} para <strong>{balance.member_name}</strong>
+                      </p>
                     </div>
                   </div>
                 </div>
