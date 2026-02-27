@@ -25,13 +25,13 @@ export function PayerSelector({
       <label className="text-sm font-semibold block required-indicator">
         Quem pagou?
       </label>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         {currentUserMember && (
           <button
             type="button"
             onClick={() => onSelect(currentUserMember.id)}
             className={`
-              flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
+              w-full sm:w-auto flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
               ${
                 isCurrentUserSelected
                   ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
@@ -43,13 +43,13 @@ export function PayerSelector({
           </button>
         )}
 
-        <div className="flex-1 flex items-center gap-2">
-          <span className="text-sm font-semibold block required-indicator">Outra pessoa:</span>
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+          <span className="text-sm font-semibold block required-indicator whitespace-nowrap">Outra pessoa:</span>
           <select
             value={isOtherPersonSelected ? selectedPayerId : ""}
             onChange={(e) => onSelect(e.target.value)}
             className={cn(
-              "flex-1 px-3 py-2 rounded-xl border-2",
+              "w-full flex-1 px-3 py-2 rounded-xl border-2",
               "text-sm font-medium",
               "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20",
               "transition-all duration-200",
