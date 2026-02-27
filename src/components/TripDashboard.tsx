@@ -635,9 +635,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
-                {itineraryAllDay ? "Data de Início" : "Início"}
-              </label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
               {itineraryAllDay ? (
                 <input 
                   type="date" 
@@ -655,9 +653,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               )}
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
-                {itineraryAllDay ? "Data de Fim" : "Fim"}
-              </label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
               {itineraryAllDay ? (
                 <input 
                   type="date" 

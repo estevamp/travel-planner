@@ -59,7 +59,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
             <h2 className="text-lg font-semibold">Contribua</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            Esse app é distribuído sem custo. Se quiser me ajudar com um cafézinho, pode fazer um pix para <b>estevamp@gmail.com</b>.
+            Esse app é distribuído sem custo. Mas, se quiser me pagar um cafezinho, pode fazer um pix para <b>estevamp@gmail.com</b>.
           </p>
         </section>
 
