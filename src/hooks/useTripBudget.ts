@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
+import { useToast } from "./useToast";
 import { getErrorMessage } from "../utils";
 import type { TripBudget } from "../types";
 
@@ -8,12 +9,14 @@ export function useTripBudget(tripId: string | undefined, userId: string) {
   const [budgetOwnerUserId, setBudgetOwnerUserId] = useState<string>("");
   const [budgetCurrency, setBudgetCurrency] = useState<string>("BRL");
   const budgetAutosaveReadyRef = useRef(false);
+  const { toast } = useToast();
 
   const loadTripBudget = async (id: string) => {
     const ownerRes = await supabase.rpc("budget_owner_user_id", { p_trip_id: id, p_user_id: userId });
     const owner = (ownerRes.data as string | null) || userId;
     if (ownerRes.error) {
-      console.error(ownerRes.error);
+      console.error('[useTripBudget] Falha ao buscar owner do budget:', ownerRes.error);
+      // Não toastear — é um fetch de inicialização, falha silenciosa é aceitável
       setBudgetOwnerUserId(userId);
       setTripBudget(null);
       return;
@@ -28,7 +31,8 @@ export function useTripBudget(tripId: string | undefined, userId: string) {
       .maybeSingle();
 
     if (error) {
-      console.error(error);
+      console.error('[useTripBudget] Falha ao buscar budget:', error);
+      // Não-crítico: budget é opcional, app funciona sem ele
       setTripBudget(null);
       return;
     }
@@ -53,8 +57,7 @@ export function useTripBudget(tripId: string | undefined, userId: string) {
     });
 
     if (error) {
-      // TODO: substituir por toast quando o TripContext for implementado
-      console.error(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
 

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../supabase";
+import { useToast } from "./useToast";
+import { getErrorMessage } from "../utils";
 import type {
   Trip,
   TripMember,
@@ -21,7 +23,11 @@ export function useTripData(tripId: string | undefined, userId: string) {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [itineraryTypes, setItineraryTypes] = useState<ItineraryType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [notAuthorized, setNotAuthorized] = useState(false);
   const [spouseByUserId, setSpouseByUserId] = useState<Map<string, string | null>>(new Map());
+
+  const { toast } = useToast();
 
   const categoriesRef = useRef<ExpenseCategory[]>([]);
   const itineraryTypesRef = useRef<ItineraryType[]>([]);
@@ -44,13 +50,19 @@ export function useTripData(tripId: string | undefined, userId: string) {
     ]);
 
     if (tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error || itineraryTypesRes.error || !tripRes.data) {
-      console.error(tripRes.error || membersRes.error || itineraryRes.error || expensesRes.error || docsRes.error || ideasRes.error || categoriesRes.error || itineraryTypesRes.error);
+      const firstError = tripRes.error || membersRes.error || itineraryRes.error ||
+        expensesRes.error || docsRes.error || ideasRes.error ||
+        categoriesRes.error || itineraryTypesRes.error;
+      console.error('[useTripData] Falha ao carregar viagem:', firstError);
+      setLoadError(getErrorMessage(firstError) || 'Não foi possível carregar a viagem.');
       setTrip(null);
       setMembers([]);
       setInvites([]);
       setLoading(false);
       return;
     }
+    // Limpar erro anterior se o load bem-sucedido
+    setLoadError(null);
 
     const nextMembers = (membersRes.data || []) as TripMember[];
     setMembers(nextMembers);
@@ -59,7 +71,9 @@ export function useTripData(tripId: string | undefined, userId: string) {
     if (userIds.length > 0) {
       const { data: profileRows, error: profileError } = await supabase.from("profiles").select("user_id,spouse_user_id").in("user_id", userIds);
       if (profileError) {
-        console.error(profileError);
+        // Não-crítico: dados de cônjuge são usados para splitting de despesas.
+        // Se falharem, o app funciona normalmente sem essa info.
+        console.error('[useTripData] Falha ao carregar profiles:', profileError);
         setSpouseByUserId(new Map());
       } else {
         const entries = new Map<string, string | null>();
@@ -72,11 +86,13 @@ export function useTripData(tripId: string | undefined, userId: string) {
 
     const me = nextMembers.find((member) => member.user_id === userId);
     if (!me) {
+      setNotAuthorized(true);
       setTrip(null);
       setInvites([]);
       setLoading(false);
       return;
     }
+    setNotAuthorized(false);
 
     if (me.role === "admin") {
       const { data, error } = await supabase.from("trip_invites").select("id,email,token,accepted_at,created_at").eq("trip_id", id).order("created_at", { ascending: false });
@@ -98,15 +114,16 @@ export function useTripData(tripId: string | undefined, userId: string) {
         supabase.from("idea_assets").select("*").in("idea_id", ideaIds),
       ]);
       if (ideaLinksRes.error || ideaAssetsRes.error) {
-        console.error(ideaLinksRes.error || ideaAssetsRes.error);
-        setTrip(null);
-        setMembers([]);
-        setInvites([]);
-        setLoading(false);
-        return;
+        console.error('[useTripData] Falha ao carregar assets de ideias:', ideaLinksRes.error || ideaAssetsRes.error);
+        toast('Alguns anexos de ideias não puderam ser carregados.', 'info');
+        // Continua com arrays vazios em vez de derrubar tudo
+        ideaLinksData = [];
+        ideaAssetsData = [];
+        // Não retorna — continua o fluxo normalmente
+      } else {
+        ideaLinksData = (ideaLinksRes.data || []) as IdeaLink[];
+        ideaAssetsData = (ideaAssetsRes.data || []) as IdeaAsset[];
       }
-      ideaLinksData = (ideaLinksRes.data || []) as IdeaLink[];
-      ideaAssetsData = (ideaAssetsRes.data || []) as IdeaAsset[];
     }
 
     const nextCategories = (categoriesRes.data || []) as ExpenseCategory[];
@@ -290,6 +307,8 @@ export function useTripData(tripId: string | undefined, userId: string) {
     itineraryTypes,
     setItineraryTypes,
     loading,
+    loadError,
+    notAuthorized,
     spouseByUserId,
     setSpouseByUserId,
     reloadTrip: tripId ? () => loadTrip(tripId) : () => {},

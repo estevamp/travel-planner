@@ -3,9 +3,11 @@ import { Card } from "./Card";
 import { getErrorMessage } from "../utils";
 import { supabase } from "../supabase";
 import { MapPin } from "lucide-react";
+import { useToast } from "../hooks/useToast";
 
 export function AuthLanding() {
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   async function signInWithGoogle(redirectTo?: string) {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -34,7 +36,7 @@ export function AuthLanding() {
             try {
               await signInWithGoogle(window.location.origin);
             } catch (error) {
-              alert(getErrorMessage(error));
+              toast(getErrorMessage(error), 'error');
             } finally {
               setLoading(false);
             }

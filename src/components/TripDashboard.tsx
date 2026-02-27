@@ -46,8 +46,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   // Hooks customizados - toda lógica de dados encapsulada
   const {
     trip, setTrip, members, invites, categories, setCategories,
-    itineraryTypes, setItineraryTypes, loading, spouseByUserId,
-    setSpouseByUserId, reloadTrip,
+    itineraryTypes, setItineraryTypes, loading, loadError, notAuthorized,
+    spouseByUserId, setSpouseByUserId, reloadTrip,
     reloadItinerary, reloadExpenses, reloadDocuments, reloadIdeas, reloadMembers,
   } = useTripData(id, session.user.id);
   const { tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency, reloadBudget } = useTripBudget(id, session.user.id);
@@ -57,6 +57,13 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   
   // Estado local apenas para UI
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
+
+  useEffect(() => {
+    if (notAuthorized) {
+      toast('Você não tem acesso a esta viagem.', 'error');
+      navigate('/');
+    }
+  }, [notAuthorized, navigate, toast]);
 
   useEffect(() => {
     if (id) {
@@ -500,8 +507,35 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     navigate("/");
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-  if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem não encontrada ou sem permissão.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)]" style={themedStyles}>
+        <p className="text-zinc-500 animate-pulse">Carregando viagem...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 bg-[var(--bg-color)]" style={themedStyles}>
+        <p className="text-red-500 font-semibold text-center">{loadError}</p>
+        <button
+          onClick={() => void reloadTrip()}
+          className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-bold hover:bg-zinc-700 transition-colors"
+        >
+          Tentar novamente
+        </button>
+        <button
+          onClick={() => navigate('/')}
+          className="text-sm text-zinc-500 hover:underline"
+        >
+          Voltar para minhas viagens
+        </button>
+      </div>
+    );
+  }
+
+  if (!trip) return null; // notAuthorized vai redirecionar via useEffect acima
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>

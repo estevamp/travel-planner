@@ -7,11 +7,13 @@ import { Card } from "./Card";
 import { UserSettings, TripSummary } from "../types";
 import { getThemeStyles } from "../utils/theme";
 import { getErrorMessage } from "../utils";
+import { useToast } from "../hooks/useToast";
 
 export function LandingPage({ session, settings }: { session: Session; settings: UserSettings }) {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
+  const { toast } = useToast();
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -44,7 +46,7 @@ export function LandingPage({ session, settings }: { session: Session; settings:
     });
     setCreating(false);
     if (error || !data) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error) || 'Não foi possível criar a viagem.', 'error');
       return;
     }
     navigate(`/trip/${data}`);
