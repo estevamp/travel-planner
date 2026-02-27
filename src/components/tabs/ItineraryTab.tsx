@@ -205,16 +205,27 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
         <div className="flex-1 min-w-0">
           {editingItineraryId === item.id ? (
             <div className="space-y-2">
-              <select
-                value={itineraryDraft.type_id || ""}
-                onChange={(e) => setItineraryDraft((current) => ({ ...current, type_id: e.target.value || null }))}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              >
-                <option value="">Sem tipo</option>
-                {itineraryTypes.map((type) => (
-                  <option key={type.id} value={type.id}>{type.name}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={itineraryDraft.type_id || ""}
+                  onChange={(e) => setItineraryDraft((current) => ({ ...current, type_id: e.target.value || null }))}
+                  className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                >
+                  <option value="">Sem tipo</option>
+                  {itineraryTypes.map((type) => (
+                    <option key={type.id} value={type.id}>{type.name}</option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Privado">
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={itineraryDraft.visibility === "private"}
+                    onChange={(e) => setItineraryDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
+                  />
+                  <Lock size={16} className={cn("transition-colors", itineraryDraft.visibility === "private" ? "text-orange-600" : "text-zinc-300")} />
+                </label>
+              </div>
               <input
                 value={itineraryDraft.title}
                 onChange={(e) => setItineraryDraft((current) => ({ ...current, title: e.target.value }))}
@@ -315,14 +326,6 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                 placeholder="Notas"
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20"
               />
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={itineraryDraft.visibility === "private"}
-                  onChange={(e) => setItineraryDraft((current) => ({ ...current, visibility: e.target.checked ? "private" : "public" }))}
-                />
-                Marcar como privado (você + cônjuge)
-              </label>
               <div className="flex flex-col gap-2 mt-2">
                 <button
                   type="button"
