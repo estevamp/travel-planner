@@ -978,11 +978,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 }}
               />
             </div>
-            <CurrencySelector
-              value={expenseCurrency}
-              onChange={setExpenseCurrency}
-              disabled={isSubmittingExpense}
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Moeda</label>
+              <CurrencySelector
+                value={expenseCurrency}
+                onChange={setExpenseCurrency}
+                disabled={isSubmittingExpense}
+              />
+            </div>
           </div>
           
           <label className="flex items-center gap-2 text-sm">
@@ -1090,11 +1093,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 }}
               />
             </div>
-            <CurrencySelector
-              value={editExpenseCurrency}
-              onChange={setEditExpenseCurrency}
-              disabled={isSubmittingExpense}
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Moeda</label>
+              <CurrencySelector
+                value={editExpenseCurrency}
+                onChange={setEditExpenseCurrency}
+                disabled={isSubmittingExpense}
+              />
+            </div>
           </div>
           
           <label className="flex items-center gap-2 text-sm">

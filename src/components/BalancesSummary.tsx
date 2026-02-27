@@ -41,18 +41,20 @@ export function BalancesSummary({
 
   const hasBalances = balances.length > 0;
 
-  return (
+
+return (
     <div className="space-y-4">
       {/* Overall Status */}
       <div
         className={`p-6 rounded-xl border-2 ${
           netBalance > 0
-            // Light: bg-green-50 + text-green-900; Dark: bg-green-950 + text-green-100
-            ? "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700"
+            // LIGHT mais claro: bg-green-100 + border-green-300
+            // DARK (mantido): bg-green-950 + border-green-700
+            ? "bg-green-100 dark:bg-green-950 border-green-300 dark:border-green-700"
             : netBalance < 0
-            ? "bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700"
-            : // Estado neutro: use superfícies com bom contraste
-              "bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+            ? "bg-red-100 dark:bg-red-950 border-red-300 dark:border-red-700"
+            : // Neutro mais claro no light
+              "bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700"
         }`}
       >
         <div className="text-center">
@@ -112,14 +114,13 @@ export function BalancesSummary({
             return (
               <div
                 key={balance.member_id}
+                // Light: branco sólido; Dark: slate-900 (mantido)
                 className="flex items-center justify-between p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                      isPositive
-                        ? "bg-green-600"
-                        : "bg-red-600"
+                      isPositive ? "bg-green-600" : "bg-red-600"
                     }`}
                   >
                     {balance.member_name.charAt(0).toUpperCase()}
@@ -152,7 +153,7 @@ export function BalancesSummary({
       {/* Summary Stats */}
       {hasBalances && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-700">
+          <div className="p-4 rounded-lg bg-green-100 dark:bg-green-950 border border-green-300 dark:border-green-700">
             <p className="text-xs text-green-900 dark:text-green-200 mb-1">
               Total a receber
             </p>
@@ -161,7 +162,7 @@ export function BalancesSummary({
             </p>
           </div>
 
-          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-700">
+          <div className="p-4 rounded-lg bg-red-100 dark:bg-red-950 border border-red-300 dark:border-red-700">
             <p className="text-xs text-red-900 dark:text-red-200 mb-1">
               Total a pagar
             </p>
