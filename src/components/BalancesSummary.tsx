@@ -41,7 +41,7 @@ export function BalancesSummary({
     .filter((b) => b.net_balance < 0)
     .reduce((sum, b) => sum + Math.abs(b.net_balance), 0);
 
-  const hasBalances = balances.length > 0;
+  const hasBalances = balances.some(b => Math.abs(b.net_balance) > 0.01);
 
   // Helpers de classe por tema
   const surfaceNeutral = isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200";

@@ -135,7 +135,10 @@ export function calculateNetBalances(
         net_balance: Math.round(net_balance * 100) / 100, // Round to 2 decimals
       };
     })
-    .filter((balance) => Math.abs(balance.net_balance) > 0.01); // Filter out near-zero balances
+    .map(balance => ({
+      ...balance,
+      net_balance: Math.abs(balance.net_balance) < 0.01 ? 0 : balance.net_balance
+    }));
 }
 
 /**
