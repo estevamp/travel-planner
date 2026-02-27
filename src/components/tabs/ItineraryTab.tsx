@@ -231,7 +231,39 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                 <input
                   type="checkbox"
                   checked={itineraryDraft.is_all_day}
-                  onChange={(e) => setItineraryDraft((current) => ({ ...current, is_all_day: e.target.checked }))}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setItineraryDraft((current) => {
+                      let newStartTime = current.start_time;
+                      let newEndTime = current.end_time;
+
+                      if (isChecked) {
+                        // When checking "All day", if there's a date, keep it and set time to 00:00
+                        // datetime-local format is YYYY-MM-DDTHH:mm
+                        if (newStartTime && newStartTime.includes("T")) {
+                          newStartTime = newStartTime.split("T")[0];
+                        }
+                        if (newEndTime && newEndTime.includes("T")) {
+                          newEndTime = newEndTime.split("T")[0];
+                        }
+                      } else {
+                        // When unchecking "All day", convert date-only to datetime-local format
+                        if (newStartTime && !newStartTime.includes("T")) {
+                          newStartTime = `${newStartTime}T00:00`;
+                        }
+                        if (newEndTime && !newEndTime.includes("T")) {
+                          newEndTime = `${newEndTime}T00:00`;
+                        }
+                      }
+
+                      return {
+                        ...current,
+                        is_all_day: isChecked,
+                        start_time: newStartTime,
+                        end_time: newEndTime,
+                      };
+                    });
+                  }}
                 />
                 Dia todo
               </label>
