@@ -177,20 +177,6 @@ export function BalancesSummary({
         </div>
       )}
 
-      {/* Summary Stats */}
-      {hasBalances && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`p-4 rounded-lg border ${summaryBg("pos")}`}>
-            <p className={`text-xs mb-1 ${summaryTextTitle("pos")}`}>Total a receber</p>
-            <p className={`text-lg font-bold ${summaryTextValue("pos")}`}>{formatCurrency(totalOwed, currency)}</p>
-          </div>
-          <div className={`p-4 rounded-lg border ${summaryBg("neg")}`}>
-            <p className={`text-xs mb-1 ${summaryTextTitle("neg")}`}>Total a pagar</p>
-            <p className={`text-lg font-bold ${summaryTextValue("neg")}`}>{formatCurrency(totalOwing, currency)}</p>
-          </div>
-        </div>
-      )}
-
       {/* Settle Button */}
       {hasBalances && (
         <button
