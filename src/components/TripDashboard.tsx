@@ -1010,6 +1010,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             />
             
             <SplitSelector
+              key="create-expense-split"
               members={members}
               totalAmount={parseCurrencyToNumber(expenseAmount) || 0}
               currentUserId={session.user.id}
@@ -1018,6 +1019,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 setExpenseSplitType(splitType);
                 setIsExpenseSplitValid(isValid);
               }}
+              initialSplits={expenseSplits}
+              initialSplitType={expenseSplitType}
             />
           </div>
           
@@ -1135,6 +1138,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             />
             
             <SplitSelector
+              key={`edit-expense-split-${editingExpense?.id || 'new'}`}
               members={members}
               totalAmount={parseCurrencyToNumber(editExpenseAmount) || 0}
               currentUserId={session.user.id}
@@ -1143,6 +1147,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 setEditExpenseSplitType(splitType);
                 setIsEditExpenseSplitValid(isValid);
               }}
+              initialSplits={editExpenseSplits}
+              initialSplitType={editExpenseSplitType}
             />
           </div>
           

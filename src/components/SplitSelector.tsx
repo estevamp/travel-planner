@@ -9,6 +9,8 @@ interface SplitSelectorProps {
   totalAmount: number;
   currentUserId: string;
   onSplitsChange: (splits: CreateExpenseSplitInput[], splitType: SplitType, isValid: boolean) => void;
+  initialSplits?: CreateExpenseSplitInput[];
+  initialSplitType?: SplitType;
 }
 
 export function SplitSelector({
@@ -16,19 +18,42 @@ export function SplitSelector({
   totalAmount,
   currentUserId,
   onSplitsChange,
+  initialSplits = [],
+  initialSplitType = "equal",
 }: SplitSelectorProps) {
-  const [splitType, setSplitType] = useState<SplitType>("equal");
+  const [splitType, setSplitType] = useState<SplitType>(initialSplitType);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, number>>({});
   const [validationError, setValidationError] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize with current user selected
+  // Initialize with existing splits or current user
   useEffect(() => {
-    const currentMember = members.find((m) => m.user_id === currentUserId);
-    if (currentMember && selectedMembers.size === 0) {
-      setSelectedMembers(new Set([currentMember.id]));
+    if (isInitialized) return;
+
+    if (initialSplits.length > 0) {
+      // Load existing splits
+      const memberIds = new Set(initialSplits.map(s => s.member_id));
+      setSelectedMembers(memberIds);
+      
+      if (initialSplitType === "unequal") {
+        const amounts: Record<string, number> = {};
+        initialSplits.forEach(split => {
+          amounts[split.member_id] = split.amount || 0;
+        });
+        setCustomAmounts(amounts);
+      }
+      
+      setIsInitialized(true);
+    } else {
+      // Initialize with current user selected
+      const currentMember = members.find((m) => m.user_id === currentUserId);
+      if (currentMember && selectedMembers.size === 0) {
+        setSelectedMembers(new Set([currentMember.id]));
+        setIsInitialized(true);
+      }
     }
-  }, [members, currentUserId, selectedMembers.size]);
+  }, [members, currentUserId, initialSplits, initialSplitType, selectedMembers.size, isInitialized]);
 
   // Calculate and emit splits whenever dependencies change
   useEffect(() => {
