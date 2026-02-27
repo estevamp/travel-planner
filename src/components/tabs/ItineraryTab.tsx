@@ -270,7 +270,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
-                    {itineraryDraft.is_all_day ? "Data de Início" : "Início"}
+                    Início
                   </label>
                   {itineraryDraft.is_all_day ? (
                     <input
@@ -290,7 +290,7 @@ export function ItineraryTab({ trip, currentMember, settings, itineraryTypes, on
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
-                    {itineraryDraft.is_all_day ? "Data de Fim" : "Fim"}
+                    Fim
                   </label>
                   {itineraryDraft.is_all_day ? (
                     <input
