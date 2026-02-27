@@ -52,12 +52,12 @@ export function PeopleTab({
   // Buscar despesas com splits e settlements
   useEffect(() => {
     const fetchBalanceData = async () => {
-      // Buscar despesas com splits
+      // Buscar TODAS as despesas confirmadas (públicas e privadas)
+      // A filtragem de privadas será feita na função calculateNetBalances
       const { data: expensesData } = await supabase
         .from("expenses")
         .select("*, expense_splits(*)")
         .eq("trip_id", tripId)
-        .eq("visibility", "public")
         .eq("is_confirmed", true);
       
       // Buscar settlements
@@ -81,7 +81,45 @@ export function PeopleTab({
     };
     
     fetchBalanceData();
-  }, [tripId, trip.expenses]); // Recarregar quando despesas mudarem
+    
+    // Configurar realtime subscription para atualizar automaticamente
+    const expensesChannel = supabase
+      .channel(`expenses-${tripId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expenses',
+          filter: `trip_id=eq.${tripId}`
+        },
+        () => {
+          fetchBalanceData();
+        }
+      )
+      .subscribe();
+    
+    const settlementsChannel = supabase
+      .channel(`settlements-${tripId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'settlements',
+          filter: `trip_id=eq.${tripId}`
+        },
+        () => {
+          fetchBalanceData();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(expensesChannel);
+      supabase.removeChannel(settlementsChannel);
+    };
+  }, [tripId]); // Removido trip.expenses da dependência, usando realtime ao invés
   
   // Calcular saldos
   useEffect(() => {
