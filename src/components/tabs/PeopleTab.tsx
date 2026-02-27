@@ -101,6 +101,21 @@ export function PeopleTab({
       )
       .subscribe();
     
+    const splitsChannel = supabase
+      .channel(`expense-splits-${tripId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expense_splits'
+        },
+        () => {
+          fetchBalanceData();
+        }
+      )
+      .subscribe();
+    
     const settlementsChannel = supabase
       .channel(`settlements-${tripId}`)
       .on(
@@ -119,6 +134,7 @@ export function PeopleTab({
     
     return () => {
       supabase.removeChannel(expensesChannel);
+      supabase.removeChannel(splitsChannel);
       supabase.removeChannel(settlementsChannel);
     };
   }, [tripId]); // Removido trip.expenses da dependência, usando realtime ao invés
@@ -134,18 +150,15 @@ export function PeopleTab({
   
   // Calcular saldos com conversão de moedas
   useEffect(() => {
-    if (expensesWithSplits.length > 0 || settlements.length > 0) {
-      const calculatedBalances = calculateNetBalances(
-        expensesWithSplits,
-        settlements,
-        members,
-        settings.default_currency,
-        exchangeRates
-      );
-      setBalances(calculatedBalances);
-    } else {
-      setBalances([]);
-    }
+    // Sempre recalcular os saldos, mesmo quando não há despesas
+    const calculatedBalances = calculateNetBalances(
+      expensesWithSplits,
+      settlements,
+      members,
+      settings.default_currency,
+      exchangeRates
+    );
+    setBalances(calculatedBalances);
   }, [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
 
   const createInvite = async () => {
