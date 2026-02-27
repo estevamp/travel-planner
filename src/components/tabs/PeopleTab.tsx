@@ -56,92 +56,38 @@ export function PeopleTab({
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   
   // Buscar despesas com splits e settlements
+  const fetchBalanceData = React.useCallback(async () => {
+    // Buscar TODAS as despesas confirmadas (públicas e privadas)
+    // A filtragem de privadas será feita na função calculateNetBalances
+    const { data: expensesData, error: expError } = await supabase
+      .from("expenses")
+      .select("*, expense_splits(*)")
+      .eq("trip_id", tripId)
+      .eq("is_confirmed", true);
+    
+    // Buscar settlements
+    const { data: settlementsData, error: setError } = await supabase
+      .from("settlements")
+      .select("*")
+      .eq("trip_id", tripId);
+    
+    if (!expError) {
+      // Transformar para ExpenseWithSplits
+      const expensesWithSplitsData: ExpenseWithSplits[] = (expensesData || []).map((exp: any) => ({
+        ...exp,
+        splits: exp.expense_splits || [],
+      }));
+      setExpensesWithSplits(expensesWithSplitsData);
+    }
+    
+    if (!setError) {
+      setSettlements(settlementsData || []);
+    }
+  }, [tripId]);
+
   useEffect(() => {
-    const fetchBalanceData = async () => {
-      // Buscar TODAS as despesas confirmadas (públicas e privadas)
-      // A filtragem de privadas será feita na função calculateNetBalances
-      const { data: expensesData, error: expError } = await supabase
-        .from("expenses")
-        .select("*, expense_splits(*)")
-        .eq("trip_id", tripId)
-        .eq("is_confirmed", true);
-      
-      // Buscar settlements
-      const { data: settlementsData, error: setError } = await supabase
-        .from("settlements")
-        .select("*")
-        .eq("trip_id", tripId);
-      
-      if (!expError) {
-        // Transformar para ExpenseWithSplits
-        const expensesWithSplitsData: ExpenseWithSplits[] = (expensesData || []).map((exp: any) => ({
-          ...exp,
-          splits: exp.expense_splits || [],
-        }));
-        setExpensesWithSplits(expensesWithSplitsData);
-      }
-      
-      if (!setError) {
-        setSettlements(settlementsData || []);
-      }
-    };
-    
     fetchBalanceData();
-    
-    // Configurar realtime subscription para atualizar automaticamente
-    const expensesChannel = supabase
-      .channel(`expenses-${tripId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'expenses',
-          filter: `trip_id=eq.${tripId}`
-        },
-        () => {
-          fetchBalanceData();
-        }
-      )
-      .subscribe();
-    
-    const splitsChannel = supabase
-      .channel(`expense-splits-${tripId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'expense_splits'
-        },
-        () => {
-          fetchBalanceData();
-        }
-      )
-      .subscribe();
-    
-    const settlementsChannel = supabase
-      .channel(`settlements-${tripId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'settlements',
-          filter: `trip_id=eq.${tripId}`
-        },
-        () => {
-          fetchBalanceData();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(expensesChannel);
-      supabase.removeChannel(splitsChannel);
-      supabase.removeChannel(settlementsChannel);
-    };
-  }, [tripId]); // Removido trip.expenses da dependência, usando realtime ao invés
+  }, [fetchBalanceData, trip]);
   
   // Buscar taxas de câmbio
   useEffect(() => {
