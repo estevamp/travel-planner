@@ -69,11 +69,20 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [expenseCurrency, setExpenseCurrency] = useState(settings.default_currency);
   const [ideaCurrency, setIdeaCurrency] = useState(settings.default_currency);
   
-  // Estados para rateio de despesas
+  // Estados para rateio de despesas (Criação)
   const [expensePayerId, setExpensePayerId] = useState<string>("");
   const [expenseSplits, setExpenseSplits] = useState<CreateExpenseSplitInput[]>([]);
   const [expenseSplitType, setExpenseSplitType] = useState<SplitType>("equal");
   const [expenseAmount, setExpenseAmount] = useState<string>("0");
+
+  // Estados para rateio de despesas (Edição)
+  const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editExpensePayerId, setEditExpensePayerId] = useState<string>("");
+  const [editExpenseSplits, setEditExpenseSplits] = useState<CreateExpenseSplitInput[]>([]);
+  const [editExpenseSplitType, setEditExpenseSplitType] = useState<SplitType>("equal");
+  const [editExpenseAmount, setEditExpenseAmount] = useState<string>("0");
+  const [editExpenseCurrency, setEditExpenseCurrency] = useState(settings.default_currency);
 
   // Computed values
   const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
@@ -111,6 +120,54 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     setExpenseSplits([]);
     setExpenseSplitType("equal");
     setExpenseAmount("0");
+  };
+
+  const openEditExpenseModal = async (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditExpenseAmount(maskCurrency(String((expense.amount || 0) * 100)));
+    setEditExpenseCurrency(expense.currency || settings.default_currency);
+    
+    // Buscar dados extras da despesa (pagador e tipo de rateio)
+    const { data: expenseData } = await supabase
+      .from("expenses")
+      .select("paid_by_member_id, split_type")
+      .eq("id", expense.id)
+      .single();
+    
+    if (expenseData) {
+      setEditExpensePayerId(expenseData.paid_by_member_id || currentMember?.id || "");
+      setEditExpenseSplitType(expenseData.split_type || "equal");
+    } else {
+      setEditExpensePayerId(currentMember?.id || "");
+      setEditExpenseSplitType("equal");
+    }
+
+    // Buscar splits existentes
+    const { data: splitsData } = await supabase
+      .from("expense_splits")
+      .select("*")
+      .eq("expense_id", expense.id);
+    
+    if (splitsData) {
+      setEditExpenseSplits(splitsData.map(s => ({
+        member_id: s.member_id,
+        amount: s.amount,
+        percentage: s.percentage,
+      })));
+    } else {
+      setEditExpenseSplits([]);
+    }
+
+    setShowEditExpenseModal(true);
+  };
+
+  const closeEditExpenseModal = () => {
+    setShowEditExpenseModal(false);
+    setEditingExpense(null);
+    setEditExpensePayerId("");
+    setEditExpenseSplits([]);
+    setEditExpenseSplitType("equal");
+    setEditExpenseAmount("0");
   };
 
   // Realtime subscriptions (mantidas aqui para centralizar)
@@ -289,6 +346,79 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         
         closeModal();
         setExpenseCurrency(settings.default_currency);
+      }
+    } finally {
+      setIsSubmittingExpense(false);
+    }
+  };
+
+  const saveEditExpense = async (form: FormData) => {
+    if (!editingExpense || !id || !currentMember) return;
+    
+    setIsSubmittingExpense(true);
+    try {
+      const visibility = form.get("is_private") === "on" ? "private" : "public";
+      const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+      const description = (form.get("description") as string) || "Despesa";
+      const category_id = (form.get("category_id") as string) || null;
+      const is_confirmed = form.get("is_confirmed") === "on";
+      
+      // Optimistic update
+      setTrip((prev) => prev ? ({
+        ...prev,
+        expenses: prev.expenses.map((exp) =>
+          exp.id === editingExpense.id
+            ? {
+                ...exp,
+                description,
+                category_id,
+                amount,
+                currency: editExpenseCurrency,
+                visibility,
+                is_confirmed,
+                category: category_id ? categories.find(c => c.id === category_id) || null : null
+              }
+            : exp
+        ),
+      }) : null);
+
+      const { error } = await supabase
+        .from("expenses")
+        .update({
+          description,
+          amount,
+          currency: editExpenseCurrency,
+          category_id,
+          visibility,
+          is_confirmed,
+          paid_by_member_id: editExpensePayerId,
+          split_type: editExpenseSplitType,
+        })
+        .eq("id", editingExpense.id);
+      
+      if (error) {
+        alert(getErrorMessage(error));
+      } else {
+        // Deletar splits antigos
+        await supabase.from("expense_splits").delete().eq("expense_id", editingExpense.id);
+
+        // Salvar novos splits se houver e for pública
+        if (editExpenseSplits.length > 0 && visibility === "public") {
+          const { error: splitsError } = await supabase.from("expense_splits").insert(
+            editExpenseSplits.map(split => ({
+              expense_id: editingExpense.id,
+              member_id: split.member_id,
+              amount: split.amount || 0,
+              percentage: split.percentage,
+            }))
+          );
+          
+          if (splitsError) {
+            console.error("Erro ao salvar splits na edição:", splitsError);
+          }
+        }
+        
+        closeEditExpenseModal();
       }
     } finally {
       setIsSubmittingExpense(false);
@@ -564,6 +694,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               settings={settings}
               tripBudget={tripBudget}
               onOpenModal={() => openModal('expense')}
+              onOpenEditModal={openEditExpenseModal}
               onSetActiveTab={setActiveTab}
               onTripUpdate={setTrip}
             />
@@ -814,6 +945,115 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           <button disabled={isSubmittingExpense} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
             {isSubmittingExpense ? "Salvando..." : "Adicionar"}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showEditExpenseModal}
+        onClose={closeEditExpenseModal}
+        title="Editar Despesa"
+        size="lg"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await saveEditExpense(new FormData(e.currentTarget));
+          }}
+        >
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
+            <input
+              name="description"
+              disabled={isSubmittingExpense}
+              required
+              defaultValue={editingExpense?.description}
+              placeholder="Ex: Almoço"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+          
+          <select
+            name="category_id"
+            disabled={isSubmittingExpense}
+            defaultValue={editingExpense?.category_id || ""}
+            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">Sem categoria</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Valor</label>
+              <input
+                name="amount"
+                disabled={isSubmittingExpense}
+                required
+                placeholder="0,00"
+                value={editExpenseAmount}
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                onChange={(e) => {
+                  const masked = maskCurrency(e.target.value);
+                  setEditExpenseAmount(masked);
+                  e.target.value = masked;
+                }}
+              />
+            </div>
+            <CurrencySelector
+              value={editExpenseCurrency}
+              onChange={setEditExpenseCurrency}
+              disabled={isSubmittingExpense}
+            />
+          </div>
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="is_private"
+              disabled={isSubmittingExpense}
+              defaultChecked={editingExpense?.visibility === "private"}
+            />
+            Marcar como privado
+          </label>
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="is_confirmed"
+              disabled={isSubmittingExpense}
+              defaultChecked={editingExpense?.is_confirmed}
+            />
+            Marcar como confirmada
+          </label>
+          
+          {/* Seção de Rateio */}
+          <div className="border-t pt-4 space-y-4">
+            <h3 className="text-sm font-bold text-zinc-700">Rateio da Despesa</h3>
+            
+            <PayerSelector
+              members={members}
+              selectedPayerId={editExpensePayerId}
+              currentUserId={session.user.id}
+              onSelect={setEditExpensePayerId}
+            />
+            
+            <SplitSelector
+              members={members}
+              totalAmount={parseCurrencyToNumber(editExpenseAmount) || 0}
+              currentUserId={session.user.id}
+              onSplitsChange={(splits, splitType) => {
+                setEditExpenseSplits(splits);
+                setEditExpenseSplitType(splitType);
+              }}
+            />
+          </div>
+          
+          <button disabled={isSubmittingExpense} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            {isSubmittingExpense ? "Salvando..." : "Salvar Alterações"}
           </button>
         </form>
       </Modal>

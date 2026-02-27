@@ -15,11 +15,12 @@ interface ExpensesTabProps {
   settings: UserSettings;
   tripBudget: TripBudget | null;
   onOpenModal: () => void;
+  onOpenEditModal: (expense: Expense) => void;
   onSetActiveTab: (tab: string) => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
+export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onOpenEditModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
   const [rates, setRates] = useState<Record<string, number>>({});
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
 
@@ -382,7 +383,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => startEditExpense(exp)} className="text-zinc-400 hover:text-zinc-700">
+                        <button type="button" onClick={() => onOpenEditModal(exp)} className="text-zinc-400 hover:text-zinc-700">
                           <FilePenLine size={16} />
                         </button>
                         <button
@@ -510,7 +511,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                   <div className="flex flex-col items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => startEditExpense(exp)}
+                      onClick={() => onOpenEditModal(exp)}
                       className="p-2 text-zinc-400 hover:text-zinc-700"
                     >
                       <FilePenLine size={16} />
