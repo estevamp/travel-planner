@@ -46,12 +46,12 @@ export function BalancesSummary({
     <div className="space-y-4">
       {/* Overall Status */}
       <div
-        className={`p-6 rounded-xl ${
+        className={`p-6 rounded-xl border-2 ${
           netBalance > 0
-            ? "bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800"
+            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
             : netBalance < 0
-            ? "bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800"
-            : "bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"
+            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+            : "bg-[var(--sidebar-hover)] border-[var(--sidebar-border)]"
         }`}
       >
         <div className="text-center">
@@ -90,7 +90,7 @@ export function BalancesSummary({
             return (
               <div
                 key={balance.member_id}
-                className="flex items-center justify-between p-4 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                className="flex items-center justify-between p-4 rounded-lg bg-[var(--card-bg)] border border-[var(--sidebar-border)]"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -126,7 +126,7 @@ export function BalancesSummary({
       {/* Summary Stats */}
       {hasBalances && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30">
             <p className="text-xs text-green-600 dark:text-green-400 mb-1">
               Total a receber
             </p>
@@ -134,7 +134,7 @@ export function BalancesSummary({
               {formatCurrency(totalOwed, currency)}
             </p>
           </div>
-          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
             <p className="text-xs text-red-600 dark:text-red-400 mb-1">Total a pagar</p>
             <p className="text-lg font-bold text-red-700 dark:text-red-300">
               {formatCurrency(totalOwing, currency)}

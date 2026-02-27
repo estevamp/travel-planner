@@ -283,14 +283,14 @@ export function PeopleTab({
       <Card className="p-0 overflow-hidden">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-zinc-50">
+            <tr className="bg-[var(--sidebar-hover)]">
               <th className="px-4 py-3 uppercase">Pessoa</th>
               <th className="px-4 py-3 uppercase">Papel</th>
               <th className="px-4 py-3 uppercase">Cônjuge</th>
               {isAdmin && <th className="px-4 py-3 uppercase text-right"></th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-[var(--sidebar-border)]">
             {members.map((member) => {
               const spouseUserId = spouseByUserId.get(member.user_id) || null;
               const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
@@ -331,7 +331,7 @@ export function PeopleTab({
             {invites.map((invite) => (
               <div
                 key={invite.id}
-                className="p-3 rounded-xl border border-zinc-200 text-sm flex items-center justify-between gap-2"
+                className="p-3 rounded-xl border border-[var(--sidebar-border)] text-sm flex items-center justify-between gap-2"
               >
                 <span>{invite.email}</span>
                 <div className="flex items-center gap-3">

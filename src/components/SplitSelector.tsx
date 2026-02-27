@@ -159,7 +159,7 @@ export function SplitSelector({
                 <div className="flex items-center gap-2">
                   {splitType === "equal" ? (
                     <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {getEqualAmount().toFixed(2)}
+                      {maskCurrency((getEqualAmount() * 100).toFixed(0))}
                     </span>
                   ) : (
                     <input
