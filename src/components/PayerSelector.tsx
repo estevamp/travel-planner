@@ -21,7 +21,7 @@ export function PayerSelector({
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
+      <label className="text-[10px] font-bold text-zinc-400 px-1">
         Quem pagou?
       </label>
       <div className="flex items-center gap-3">
@@ -43,7 +43,7 @@ export function PayerSelector({
         )}
 
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-[9px] font-bold text-zinc-400 uppercase whitespace-nowrap">Outra pessoa:</span>
+          <span cclassName="text-[10px] font-bold text-zinc-400 px-1">Outra pessoa:</span>
           <select
             value={isOtherPersonSelected ? selectedPayerId : ""}
             onChange={(e) => onSelect(e.target.value)}

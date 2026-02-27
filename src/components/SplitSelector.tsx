@@ -2,6 +2,7 @@ import { TripMember } from "../types";
 import { CreateExpenseSplitInput, SplitType } from "../types/splitting";
 import { calculateEqualSplits, validateUnequalSplits } from "../utils/splitting";
 import { useState, useEffect } from "react";
+import { maskCurrency, parseCurrencyToNumber } from "../utils";
 
 interface SplitSelectorProps {
   members: TripMember[];
@@ -86,7 +87,7 @@ export function SplitSelector({
   };
 
   const handleCustomAmountChange = (memberId: string, value: string) => {
-    const amount = parseFloat(value) || 0;
+    const amount = parseCurrencyToNumber(value);
     setCustomAmounts((prev) => ({ ...prev, [memberId]: amount }));
   };
 
@@ -162,12 +163,11 @@ export function SplitSelector({
                     </span>
                   ) : (
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={customAmounts[member.id] || ""}
+                      type="text"
+                      inputMode="numeric"
+                      value={customAmounts[member.id] ? maskCurrency((customAmounts[member.id] * 100).toFixed(0)) : ""}
                       onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
-                      placeholder="0.00"
+                      placeholder="0,00"
                       className="w-24 px-2 py-1 text-sm border rounded-md bg-white dark:bg-zinc-100 border-zinc-200 dark:border-zinc-300 text-zinc-900 dark:text-zinc-900"
                     />
                   )}

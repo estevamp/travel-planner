@@ -997,7 +997,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
+            <h3 className="text-[10px] font-bold text-zinc-400 px-1">Rateio</h3>
             
             <PayerSelector
               members={members}
