@@ -1,0 +1,1 @@
+ALTER TABLE itinerary ADD COLUMN is_completed BOOLEAN DEFAULT false;

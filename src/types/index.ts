@@ -40,6 +40,7 @@ export interface ItineraryItem {
   currency: string;
   visibility: Visibility;
   photo_url?: string | null;
+  is_completed?: boolean;
 }
 
 export interface ExpenseCategory {
