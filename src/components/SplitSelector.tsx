@@ -97,7 +97,7 @@ export function SplitSelector({
               ${
                 splitType === "equal"
                   ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300"
               }
             `}
           >
@@ -111,7 +111,7 @@ export function SplitSelector({
               ${
                 splitType === "unequal"
                   ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300"
               }
             `}
           >
@@ -129,7 +129,7 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50"
+              className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800"
             >
               <input
                 type="checkbox"
@@ -137,7 +137,7 @@ export function SplitSelector({
                 onChange={() => toggleMember(member.id)}
                 className="w-5 h-5 text-[var(--accent-color)] rounded focus:ring-2 focus:ring-[var(--accent-color)]/20"
               />
-              <span className="flex-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <span className="flex-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 {displayName}
               </span>
 

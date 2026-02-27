@@ -35,7 +35,7 @@ export function PayerSelector({
                 ${
                   isSelected
                     ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                    : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300 hover:opacity-80"
                 }
               `}
             >
