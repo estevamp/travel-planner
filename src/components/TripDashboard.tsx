@@ -778,7 +778,14 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             (e.target as HTMLFormElement).reset();
           }}
         >
-          <select name="type_id" disabled={isSubmittingItinerary} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <select
+            name="type_id"
+            disabled={isSubmittingItinerary}
+            className={cn(
+              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+            )}
+          >
             <option value="">Sem tipo</option>
             {itineraryTypes.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
@@ -787,11 +794,28 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
-            <input name="title" disabled={isSubmittingItinerary} required placeholder="Ex: Jantar no restaurante" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
+            <input
+              name="title"
+              disabled={isSubmittingItinerary}
+              required
+              placeholder="Ex: Jantar no restaurante"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Local</label>
-            <input name="location" disabled={isSubmittingItinerary} placeholder="Ex: Rua Augusta, 123" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
+            <input
+              name="location"
+              disabled={isSubmittingItinerary}
+              placeholder="Ex: Rua Augusta, 123"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
           </div>
           
           <label className="flex items-center gap-2 text-sm">
@@ -812,38 +836,58 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                   type="date" 
                   name="start_date" 
                   disabled={isSubmittingItinerary} 
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                  className={cn(
+                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
+                  )}
                 />
               ) : (
-                <input 
-                  type="datetime-local" 
-                  name="start_time" 
-                  disabled={isSubmittingItinerary} 
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                <input
+                  type="datetime-local"
+                  name="start_time"
+                  disabled={isSubmittingItinerary}
+                  className={cn(
+                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
+                  )}
                 />
               )}
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
               {itineraryAllDay ? (
-                <input 
-                  type="date" 
-                  name="end_date" 
-                  disabled={isSubmittingItinerary} 
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                <input
+                  type="date"
+                  name="end_date"
+                  disabled={isSubmittingItinerary}
+                  className={cn(
+                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
+                  )}
                 />
               ) : (
-                <input 
-                  type="datetime-local" 
-                  name="end_time" 
-                  disabled={isSubmittingItinerary} 
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed" 
+                <input
+                  type="datetime-local"
+                  name="end_time"
+                  disabled={isSubmittingItinerary}
+                  className={cn(
+                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
+                  )}
                 />
               )}
             </div>
           </div>
           
-          <textarea name="description" disabled={isSubmittingItinerary} placeholder="Notas" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed" />
+          <textarea
+            name="description"
+            disabled={isSubmittingItinerary}
+            placeholder="Notas"
+            className={cn(
+              "w-full px-3 py-2 rounded-xl border text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+            )}
+          />
           
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="is_private" disabled={isSubmittingItinerary} />
@@ -852,7 +896,16 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Foto</label>
-            <input type="file" name="photo" accept="image/*" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={isSubmittingItinerary} />
+            <input
+              type="file"
+              name="photo"
+              accept="image/*"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+              disabled={isSubmittingItinerary}
+            />
           </div>
           
           <button disabled={isSubmittingItinerary} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
@@ -877,10 +930,26 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         >
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
-            <input name="description" disabled={isSubmittingExpense} required placeholder="Ex: Almoço" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
+            <input
+              name="description"
+              disabled={isSubmittingExpense}
+              required
+              placeholder="Ex: Almoço"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
           </div>
           
-          <select name="category_id" disabled={isSubmittingExpense} className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <select
+            name="category_id"
+            disabled={isSubmittingExpense}
+            className={cn(
+              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+            )}
+          >
             <option value="">Sem categoria</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -896,7 +965,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 required
                 placeholder="0,00"
                 value={expenseAmount}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cn(
+                  "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
                 onChange={(e) => {
                   const masked = maskCurrency(e.target.value);
                   setExpenseAmount(masked);
@@ -923,7 +995,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className="text-sm font-bold text-zinc-700">Rateio da Despesa</h3>
+            <h3 className={cn("text-sm font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>Rateio da Despesa</h3>
             
             <PayerSelector
               members={members}
@@ -970,7 +1042,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               required
               defaultValue={editingExpense?.description}
               placeholder="Ex: Almoço"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
             />
           </div>
           
@@ -978,7 +1053,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
             name="category_id"
             disabled={isSubmittingExpense}
             defaultValue={editingExpense?.category_id || ""}
-            className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className={cn(
+              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+            )}
           >
             <option value="">Sem categoria</option>
             {categories.map((cat) => (
@@ -995,7 +1073,10 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                 required
                 placeholder="0,00"
                 value={editExpenseAmount}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cn(
+                  "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
                 onChange={(e) => {
                   const masked = maskCurrency(e.target.value);
                   setEditExpenseAmount(masked);
@@ -1032,7 +1113,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className="text-sm font-bold text-zinc-700">Rateio da Despesa</h3>
+            <h3 className={cn("text-sm font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>Rateio da Despesa</h3>
             
             <PayerSelector
               members={members}
@@ -1074,15 +1155,40 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         >
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
-            <input name="title" disabled={isSubmittingIdea} required placeholder="Ex: Museu do Louvre" className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
+            <input
+              name="title"
+              disabled={isSubmittingIdea}
+              required
+              placeholder="Ex: Museu do Louvre"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Notas</label>
-            <textarea name="notes" disabled={isSubmittingIdea} placeholder="Detalhes da ideia..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed" />
+            <textarea
+              name="notes"
+              disabled={isSubmittingIdea}
+              placeholder="Detalhes da ideia..."
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL do Google Maps</label>
-            <input name="maps_url" disabled={isSubmittingIdea} placeholder="https://goo.gl/maps/..." className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed" />
+            <input
+              name="maps_url"
+              disabled={isSubmittingIdea}
+              placeholder="https://goo.gl/maps/..."
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
           </div>
           
           

@@ -85,7 +85,7 @@ export function SplitSelector({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
           Dividir despesa
         </label>
         <div className="flex gap-2">
@@ -96,8 +96,8 @@ export function SplitSelector({
               px-3 py-1 rounded-md text-sm font-medium transition-all
               ${
                 splitType === "equal"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
+                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }
             `}
           >
@@ -110,8 +110,8 @@ export function SplitSelector({
               px-3 py-1 rounded-md text-sm font-medium transition-all
               ${
                 splitType === "unequal"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
+                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }
             `}
           >
@@ -129,22 +129,22 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+              className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50"
             >
               <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => toggleMember(member.id)}
-                className="w-5 h-5 text-blue-500 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-5 h-5 text-[var(--accent-color)] rounded focus:ring-2 focus:ring-[var(--accent-color)]/20"
               />
-              <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="flex-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 {displayName}
               </span>
 
               {isSelected && (
                 <div className="flex items-center gap-2">
                   {splitType === "equal" ? (
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
                       {getEqualAmount().toFixed(2)}
                     </span>
                   ) : (
@@ -155,7 +155,7 @@ export function SplitSelector({
                       value={customAmounts[member.id] || ""}
                       onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
                       placeholder="0.00"
-                      className="w-24 px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                      className="w-24 px-2 py-1 text-sm border rounded-md bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
                     />
                   )}
                 </div>
@@ -172,7 +172,7 @@ export function SplitSelector({
       )}
 
       {selectedMembers.size > 0 && (
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg">
           <p className="text-sm text-blue-600 dark:text-blue-400">
             {selectedMembers.size} {selectedMembers.size === 1 ? "pessoa" : "pessoas"}{" "}
             selecionada{selectedMembers.size === 1 ? "" : "s"}

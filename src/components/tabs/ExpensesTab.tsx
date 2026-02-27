@@ -151,12 +151,19 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
   return (
     <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
       {/* Budget Overview Card */}
-      <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
+      <Card
+        className={cn(
+          "border-2",
+          settings.dark_mode
+            ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
+            : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+        )}
+      >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-zinc-600">Orçamento da Viagem</h3>
-              <p className="text-sm text-zinc-400 mt-1">
+              <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>Orçamento da Viagem</h3>
+              <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
                 {budgetLimit > 0
                   ? `${formatCurrency(budgetLimit, settings.default_currency)}`
                   : "Nenhum orçamento definido"}
@@ -164,12 +171,12 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
             </div>
             <div className="text-right space-y-1">
               <div>
-                <p className="text-xs text-zinc-500">Confirmado</p>
+                <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Confirmado</p>
                 <p className="text-lg font-bold text-emerald-600">{formatCurrency(confirmedTotal, settings.default_currency)}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Total Previsto</p>
-                <p className="text-lg font-bold text-zinc-800">{formatCurrency(predictedTotal, settings.default_currency)}</p>
+                <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Total Previsto</p>
+                <p className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>{formatCurrency(predictedTotal, settings.default_currency)}</p>
               </div>
             </div>
           </div>
@@ -177,7 +184,12 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
           {budgetLimit > 0 && (
             <button
               onClick={() => setIsBudgetExpanded(!isBudgetExpanded)}
-              className="w-full flex items-center justify-center gap-2 py-1 text-zinc-400 hover:text-zinc-600 transition-colors border-t border-blue-100 mt-2"
+              className={cn(
+                "w-full flex items-center justify-center gap-2 py-1 transition-colors border-t mt-2",
+                settings.dark_mode
+                  ? "text-zinc-500 hover:text-zinc-300 border-zinc-700"
+                  : "text-zinc-400 hover:text-zinc-600 border-blue-100"
+              )}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider">
                 {isBudgetExpanded ? "Recolher Detalhes" : "Ver Detalhes do Orçamento"}
@@ -196,14 +208,14 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               {/* Progress Bar */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-zinc-600">Progresso</span>
+                  <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>Progresso</span>
                   <div className="flex items-center gap-3">
                     <span className="text-emerald-600">
                       Confirmado: {confirmedProgress.toFixed(1)}%
                     </span>
                     <span className={cn(
                       "font-bold",
-                      isOverBudget ? "text-red-600" : "text-blue-600"
+                      isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600")
                     )}>
                       Previsto: {predictedProgress.toFixed(1)}%
                     </span>
@@ -232,11 +244,11 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
               <div className={cn(
                 "p-4 rounded-xl border-2",
                 isOverBudget
-                  ? "bg-red-50 border-red-300"
-                  : "bg-emerald-50 border-emerald-300"
+                  ? (settings.dark_mode ? "bg-red-950/30 border-red-900/50" : "bg-red-50 border-red-300")
+                  : (settings.dark_mode ? "bg-emerald-950/30 border-emerald-900/50" : "bg-emerald-50 border-emerald-300")
               )}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-zinc-700">
+                  <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
                     {isOverBudget ? "Acima do orçamento" : "Restante"}
                   </span>
                   <span className={cn(
@@ -252,10 +264,10 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
 
           {budgetLimit === 0 && (
             <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-              <p className="text-sm text-zinc-600 text-center">
+              <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
                 💡 Defina um orçamento nas <button
                   onClick={() => onSetActiveTab("settings")}
-                  className="text-blue-600 font-semibold hover:underline"
+                  className={cn("font-semibold hover:underline", settings.dark_mode ? "text-blue-400" : "text-blue-600")}
                 >Configurações</button> para acompanhar seus gastos
               </p>
             </div>
@@ -266,8 +278,8 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
       {/* Desktop table view */}
       <Card className="p-0 overflow-hidden hidden md:block">
         <table className="w-full text-left border-collapse">
-          <thead><tr className="bg-zinc-50"><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
-          <tbody className="divide-y divide-zinc-100">
+          <thead><tr className={settings.dark_mode ? "bg-zinc-800/50" : "bg-zinc-50"}><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
+          <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
             {trip.expenses.map((exp) => (
               <tr key={exp.id}>
                 {editingExpenseId === exp.id ? (
@@ -278,7 +290,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                           value={expenseDraft.description}
                           onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
                           placeholder="Descricao"
-                          className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                          className={cn("flex-1 px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                         />
                         <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Privado">
                           <input
@@ -309,7 +321,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                       <select
                         value={expenseDraft.category_id}
                         onChange={(e) => setExpenseDraft((current) => ({ ...current, category_id: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                        className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                       >
                         <option value="">Sem categoria</option>
                         {categories.map((cat) => (
@@ -322,7 +334,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                         value={expenseDraft.amount}
                         onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
                         placeholder="Valor"
-                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                        className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -339,7 +351,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                           type="button"
                           disabled={savingExpense}
                           onClick={() => setEditingExpenseId(null)}
-                          className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold"
+                          className={cn("px-3 py-2 rounded-xl border text-xs font-bold", settings.dark_mode ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50")}
                         >
                           Cancelar
                         </button>
@@ -418,12 +430,12 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     value={expenseDraft.description}
                     onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
                     placeholder="Descricao"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                   />
                   <select
                     value={expenseDraft.category_id}
                     onChange={(e) => setExpenseDraft((current) => ({ ...current, category_id: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                   >
                     <option value="">Sem categoria</option>
                     {categories.map((cat) => (
@@ -434,7 +446,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     value={expenseDraft.amount}
                     onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
                     placeholder="Valor"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+                    className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
                   />
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 text-xs">
@@ -468,7 +480,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
                     type="button"
                     disabled={savingExpense}
                     onClick={() => setEditingExpenseId(null)}
-                    className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm font-bold"
+                    className={cn("flex-1 px-3 py-2 rounded-xl border text-sm font-bold", settings.dark_mode ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50")}
                   >
                     Cancelar
                   </button>

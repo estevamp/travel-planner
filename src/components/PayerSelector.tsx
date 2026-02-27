@@ -16,7 +16,7 @@ export function PayerSelector({
 }: PayerSelectorProps) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
         Quem pagou?
       </label>
       <div className="flex gap-2 overflow-x-auto pb-2">
@@ -34,8 +34,8 @@ export function PayerSelector({
                 flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-all
                 ${
                   isSelected
-                    ? "bg-blue-500 text-white shadow-md"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                 }
               `}
             >

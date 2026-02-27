@@ -175,7 +175,12 @@ export function SettingsTab({
                   "px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 hover:scale-105",
                   settingsDraft.default_currency === currency
                     ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
-                    : "border-zinc-200 hover:border-zinc-300 shadow-sm"
+                    : cn(
+                        "shadow-sm",
+                        settings.dark_mode
+                          ? "border-zinc-700 text-zinc-300 hover:border-zinc-600"
+                          : "border-zinc-200 hover:border-zinc-300"
+                      )
                 )}
               >
                 {currency}
@@ -206,7 +211,10 @@ export function SettingsTab({
                 setBudgetDraft(nextLimit);
               }}
               placeholder="0,00"
-              className="flex-1 px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+              className={cn(
+                "flex-1 px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
             />
             <button
               onClick={async () => {
@@ -248,7 +256,7 @@ export function SettingsTab({
             </button>
           </div>
           <div className="px-4 py-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-            <p className="text-xs text-zinc-600">
+            <p className={cn("text-xs", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
               {budgetOwnerUserId === userId
                 ? "💡 Orçamento individual nesta viagem"
                 : "👥 Orçamento compartilhado com cônjuge nesta viagem"}
@@ -315,7 +323,10 @@ export function SettingsTab({
                 value={editTripName}
                 onChange={(e) => setEditTripName(e.target.value)}
                 placeholder="Nome da viagem"
-                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
                 required
               />
             </div>
@@ -325,7 +336,10 @@ export function SettingsTab({
                 value={editTripDestination}
                 onChange={(e) => setEditTripDestination(e.target.value)}
                 placeholder="Destino"
-                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
                 required
               />
             </div>
@@ -334,7 +348,12 @@ export function SettingsTab({
                 type="button"
                 onClick={onDeleteTrip}
                 disabled={updatingTrip}
-                className="px-4 py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all disabled:opacity-50"
+                className={cn(
+                  "px-4 py-3 rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
+                  settings.dark_mode
+                    ? "border-red-900/50 bg-red-950/20 text-red-400 hover:bg-red-950/40"
+                    : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                )}
               >
                 <Trash2 size={16} />
                 Excluir Viagem
@@ -390,7 +409,12 @@ export function SettingsTab({
                         "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
                         isActive
                           ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
-                          : "border-zinc-200 hover:border-zinc-300 shadow-sm"
+                          : cn(
+                              "shadow-sm",
+                              settings.dark_mode
+                                ? "border-zinc-700 hover:border-zinc-600"
+                                : "border-zinc-200 hover:border-zinc-300"
+                            )
                       )}
                     >
                       <div className="space-y-2">
@@ -459,7 +483,10 @@ export function SettingsTab({
                 name="name"
                 required
                 placeholder="Ex: Alimentação"
-                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
               />
             </div>
             <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
@@ -493,14 +520,20 @@ export function SettingsTab({
                       onSetCategories(categories);
                     }
                   }}
-                  className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
+                  className={cn(
+                    "text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg",
+                    settings.dark_mode ? "hover:bg-red-950/30" : "hover:bg-red-50"
+                  )}
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
             ))}
             {categories.length === 0 && (
-              <div className="sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed border-zinc-200">
+              <div className={cn(
+                "sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed",
+                settings.dark_mode ? "border-zinc-800" : "border-zinc-200"
+              )}>
                 <p className="text-sm text-zinc-500">Nenhuma categoria configurada ainda.</p>
                 <p className="text-xs text-zinc-400 mt-1">Adicione sua primeira categoria acima!</p>
               </div>
@@ -544,7 +577,10 @@ export function SettingsTab({
                   name="name"
                   required
                   placeholder="Ex: Voo"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all"
+                  className={cn(
+                    "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                  )}
                 />
               </div>
               <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
@@ -554,14 +590,20 @@ export function SettingsTab({
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-zinc-400 px-1">Ícone</label>
-              <div className="flex flex-wrap gap-2 p-3 rounded-xl border-2 border-zinc-100 max-h-40 overflow-y-auto">
+              <div className={cn(
+                "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
+                settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
+              )}>
                 {ACTIVITY_ICONS.map((iconName) => {
                   const Icon = ICON_COMPONENTS[iconName] || Calendar;
                   return (
                     <label key={iconName} className="cursor-pointer group">
                       <input type="radio" name="icon" value={iconName} className="hidden peer" defaultChecked={iconName === "Calendar"} />
-                      <div className="p-2 rounded-lg border-2 border-transparent peer-checked:border-[var(--accent-color)] peer-checked:bg-[var(--accent-color)]/5 hover:bg-zinc-50 transition-all">
-                        <Icon size={20} className="text-zinc-600 group-hover:text-zinc-900" />
+                      <div className={cn(
+                        "p-2 rounded-lg border-2 border-transparent peer-checked:border-[var(--accent-color)] peer-checked:bg-[var(--accent-color)]/5 transition-all",
+                        settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50"
+                      )}>
+                        <Icon size={20} className={cn(settings.dark_mode ? "text-zinc-400 group-hover:text-zinc-200" : "text-zinc-600 group-hover:text-zinc-900")} />
                       </div>
                     </label>
                   );
@@ -587,7 +629,10 @@ export function SettingsTab({
                         <input
                           value={editTypeName}
                           onChange={(e) => setEditTypeName(e.target.value)}
-                          className="w-full px-4 py-2 rounded-lg border-2 border-zinc-200 text-sm focus:border-[var(--accent-color)] transition-all"
+                          className={cn(
+                            "w-full px-4 py-2 rounded-lg border-2 text-sm focus:border-[var(--accent-color)] transition-all",
+                            settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                          )}
                         />
                       </div>
                       <div className="flex items-end gap-2">
@@ -620,7 +665,10 @@ export function SettingsTab({
                         </button>
                         <button
                           onClick={() => setEditingTypeId(null)}
-                          className="px-4 py-2 rounded-lg border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50"
+                          className={cn(
+                            "px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all",
+                            settings.dark_mode ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                          )}
                         >
                           Cancelar
                         </button>
@@ -628,7 +676,10 @@ export function SettingsTab({
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Ícone</label>
-                      <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-white border-2 border-zinc-100 max-h-32 overflow-y-auto">
+                      <div className={cn(
+                        "flex flex-wrap gap-2 p-2 rounded-lg border-2 max-h-32 overflow-y-auto",
+                        settings.dark_mode ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-100"
+                      )}>
                         {ACTIVITY_ICONS.map((iconName) => {
                           const IconComp = ICON_COMPONENTS[iconName] || Calendar;
                           return (
@@ -639,10 +690,10 @@ export function SettingsTab({
                                 "p-2 rounded-lg border-2 transition-all",
                                 editTypeIcon === iconName
                                   ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10"
-                                  : "border-transparent hover:bg-zinc-50"
+                                  : cn("border-transparent", settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50")
                               )}
                             >
-                              <IconComp size={18} className={editTypeIcon === iconName ? "text-[var(--accent-color)]" : "text-zinc-500"} />
+                              <IconComp size={18} className={editTypeIcon === iconName ? "text-[var(--accent-color)]" : (settings.dark_mode ? "text-zinc-500" : "text-zinc-500")} />
                             </button>
                           );
                         })}
@@ -662,7 +713,7 @@ export function SettingsTab({
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-zinc-50 text-zinc-600">
+                    <div className={cn("p-2 rounded-lg", settings.dark_mode ? "bg-zinc-800 text-zinc-400" : "bg-zinc-50 text-zinc-600")}>
                       <Icon size={18} />
                     </div>
                     <span className="text-sm font-semibold">{type.name}</span>
@@ -674,7 +725,10 @@ export function SettingsTab({
                         setEditTypeName(type.name);
                         setEditTypeIcon(type.icon);
                       }}
-                      className="text-zinc-400 hover:text-[var(--accent-color)] transition-colors p-1 rounded-lg hover:bg-zinc-50"
+                      className={cn(
+                        "text-zinc-400 hover:text-[var(--accent-color)] transition-colors p-1 rounded-lg",
+                        settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50"
+                      )}
                     >
                       <FileText size={16} />
                     </button>
@@ -692,7 +746,10 @@ export function SettingsTab({
                           onSetItineraryTypes(itineraryTypes);
                         }
                       }}
-                      className="text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
+                      className={cn(
+                        "text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg",
+                        settings.dark_mode ? "hover:bg-red-950/30" : "hover:bg-red-50"
+                      )}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -701,7 +758,10 @@ export function SettingsTab({
               );
             })}
             {itineraryTypes.length === 0 && (
-              <div className="sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed border-zinc-200">
+              <div className={cn(
+                "sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed",
+                settings.dark_mode ? "border-zinc-800" : "border-zinc-200"
+              )}>
                 <p className="text-sm text-zinc-500">Nenhum tipo de atividade configurado ainda.</p>
               </div>
             )}
@@ -710,8 +770,11 @@ export function SettingsTab({
       </Card>
 
       {savingSettings && (
-        <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200">
-          <p className="text-sm text-green-700 font-medium">✅ Salvando configurações automaticamente...</p>
+        <div className={cn(
+          "px-4 py-3 rounded-xl border",
+          settings.dark_mode ? "bg-emerald-950/20 border-emerald-900/50" : "bg-green-50 border-green-200"
+        )}>
+          <p className={cn("text-sm font-medium", settings.dark_mode ? "text-emerald-400" : "text-green-700")}>✅ Salvando configurações automaticamente...</p>
         </div>
       )}
 
