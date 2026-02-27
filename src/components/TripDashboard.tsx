@@ -14,6 +14,7 @@ import { useTripBudget } from "../hooks/useTripBudget";
 import { useTripList } from "../hooks/useTripList";
 import { useToast } from "../hooks/useToast";
 import { useConfirm } from "../hooks/useConfirm";
+import { useRealtimeTrip } from "../hooks/useRealtimeTrip";
 
 // Componentes de abas
 import { ItineraryTab } from "./tabs/ItineraryTab";
@@ -178,28 +179,13 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     setEditExpenseAmount("0");
   };
 
-  // Realtime subscriptions (mantidas aqui para centralizar)
-  useEffect(() => {
-    if (!id) return;
-    const channel = supabase
-      .channel(`trip-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary_types" }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "trip_invites", filter: `trip_id=eq.${id}` }, () => void reloadTrip())
-      .on("postgres_changes", { event: "*", schema: "public", table: "trip_budgets", filter: `trip_id=eq.${id}` }, () => void reloadBudget())
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [id, reloadTrip, reloadBudget]);
+  // Realtime subscriptions centralizadas
+  useRealtimeTrip(id, {
+    onTripDataChange: reloadTrip,
+    onBudgetChange: reloadBudget,
+    onBalanceChange: reloadTrip,
+    onGlobalCatalogChange: reloadTrip,
+  });
 
   // Funções de criação (mantidas aqui pois são usadas nos modais)
   const createItinerary = async (form: FormData) => {

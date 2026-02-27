@@ -53,7 +53,8 @@ export function useTripBudget(tripId: string | undefined, userId: string) {
     });
 
     if (error) {
-      alert(getErrorMessage(error));
+      // TODO: substituir por toast quando o TripContext for implementado
+      console.error(getErrorMessage(error));
       return;
     }
 
