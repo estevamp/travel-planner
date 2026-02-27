@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { FilePenLine, Trash2, Lock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
@@ -21,6 +23,8 @@ interface ExpensesTabProps {
 }
 
 export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onOpenEditModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const [rates, setRates] = useState<Record<string, number>>({});
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
 
@@ -115,7 +119,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
     setSavingExpense(false);
 
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
 
@@ -123,7 +127,12 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
   };
 
   const deleteExpense = async (expense: Expense) => {
-    const confirmed = window.confirm(`Remover a despesa "${expense.description}"?`);
+    const confirmed = await confirm({
+      title: 'Remover despesa?',
+      message: `Remover a despesa "${expense.description}"? Esta ação não pode ser desfeita.`,
+      variant: 'danger',
+      isDark: settings.dark_mode
+    });
     if (!confirmed) return;
 
     // Optimistic update
@@ -134,7 +143,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
 
     const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
     }
   };
 
@@ -520,6 +529,7 @@ export function ExpensesTab({ trip, currentMember, categories, settings, tripBud
       </div>
 
       <FloatingActionButton onClick={onOpenModal} />
+      {ConfirmDialogNode}
     </motion.div>
   );
 }

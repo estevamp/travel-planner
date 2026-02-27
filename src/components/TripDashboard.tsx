@@ -12,6 +12,8 @@ import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSpl
 import { useTripData } from "../hooks/useTripData";
 import { useTripBudget } from "../hooks/useTripBudget";
 import { useTripList } from "../hooks/useTripList";
+import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
 
 // Componentes de abas
 import { ItineraryTab } from "./tabs/ItineraryTab";
@@ -28,6 +30,7 @@ import { Modal } from "./Modal";
 import { CurrencySelector } from "./CurrencySelector";
 import { PayerSelector } from "./PayerSelector";
 import { SplitSelector } from "./SplitSelector";
+import { CreateTripModal } from "./CreateTripModal";
 
 interface TripDashboardProps {
   session: Session;
@@ -43,6 +46,8 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const { trip, setTrip, members, invites, categories, setCategories, itineraryTypes, setItineraryTypes, loading, spouseByUserId, setSpouseByUserId, reloadTrip } = useTripData(id, session.user.id);
   const { tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency, reloadBudget } = useTripBudget(id, session.user.id);
   const { tripOptions, createTripFromSidebar, creatingTripFromSidebar, reloadTripOptions } = useTripList();
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   
   // Estado local apenas para UI
   const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
@@ -53,6 +58,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     }
   }, [activeTab, id]);
   const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
+  const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
   
@@ -273,7 +279,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     });
 
       if (error) {
-        alert(getErrorMessage(error));
+        toast(getErrorMessage(error), 'error');
       } else {
         closeModal();
       }
@@ -327,7 +333,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       });
       
       if (error) {
-        alert(getErrorMessage(error));
+        toast(getErrorMessage(error), 'error');
       } else {
         // Salvar splits se houver
         if (expenseSplits.length > 0 && visibility === "public") {
@@ -342,7 +348,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           
           if (splitsError) {
             console.error("Erro ao salvar splits:", splitsError);
-            alert("Despesa criada, mas houve erro ao salvar o rateio: " + getErrorMessage(splitsError));
+            toast("Despesa criada, mas houve erro ao salvar o rateio: " + getErrorMessage(splitsError), 'error');
           }
         }
         
@@ -399,7 +405,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         .eq("id", editingExpense.id);
       
       if (error) {
-        alert(getErrorMessage(error));
+        toast(getErrorMessage(error), 'error');
       } else {
         // Deletar splits antigos
         await supabase.from("expense_splits").delete().eq("expense_id", editingExpense.id);
@@ -470,7 +476,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       });
 
       if (error) {
-        alert(getErrorMessage(error));
+        toast(getErrorMessage(error), 'error');
       } else {
         closeModal();
         setIdeaCurrency(settings.default_currency);
@@ -482,12 +488,17 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
   const deleteCurrentTrip = async () => {
     if (!id || !trip || !isAdmin) return;
-    const confirmed = window.confirm(`Excluir a viagem "${trip.name}"? Esta ação não pode ser desfeita.`);
+    const confirmed = await confirm({
+      title: 'Excluir viagem?',
+      message: `Excluir a viagem "${trip.name}"? Esta ação não pode ser desfeita.`,
+      variant: 'danger',
+      isDark: settings.dark_mode
+    });
     if (!confirmed) return;
 
     const { error } = await supabase.from("trips").delete().eq("id", id);
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
 
@@ -531,10 +542,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           </div>
           <button
             type="button"
-            onClick={async () => {
-              const newTripId = await createTripFromSidebar();
-              if (newTripId) navigate(`/trip/${newTripId}`);
-            }}
+            onClick={() => setShowCreateTripModal(true)}
             disabled={creatingTripFromSidebar}
             className="mt-3 w-full px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center justify-center gap-2 text-sm hover:bg-[var(--sidebar-hover)] disabled:opacity-60"
           >
@@ -659,10 +667,9 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                   </div>
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       setShowMobileTripSelector(false);
-                      const newTripId = await createTripFromSidebar();
-                      if (newTripId) navigate(`/trip/${newTripId}`);
+                      setShowCreateTripModal(true);
                     }}
                     className="w-full py-4 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
                   >
@@ -1230,6 +1237,22 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           </button>
         </div>
       </nav>
+
+      <CreateTripModal
+        isOpen={showCreateTripModal}
+        isDark={settings.dark_mode}
+        onClose={() => setShowCreateTripModal(false)}
+        onSubmit={async ({ name, destination }) => {
+          try {
+            const newTripId = await createTripFromSidebar(name, destination);
+            if (newTripId) navigate(`/trip/${newTripId}`);
+          } catch (error) {
+            toast(getErrorMessage(error), 'error');
+          }
+        }}
+      />
+
+      {ConfirmDialogNode}
     </div>
   );
 }

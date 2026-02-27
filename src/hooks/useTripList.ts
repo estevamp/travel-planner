@@ -16,12 +16,8 @@ export function useTripList() {
     setTripOptions((data || []) as TripSummary[]);
   };
 
-  const createTripFromSidebar = async () => {
+  const createTripFromSidebar = async (name: string, destination: string) => {
     if (creatingTripFromSidebar) return null;
-    const name = window.prompt("Nome da viagem:");
-    if (!name?.trim()) return null;
-    const destination = window.prompt("Destino da viagem:");
-    if (!destination?.trim()) return null;
 
     setCreatingTripFromSidebar(true);
     const now = new Date().toISOString();
@@ -34,8 +30,7 @@ export function useTripList() {
     setCreatingTripFromSidebar(false);
 
     if (error || !data) {
-      alert(getErrorMessage(error));
-      return null;
+      throw error || new Error("Falha ao criar viagem");
     }
 
     await loadTripOptions();

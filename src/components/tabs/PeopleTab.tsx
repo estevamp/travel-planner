@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { UserPlus, Trash2 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage } from "../../utils";
@@ -37,6 +39,8 @@ export function PeopleTab({
   onReloadTrip,
   onTripUpdate,
 }: PeopleTabProps) {
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
@@ -177,10 +181,10 @@ export function PeopleTab({
 
     if (!inviteToken || inviteError) {
       if (inviteError?.code === "PGRST202") {
-        alert('RPC create_trip_invite não encontrada no Supabase. Execute o schema SQL atualizado (supabase/schema.sql) no projeto remoto.');
+        toast('RPC create_trip_invite não encontrada no Supabase. Execute o schema SQL atualizado (supabase/schema.sql) no projeto remoto.', 'error');
         return;
       }
-      alert(getErrorMessage(inviteError));
+      toast(getErrorMessage(inviteError), 'error');
       return;
     }
 
@@ -189,7 +193,7 @@ export function PeopleTab({
     setInviteEmail("");
     await navigator.clipboard.writeText(link);
     onReloadTrip();
-    alert("Link copiado.");
+    toast("Link copiado!", 'success');
   };
 
   const setGlobalSpouse = async (spouseUserId: string | null) => {
@@ -197,7 +201,7 @@ export function PeopleTab({
       p_spouse_user_id: spouseUserId,
     });
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
     onSettingsChange({ ...settings, spouse_user_id: spouseUserId });
@@ -210,7 +214,7 @@ export function PeopleTab({
       p_invite_id: inviteId,
     });
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
     onReloadTrip();
@@ -327,9 +331,15 @@ export function PeopleTab({
                       {member.user_id !== currentMember?.user_id && (
                         <button
                           onClick={async () => {
-                            if (!window.confirm(`Remover ${member.display_name || member.user_id} da viagem?`)) return;
+                            const confirmed = await confirm({
+                              title: 'Remover pessoa?',
+                              message: `Remover ${member.display_name || member.user_id} da viagem?`,
+                              variant: 'danger',
+                              isDark: settings.dark_mode
+                            });
+                            if (!confirmed) return;
                             const { error } = await supabase.from("trip_members").delete().eq("id", member.id);
-                            if (error) alert(getErrorMessage(error));
+                            if (error) toast(getErrorMessage(error), 'error');
                             else onReloadTrip();
                           }}
                           className="text-zinc-400 hover:text-red-500"
@@ -405,7 +415,7 @@ export function PeopleTab({
               });
               
               if (error) {
-                alert(getErrorMessage(error));
+                toast(getErrorMessage(error), 'error');
               } else {
                 // Recarregar settlements
                 const { data: settlementsData } = await supabase
@@ -428,15 +438,16 @@ export function PeopleTab({
               });
             
             if (error) {
-              alert(getErrorMessage(error));
+              toast(getErrorMessage(error), 'error');
             } else {
               setShowSettlement(false);
-              alert("Viagem quitada com sucesso! 🎉");
+              toast("Viagem quitada com sucesso! 🎉", 'success');
               onReloadTrip();
             }
           }}
         />
       )}
+      {ConfirmDialogNode}
     </motion.div>
   );
 }

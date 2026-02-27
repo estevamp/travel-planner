@@ -1,5 +1,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus, X } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
@@ -19,6 +21,8 @@ interface IdeasTabProps {
 }
 
 export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
@@ -100,7 +104,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       .eq("id", ideaId);
     
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
 
@@ -110,7 +114,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   const openIdeaAsset = async (asset: IdeaAsset) => {
     const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(asset.url, 60);
     if (error || !data) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       return;
     }
     
@@ -123,7 +127,12 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   };
 
   const deleteIdea = async (idea: Idea) => {
-    const confirmed = window.confirm(`Remover a ideia "${idea.title}"?`);
+    const confirmed = await confirm({
+      title: 'Remover ideia?',
+      message: `Remover a ideia "${idea.title}"? Esta ação não pode ser desfeita.`,
+      variant: 'danger',
+      isDark: settings.dark_mode
+    });
     if (!confirmed) return;
 
     // Optimistic update
@@ -137,12 +146,12 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     if (paths.length > 0) {
       const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove(paths);
       if (storageError) {
-        alert(getErrorMessage(storageError));
+        toast(getErrorMessage(storageError), 'error');
         return;
       }
     }
     const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
-    if (error) alert(getErrorMessage(error));
+    if (error) toast(getErrorMessage(error), 'error');
   };
 
   const convertIdeaToActivity = async (idea: Idea) => {
@@ -193,7 +202,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     const { error: itineraryError } = await supabase.from("itinerary").insert(newItineraryItem);
 
     if (itineraryError) {
-      alert(getErrorMessage(itineraryError));
+      toast(getErrorMessage(itineraryError), 'error');
       setCopyingIdeaId(null);
       // Rollback would be complex here, but usually Supabase is reliable
       return;
@@ -220,7 +229,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
 
       const { error: uploadError } = await supabase.storage.from(DOCS_BUCKET).upload(filePath, file);
       if (uploadError) {
-        alert(getErrorMessage(uploadError));
+        toast(getErrorMessage(uploadError), 'error');
         continue;
       }
 
@@ -248,7 +257,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
         asset_type: type,
       });
 
-      if (dbError) alert(getErrorMessage(dbError));
+      if (dbError) toast(getErrorMessage(dbError), 'error');
     }
     e.target.value = "";
   };
@@ -279,7 +288,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
       label: linkData.label,
     });
 
-    if (error) alert(getErrorMessage(error));
+    if (error) toast(getErrorMessage(error), 'error');
     else {
       setNewLink({ label: "", url: "" });
       setShowLinkForm(null);
@@ -287,7 +296,13 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
   };
 
   const handleDeleteLink = async (linkId: string) => {
-    if (!window.confirm("Excluir este link?")) return;
+    const confirmed = await confirm({
+      title: 'Excluir link?',
+      message: 'Deseja realmente excluir este link?',
+      variant: 'danger',
+      isDark: settings.dark_mode
+    });
+    if (!confirmed) return;
     
     // Optimistic update
     onTripUpdate(prev => ({
@@ -296,11 +311,17 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
     }));
 
     const { error } = await supabase.from("idea_links").delete().eq("id", linkId);
-    if (error) alert(getErrorMessage(error));
+    if (error) toast(getErrorMessage(error), 'error');
   };
 
   const handleDeleteAsset = async (asset: IdeaAsset) => {
-    if (!window.confirm("Excluir este arquivo?")) return;
+    const confirmed = await confirm({
+      title: 'Excluir arquivo?',
+      message: `Deseja realmente excluir o arquivo "${asset.name}"?`,
+      variant: 'danger',
+      isDark: settings.dark_mode
+    });
+    if (!confirmed) return;
 
     // Optimistic update
     onTripUpdate(prev => ({
@@ -310,11 +331,11 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
 
     const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([asset.url]);
     if (storageError) {
-      alert(getErrorMessage(storageError));
+      toast(getErrorMessage(storageError), 'error');
       return;
     }
     const { error: dbError } = await supabase.from("idea_assets").delete().eq("id", asset.id);
-    if (dbError) alert(getErrorMessage(dbError));
+    if (dbError) toast(getErrorMessage(dbError), 'error');
   };
 
   return (
@@ -621,6 +642,7 @@ export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, 
           />
         </div>
       )}
+      {ConfirmDialogNode}
     </motion.div>
   );
 }

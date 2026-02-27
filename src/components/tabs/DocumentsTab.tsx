@@ -1,5 +1,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "motion/react";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { supabase } from "../../supabase";
 import { getErrorMessage, resizeImage } from "../../utils";
@@ -17,10 +19,20 @@ interface DocumentsTabProps {
 }
 
 export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark = false }: DocumentsTabProps) {
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<{ name: string; url: string } | null>(null);
 
-  const deleteDocument = async (docId: string, docUrl: string) => {
+  const deleteDocument = async (docId: string, docUrl: string, docName: string) => {
+    const confirmed = await confirm({
+      title: 'Excluir documento?',
+      message: `Deseja realmente excluir o documento "${docName}"?`,
+      variant: 'danger',
+      isDark
+    });
+    if (!confirmed) return;
+
     // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
@@ -29,11 +41,11 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark
 
     const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([docUrl]);
     if (storageError) {
-      alert(getErrorMessage(storageError));
+      toast(getErrorMessage(storageError), 'error');
       return;
     }
     const { error } = await supabase.from("documents").delete().eq("id", docId);
-    if (error) alert(getErrorMessage(error));
+    if (error) toast(getErrorMessage(error), 'error');
   };
 
   return (
@@ -87,7 +99,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark
               ],
             }));
           } catch (error) {
-            alert(getErrorMessage(error));
+            toast(getErrorMessage(error), 'error');
           }
           e.target.value = "";
         }}
@@ -106,7 +118,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark
                 onClick={async () => {
                   const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 3600);
                   if (error || !data) {
-                    alert(getErrorMessage(error));
+                    toast(getErrorMessage(error), 'error');
                     return;
                   }
                   setSelectedDoc({ name: doc.name, url: data.signedUrl });
@@ -121,7 +133,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark
                 onClick={async () => {
                   const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 60);
                   if (error || !data) {
-                    alert(getErrorMessage(error));
+                    toast(getErrorMessage(error), 'error');
                     return;
                   }
                   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
@@ -134,7 +146,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark
           </div>
           <button
             type="button"
-            onClick={() => void deleteDocument(doc.id, doc.url)}
+            onClick={() => void deleteDocument(doc.id, doc.url, doc.name)}
             className="text-zinc-300 hover:text-red-500 transition-colors p-2"
             title="Excluir documento"
           >
@@ -152,6 +164,7 @@ export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark
           isDark={isDark}
         />
       )}
+      {ConfirmDialogNode}
     </motion.div>
   );
 }

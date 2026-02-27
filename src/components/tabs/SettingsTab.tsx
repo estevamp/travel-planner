@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
@@ -56,6 +58,8 @@ export function SettingsTab({
   onReloadTripOptions,
   onNavigateToAbout,
 }: SettingsTabProps) {
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const [settingsDraft, setSettingsDraft] = useState<UserSettings>(settings);
   const [savingSettings, setSavingSettings] = useState(false);
   const [editTripName, setEditTripName] = useState(trip.name || "");
@@ -110,7 +114,7 @@ export function SettingsTab({
         .eq("user_id", userId);
       setSavingSettings(false);
       if (error) {
-        alert(getErrorMessage(error));
+        toast(getErrorMessage(error), 'error');
         // Rollback
         onSettingsChange(settings);
         return;
@@ -143,7 +147,7 @@ export function SettingsTab({
     
     setUpdatingTrip(false);
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       // Rollback
       onSetTrip(trip);
       return;
@@ -242,7 +246,7 @@ export function SettingsTab({
 
                 setSavingBudget(false);
                 if (error) {
-                  alert(getErrorMessage(error));
+                  toast(getErrorMessage(error), 'error');
                   // Rollback
                   onSetTripBudget(tripBudget);
                 } else {
@@ -398,7 +402,7 @@ export function SettingsTab({
                           .update({ theme_palette: theme })
                           .eq("id", tripId);
                         if (error) {
-                          alert(getErrorMessage(error));
+                          toast(getErrorMessage(error), 'error');
                           // Rollback
                           onSetTrip(trip);
                           return;
@@ -470,7 +474,7 @@ export function SettingsTab({
               if (!name) return;
               const { data, error } = await supabase.from("expense_categories").insert({ name }).select().single();
               if (error) {
-                alert(getErrorMessage(error));
+                toast(getErrorMessage(error), 'error');
               } else {
                 if (data) onSetCategories([...categories, data as ExpenseCategory].sort((a, b) => a.name.localeCompare(b.name)));
                 (e.target as HTMLFormElement).reset();
@@ -508,14 +512,20 @@ export function SettingsTab({
                 <span className="text-sm font-semibold">{cat.name}</span>
                 <button
                   onClick={async () => {
-                    if (!window.confirm(`Excluir categoria "${cat.name}"?`)) return;
+                    const confirmed = await confirm({
+                      title: 'Excluir categoria?',
+                      message: `Excluir categoria "${cat.name}"?`,
+                      variant: 'danger',
+                      isDark: settings.dark_mode
+                    });
+                    if (!confirmed) return;
                     
                     // Optimistic update
                     onSetCategories(categories.filter(c => c.id !== cat.id));
 
                     const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
                     if (error) {
-                      alert(getErrorMessage(error));
+                      toast(getErrorMessage(error), 'error');
                       // Rollback
                       onSetCategories(categories);
                     }
@@ -563,7 +573,7 @@ export function SettingsTab({
               if (!name) return;
               const { data, error } = await supabase.from("itinerary_types").insert({ name, icon }).select().single();
               if (error) {
-                alert(getErrorMessage(error));
+                toast(getErrorMessage(error), 'error');
               } else {
                 if (data) onSetItineraryTypes([...itineraryTypes, data as ItineraryType].sort((a, b) => a.name.localeCompare(b.name)));
                 (e.target as HTMLFormElement).reset();
@@ -647,7 +657,7 @@ export function SettingsTab({
                               .eq("id", type.id);
 
                             if (error) {
-                              alert(getErrorMessage(error));
+                              toast(getErrorMessage(error), 'error');
                             } else {
                               onSetItineraryTypes(
                                 itineraryTypes.map((t) =>
@@ -734,14 +744,20 @@ export function SettingsTab({
                     </button>
                     <button
                       onClick={async () => {
-                        if (!window.confirm(`Excluir tipo de atividade "${type.name}"?`)) return;
+                        const confirmed = await confirm({
+                          title: 'Excluir tipo?',
+                          message: `Excluir tipo de atividade "${type.name}"?`,
+                          variant: 'danger',
+                          isDark: settings.dark_mode
+                        });
+                        if (!confirmed) return;
                         
                         // Optimistic update
                         onSetItineraryTypes(itineraryTypes.filter(t => t.id !== type.id));
 
                         const { error } = await supabase.from("itinerary_types").delete().eq("id", type.id);
                         if (error) {
-                          alert(getErrorMessage(error));
+                          toast(getErrorMessage(error), 'error');
                           // Rollback
                           onSetItineraryTypes(itineraryTypes);
                         }
@@ -787,6 +803,7 @@ export function SettingsTab({
           Sobre o Partiu!
         </button>
       </div>
+      {ConfirmDialogNode}
     </motion.div>
   );
 }

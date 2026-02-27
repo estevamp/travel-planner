@@ -9,6 +9,8 @@ import { InvitePage } from "./components/InvitePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import TripDashboard from "./components/TripDashboard";
 import { AboutPage } from "./components/AboutPage";
+import { ToastProvider } from "./hooks/useToast";
+import { Toast } from "./components/Toast";
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
@@ -77,20 +79,23 @@ export default function App() {
   if (loadingAuth) return <div className="min-h-screen flex items-center justify-center">Carregando sessao...</div>;
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={session ? <LandingPage session={session} settings={userSettings} /> : <AuthLanding />} />
-        <Route
-          path="/trip/:id"
-          element={
-            <ProtectedRoute session={session}>
-              <TripDashboard session={session as Session} settings={userSettings} onSettingsChange={setUserSettings} />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/invite/:token" element={<InvitePage session={session} />} />
-        <Route path="/about" element={<AboutPage settings={userSettings} />} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={session ? <LandingPage session={session} settings={userSettings} /> : <AuthLanding />} />
+          <Route
+            path="/trip/:id"
+            element={
+              <ProtectedRoute session={session}>
+                <TripDashboard session={session as Session} settings={userSettings} onSettingsChange={setUserSettings} />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/invite/:token" element={<InvitePage session={session} />} />
+          <Route path="/about" element={<AboutPage settings={userSettings} />} />
+        </Routes>
+      </BrowserRouter>
+      <Toast />
+    </ToastProvider>
   );
 }
