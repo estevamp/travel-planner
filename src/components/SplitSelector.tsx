@@ -1,0 +1,184 @@
+import { TripMember } from "../types";
+import { CreateExpenseSplitInput, SplitType } from "../types/splitting";
+import { calculateEqualSplits, validateUnequalSplits } from "../utils/splitting";
+import { useState, useEffect } from "react";
+
+interface SplitSelectorProps {
+  members: TripMember[];
+  totalAmount: number;
+  currentUserId: string;
+  onSplitsChange: (splits: CreateExpenseSplitInput[], splitType: SplitType) => void;
+}
+
+export function SplitSelector({
+  members,
+  totalAmount,
+  currentUserId,
+  onSplitsChange,
+}: SplitSelectorProps) {
+  const [splitType, setSplitType] = useState<SplitType>("equal");
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [customAmounts, setCustomAmounts] = useState<Record<string, number>>({});
+  const [validationError, setValidationError] = useState<string>("");
+
+  // Initialize with current user selected
+  useEffect(() => {
+    const currentMember = members.find((m) => m.user_id === currentUserId);
+    if (currentMember && selectedMembers.size === 0) {
+      setSelectedMembers(new Set([currentMember.id]));
+    }
+  }, [members, currentUserId, selectedMembers.size]);
+
+  // Calculate and emit splits whenever dependencies change
+  useEffect(() => {
+    if (selectedMembers.size === 0 || totalAmount <= 0) {
+      onSplitsChange([], splitType);
+      return;
+    }
+
+    const participantIds = Array.from(selectedMembers);
+
+    if (splitType === "equal") {
+      const splits = calculateEqualSplits(totalAmount, participantIds);
+      setValidationError("");
+      onSplitsChange(splits, splitType);
+    } else {
+      // Unequal split
+      const splits: CreateExpenseSplitInput[] = participantIds.map((member_id) => ({
+        member_id,
+        amount: customAmounts[member_id] || 0,
+      }));
+
+      const validation = validateUnequalSplits(totalAmount, splits);
+      if (!validation.isValid) {
+        setValidationError(
+          `A soma não bate! Faltam ${Math.abs(validation.difference).toFixed(2)}`
+        );
+      } else {
+        setValidationError("");
+      }
+
+      onSplitsChange(splits, splitType);
+    }
+  }, [selectedMembers, splitType, customAmounts, totalAmount, onSplitsChange]);
+
+  const toggleMember = (memberId: string) => {
+    const newSelected = new Set(selectedMembers);
+    if (newSelected.has(memberId)) {
+      newSelected.delete(memberId);
+    } else {
+      newSelected.add(memberId);
+    }
+    setSelectedMembers(newSelected);
+  };
+
+  const handleCustomAmountChange = (memberId: string, value: string) => {
+    const amount = parseFloat(value) || 0;
+    setCustomAmounts((prev) => ({ ...prev, [memberId]: amount }));
+  };
+
+  const getEqualAmount = () => {
+    if (selectedMembers.size === 0) return 0;
+    return totalAmount / selectedMembers.size;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Dividir despesa
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setSplitType("equal")}
+            className={`
+              px-3 py-1 rounded-md text-sm font-medium transition-all
+              ${
+                splitType === "equal"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+              }
+            `}
+          >
+            Igual
+          </button>
+          <button
+            type="button"
+            onClick={() => setSplitType("unequal")}
+            className={`
+              px-3 py-1 rounded-md text-sm font-medium transition-all
+              ${
+                splitType === "unequal"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+              }
+            `}
+          >
+            Desigual
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {members.map((member) => {
+          const isCurrentUser = member.user_id === currentUserId;
+          const displayName = isCurrentUser ? "Eu" : member.display_name || "Membro";
+          const isSelected = selectedMembers.has(member.id);
+
+          return (
+            <div
+              key={member.id}
+              className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleMember(member.id)}
+                className="w-5 h-5 text-blue-500 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                {displayName}
+              </span>
+
+              {isSelected && (
+                <div className="flex items-center gap-2">
+                  {splitType === "equal" ? (
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {getEqualAmount().toFixed(2)}
+                    </span>
+                  ) : (
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={customAmounts[member.id] || ""}
+                      onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
+                      placeholder="0.00"
+                      className="w-24 px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {validationError && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
+        </div>
+      )}
+
+      {selectedMembers.size > 0 && (
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm text-blue-600 dark:text-blue-400">
+            {selectedMembers.size} {selectedMembers.size === 1 ? "pessoa" : "pessoas"}{" "}
+            selecionada{selectedMembers.size === 1 ? "" : "s"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
