@@ -34,13 +34,6 @@
     opacity: 0.5;
   }
 
-  /* LAYOUT FIX: transição suave na troca de tema */
-  *, *::before, *::after {
-    transition-property: background-color, border-color, color;
-    transition-duration: 150ms;
-    transition-timing-function: ease;
-  }
-
   /* LAYOUT FIX: exceção para elementos animados — não interferir com Framer Motion */
   [data-framer-component-type], [style*="transform"], button, a {
     transition-property: background-color, border-color, color, opacity, box-shadow;
