@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Plane, Plus, Shield, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Plane, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
@@ -477,9 +477,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               </h2>
               <div className="flex items-center gap-1">
                 {isAdmin && (
-                  <div className="md:hidden w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md" title="Admin">
-                    <Shield size={18} />
-                  </div>
+                  <Crown size={14} className="md:hidden text-amber-400 opacity-80" title="Administrador da viagem" />
                 )}
                 <button
                   onClick={() => setShowMobileTripSelector(true)}
@@ -527,10 +525,9 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           </div>
           <div className="hidden md:flex items-center gap-2">
             {isAdmin && (
-              <div className="px-3 py-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1.5 shadow-md">
-                <Shield size={12} />
-                Admin
-              </div>
+              <Crown size={14} className="text-amber-400 opacity-80" title="Administrador da viagem" />
+            )}
+          </div>
             )}
           </div>
         </header>
