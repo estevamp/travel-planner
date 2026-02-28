@@ -230,7 +230,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                         <button
                           onClick={async () => {
                             const confirmed = await confirm({
-                              title: 'Remover pessoa?',
+                              title: 'Remover amigo?',
                               message: `Remover ${member.display_name || member.user_id} da viagem?`,
                               variant: 'danger',
                               isDark: settings.dark_mode

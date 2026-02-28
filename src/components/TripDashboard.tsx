@@ -517,7 +517,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 {activeTab === "expenses" && "Despesas"}
                 {activeTab === "ideas" && "Ideias"}
                 {activeTab === "documents" && "Documentos"}
-                {activeTab === "people" && "Pessoas"}
+                {activeTab === "people" && "Amigos"}
                 {activeTab === "settings" && "Configurações"}
               </h3>
             </div>
