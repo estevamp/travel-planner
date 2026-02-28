@@ -418,8 +418,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
         </button>
         <nav className="space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Atividades" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
-          <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
+          <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
           <SidebarItem icon={Users} label="Pessoas" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
           <SidebarItem icon={Settings} label="Configurações" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
@@ -940,9 +940,9 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md text-[var(--sidebar-text)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="grid grid-cols-5 h-16">
           {([
-            { tab: "itinerary",  icon: LayoutDashboard, label: "Roteiro"   },
-            { tab: "expenses",   icon: DollarSign,       label: "Despesas"  },
+            { tab: "itinerary",  icon: LayoutDashboard, label: "Atividades"   },
             { tab: "ideas",      icon: Lightbulb,        label: "Ideias"    },
+            { tab: "expenses",   icon: DollarSign,       label: "Despesas"  },
             { tab: "documents",  icon: FileText,          label: "Docs"      },
             { tab: "people",     icon: Users,             label: "Pessoas"   },
           ] as const).map(({ tab, icon: Icon, label }) => {
