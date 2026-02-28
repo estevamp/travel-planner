@@ -338,22 +338,21 @@ export function SettingsTab() {
             <div className="space-y-3">
               <label className="text-sm font-semibold block">Tema da Viagem</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                {(["default", "ocean", "forest", "sunset", "lavender", "midnight", "rose",
-                   "tropic", "aurora", "coastal", "terra"] as const).map((theme) => {
+                {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach"] as const).map((theme) => {
                   const palette = THEME_PALETTES[theme];
                   const isActive = (trip?.theme_palette || 'default') === theme;
                   const themeNames: Record<string, string> = {
                     default: "Padrão",
                     ocean: "Oceano",
-                    forest: "Floresta",
+                    coastal: "Coastal",
                     sunset: "Pôr do Sol",
                     lavender: "Lavanda",
-                    midnight: "Meia-Noite",
                     rose: "Rosa",
-                    tropic: "Tropical",   // LAYOUT FIX
-                    aurora: "Aurora",     // LAYOUT FIX
-                    coastal: "Coastal",   // LAYOUT FIX
-                    terra: "Terra",       // LAYOUT FIX
+                    tropic: "Tropical",
+                    candy: "Candy",
+                    galaxy: "Galaxy",
+                    jade: "Jade",
+                    peach: "Peach",
                   };
                   
                   return (
