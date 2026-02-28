@@ -621,14 +621,16 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                       </button>
                       {canManage && (
                         <>
-                          <button
-                            type="button"
-                            onClick={() => startEditIdea(idea)}
-                            className="p-2 text-zinc-400 hover:text-zinc-700"
-                            aria-label="Editar ideia"
-                          >
-                            <FilePenLine size={16} />
-                          </button>
+                          {!editingIdeaId && (
+                            <button
+                              type="button"
+                              onClick={() => startEditIdea(idea)}
+                              className="p-2 text-zinc-400 hover:text-zinc-700"
+                              aria-label="Editar ideia"
+                            >
+                              <FilePenLine size={16} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => void deleteIdea(idea)}

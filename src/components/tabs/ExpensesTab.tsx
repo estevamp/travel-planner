@@ -521,9 +521,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => openEditExpenseModal(exp)} className="text-zinc-400 hover:text-zinc-700">
-                          <FilePenLine size={16} />
-                        </button>
+                        {!editingExpenseId && (
+                          <button type="button" onClick={() => openEditExpenseModal(exp)} className="text-zinc-400 hover:text-zinc-700">
+                            <FilePenLine size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => void deleteExpense(exp)}
                           className="text-zinc-400 hover:text-red-500"
@@ -636,13 +638,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openEditExpenseModal(exp)}
-                      className="p-2 text-zinc-400 hover:text-zinc-700"
-                    >
-                      <FilePenLine size={16} />
-                    </button>
+                    {!editingExpenseId && (
+                      <button
+                        type="button"
+                        onClick={() => openEditExpenseModal(exp)}
+                        className="p-2 text-zinc-400 hover:text-zinc-700"
+                      >
+                        <FilePenLine size={16} />
+                      </button>
+                    )}
                     <button
                       onClick={() => void deleteExpense(exp)}
                       className="p-2 text-zinc-400 hover:text-red-500"

@@ -516,13 +516,15 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
           />
         </div>
         <div className="flex flex-col items-center gap-1">
-          <button
-            type="button"
-            onClick={() => startEditItinerary(item)}
-            className="p-2 text-zinc-400 hover:text-zinc-700"
-          >
-            <FilePenLine size={16} />
-          </button>
+          {!editingItineraryId && (
+            <button
+              type="button"
+              onClick={() => startEditItinerary(item)}
+              className="p-2 text-zinc-400 hover:text-zinc-700"
+            >
+              <FilePenLine size={16} />
+            </button>
+          )}
           <button
             onClick={async () => {
               const confirmed = await confirm({
