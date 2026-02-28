@@ -528,8 +528,6 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               <Crown size={14} className="text-amber-400 opacity-80" title="Administrador da viagem" />
             )}
           </div>
-            )}
-          </div>
         </header>
 
         {/* Mobile Trip Selector */}
