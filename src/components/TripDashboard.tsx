@@ -478,8 +478,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               <div className="flex items-center gap-2">
                 {isAdmin && (
                   <div className="md:hidden px-2 py-1 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
-                    <Shield size={10} />
-                    Admin
+                    <Shield size={13} />
                   </div>
                 )}
                 <button
@@ -489,6 +488,19 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 >
                   <Briefcase size={20} />
                   <span className="text-[10px] font-bold uppercase">Viagens</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("settings")}
+                  className={cn(
+                    "md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-colors min-h-[44px] min-w-[44px]",
+                    activeTab === "settings"
+                      ? "bg-[var(--sidebar-active-bg)]/10 text-[var(--sidebar-active-bg)]"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  )}
+                  aria-label="Configurações"
+                >
+                  <Settings size={20} />
+                  <span className="text-[10px] font-bold uppercase">Config</span>
                 </button>
               </div>
             </div>
@@ -933,14 +945,13 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
 
       {/* Mobile Navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md text-[var(--sidebar-text)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-6 h-16">
+        <div className="grid grid-cols-5 h-16">
           {([
             { tab: "itinerary",  icon: LayoutDashboard, label: "Roteiro"   },
             { tab: "expenses",   icon: DollarSign,       label: "Despesas"  },
             { tab: "ideas",      icon: Lightbulb,        label: "Ideias"    },
             { tab: "documents",  icon: FileText,          label: "Docs"      },
             { tab: "people",     icon: Users,             label: "Pessoas"   },
-            { tab: "settings",   icon: Settings,          label: "Config"    },
           ] as const).map(({ tab, icon: Icon, label }) => {
             const isActive = activeTab === tab;
             return (
