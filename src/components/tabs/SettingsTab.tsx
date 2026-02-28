@@ -230,7 +230,139 @@ export function SettingsTab() {
         </div>
       </Card>
 
-      {/* ── 2. CATEGORIAS DE DESPESAS ── */}
+      {/* ── 2. APARÊNCIA & TEMAS (moved to follow financial section) ── */}
+      {trip && (
+        <Card className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Palette size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Aparência</h3>
+              <p className="text-sm text-zinc-500">Modo de exibição e tema da viagem</p>
+            </div>
+          </div>
+
+          {/* Dark Mode */}
+          <div>
+            <label className="text-sm font-semibold mb-3 block">Modo de Exibição</label>
+            <button
+              type="button"
+              onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
+              className={cn(
+                "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
+                settingsDraft.dark_mode
+                  ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
+                  : "border-zinc-200 hover:border-zinc-300 shadow-sm"
+              )}
+              style={!settingsDraft.dark_mode ? {
+                background: `linear-gradient(to bottom right, var(--card-bg), var(--card-bg))`
+              } : undefined}
+            >
+              <div className="flex items-center gap-3">
+                {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
+                <span className="text-base">{settingsDraft.dark_mode ? "Modo Escuro" : "Modo Claro"}</span>
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-full text-xs font-bold",
+                settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
+              )}>
+                {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
+              </div>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className={cn("border-t", settings.dark_mode ? "border-zinc-700" : "border-zinc-100")} />
+
+          {/* Tema da Viagem */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold block">Tema da Viagem</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach"] as const).map((theme) => {
+                const palette = THEME_PALETTES[theme];
+                const isActive = (trip?.theme_palette || 'default') === theme;
+                const themeNames: Record<string, string> = {
+                  default: "Padrão",
+                  ocean: "Oceano",
+                  coastal: "Coastal",
+                  sunset: "Pôr do Sol",
+                  lavender: "Lavanda",
+                  rose: "Rosa",
+                  tropic: "Tropical",
+                  candy: "Candy",
+                  galaxy: "Galaxy",
+                  jade: "Jade",
+                  peach: "Peach",
+                };
+                
+                return (
+                  <button
+                    key={theme}
+                    type="button"
+                    onClick={async () => {
+                      if (isActive) return;
+                      
+                      // Optimistic update
+                      setTrip({ ...trip, theme_palette: theme });
+
+                      const { error } = await supabase
+                        .from("trips")
+                        .update({ theme_palette: theme })
+                        .eq("id", tripId);
+                      if (error) {
+                        toast(getErrorMessage(error), 'error');
+                        // Rollback
+                        setTrip(trip);
+                        return;
+                      }
+                    }}
+                    disabled={isActive}
+                    className={cn(
+                      "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
+                      isActive
+                        ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
+                        : cn(
+                            "shadow-sm",
+                            settings.dark_mode
+                              ? "border-zinc-700 hover:border-zinc-600"
+                              : "border-zinc-200 hover:border-zinc-300"
+                          )
+                    )}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
+                        <div
+                          className="flex-1"
+                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkSidebarActiveBg : palette.lightSidebarActiveBg }}
+                        />
+                        <div
+                          className="flex-1"
+                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
+                        />
+                        <div
+                          className="flex-1"
+                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkBg : palette.lightBg }}
+                        />
+                      </div>
+                      <p className="text-xs font-semibold text-center">{themeNames[theme]}</p>
+                    </div>
+                    {isActive && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--accent-color)] flex items-center justify-center shadow-lg">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ── 3. CATEGORIAS DE DESPESAS ── */}
       {isAdmin && (
         <Card className="space-y-6">
           <div className="flex items-center gap-3">
@@ -569,139 +701,7 @@ export function SettingsTab() {
         </Card>
       )}
 
-      {/* ── 4. APARÊNCIA & TEMAS (moved to end, dark mode included) ── */}
-      {isAdmin && trip && (
-        <Card className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Palette size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Aparência</h3>
-              <p className="text-sm text-zinc-500">Modo de exibição e tema da viagem</p>
-            </div>
-          </div>
-
-          {/* Dark Mode */}
-          <div>
-            <label className="text-sm font-semibold mb-3 block">Modo de Exibição</label>
-            <button
-              type="button"
-              onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
-              className={cn(
-                "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
-                settingsDraft.dark_mode
-                  ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
-                  : "border-zinc-200 hover:border-zinc-300 shadow-sm"
-              )}
-              style={!settingsDraft.dark_mode ? {
-                background: `linear-gradient(to bottom right, var(--card-bg), var(--card-bg))`
-              } : undefined}
-            >
-              <div className="flex items-center gap-3">
-                {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
-                <span className="text-base">{settingsDraft.dark_mode ? "Modo Escuro" : "Modo Claro"}</span>
-              </div>
-              <div className={cn(
-                "px-3 py-1 rounded-full text-xs font-bold",
-                settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
-              )}>
-                {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
-              </div>
-            </button>
-          </div>
-
-          {/* Divider */}
-          <div className={cn("border-t", settings.dark_mode ? "border-zinc-700" : "border-zinc-100")} />
-
-          {/* Tema da Viagem */}
-          <div className="space-y-3">
-            <label className="text-sm font-semibold block">Tema da Viagem</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-              {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach"] as const).map((theme) => {
-                const palette = THEME_PALETTES[theme];
-                const isActive = (trip?.theme_palette || 'default') === theme;
-                const themeNames: Record<string, string> = {
-                  default: "Padrão",
-                  ocean: "Oceano",
-                  coastal: "Coastal",
-                  sunset: "Pôr do Sol",
-                  lavender: "Lavanda",
-                  rose: "Rosa",
-                  tropic: "Tropical",
-                  candy: "Candy",
-                  galaxy: "Galaxy",
-                  jade: "Jade",
-                  peach: "Peach",
-                };
-                
-                return (
-                  <button
-                    key={theme}
-                    type="button"
-                    onClick={async () => {
-                      if (isActive) return;
-                      
-                      // Optimistic update
-                      setTrip({ ...trip, theme_palette: theme });
-
-                      const { error } = await supabase
-                        .from("trips")
-                        .update({ theme_palette: theme })
-                        .eq("id", tripId);
-                      if (error) {
-                        toast(getErrorMessage(error), 'error');
-                        // Rollback
-                        setTrip(trip);
-                        return;
-                      }
-                    }}
-                    disabled={isActive}
-                    className={cn(
-                      "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
-                      isActive
-                        ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
-                        : cn(
-                            "shadow-sm",
-                            settings.dark_mode
-                              ? "border-zinc-700 hover:border-zinc-600"
-                              : "border-zinc-200 hover:border-zinc-300"
-                          )
-                    )}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
-                        <div
-                          className="flex-1"
-                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkSidebarActiveBg : palette.lightSidebarActiveBg }}
-                        />
-                        <div
-                          className="flex-1"
-                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
-                        />
-                        <div
-                          className="flex-1"
-                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkBg : palette.lightBg }}
-                        />
-                      </div>
-                      <p className="text-xs font-semibold text-center">{themeNames[theme]}</p>
-                    </div>
-                    {isActive && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--accent-color)] flex items-center justify-center shadow-lg">
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* ── 5. GERENCIAR VIAGEM ── */}
+      {/* ── 4. GERENCIAR VIAGEM ── */}
       {isAdmin && trip && (
         <Card className="space-y-6">
           <div className="flex items-center gap-3">
