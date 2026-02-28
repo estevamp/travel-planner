@@ -205,6 +205,15 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
 
   const convertIdeaToActivity = async (idea: Idea) => {
     if (!trip.id || !currentMember || copyingIdeaId || idea.is_converted) return;
+
+    const confirmed = await confirm({
+      title: 'Adicionar ao roteiro?',
+      message: `Deseja transformar "${idea.title}" em uma atividade? A ideia será removida desta lista.`,
+      variant: 'primary',
+      isDark: settings.dark_mode
+    });
+    if (!confirmed) return;
+
     setCopyingIdeaId(idea.id);
     
     const itineraryId = crypto.randomUUID();
@@ -241,11 +250,15 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
       photo_url: null,
     };
 
-    // Optimistic update for both itinerary and ideas
+    // Snapshot for rollback
+    const previousItinerary = trip.itinerary;
+    const previousIdeas = trip.ideas;
+
+    // Optimistic update: add to itinerary and remove from ideas
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: [...prev.itinerary, newItineraryItem],
-      ideas: prev.ideas.map((i) => (i.id === idea.id ? { ...i, is_converted: true } : i)),
+      ideas: prev.ideas.filter((i) => i.id !== idea.id),
     }));
 
     const { error: itineraryError } = await supabase.from("itinerary").insert(newItineraryItem);
@@ -253,18 +266,26 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     if (itineraryError) {
       toast(getErrorMessage(itineraryError), 'error');
       setCopyingIdeaId(null);
-      // Rollback would be complex here, but usually Supabase is reliable
+      // Rollback
+      onTripUpdate((prev) => ({
+        ...prev,
+        itinerary: previousItinerary,
+        ideas: previousIdeas,
+      }));
       return;
     }
 
-    const { error: ideaError } = await supabase.from("ideas").update({ is_converted: true }).eq("id", idea.id);
+    // Delete the idea (cascade in DB removes links and assets automatically)
+    const { error: ideaError } = await supabase.from("ideas").delete().eq("id", idea.id);
 
     if (ideaError) {
-      console.error("Error updating idea status:", ideaError);
+      console.error("Error deleting converted idea:", ideaError);
+      // We don't rollback the itinerary insert because it succeeded
     }
 
     setCopyingIdeaId(null);
     onSetActiveTab("itinerary");
+    toast("Ideia convertida em atividade!", "success");
   };
 
   const handleFileUpload = async (ideaId: string, e: React.ChangeEvent<HTMLInputElement>, type: "photo" | "attachment") => {
@@ -538,11 +559,6 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold flex items-center gap-2 flex-wrap">
                         <span className="break-words">{idea.title}</span>
-                        {idea.is_converted && (
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
-                            Adicionada ao roteiro
-                          </span>
-                        )}
                       </p>
                       {idea.notes && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.notes}</p>}
                       {idea.maps_url && (
@@ -552,32 +568,20 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                       )}
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      {idea.is_converted ? (
-                        <button
-                          type="button"
-                          onClick={() => onSetActiveTab("itinerary")}
-                          className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                          aria-label="Ver no roteiro"
-                          title="Ver no roteiro"
-                        >
+                      <button
+                        type="button"
+                        onClick={() => void convertIdeaToActivity(idea)}
+                        disabled={copyingIdeaId === idea.id}
+                        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
+                        aria-label="Transformar em atividade"
+                        title="Transformar em atividade"
+                      >
+                        {copyingIdeaId === idea.id ? (
+                          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
                           <CalendarPlus size={20} />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => void convertIdeaToActivity(idea)}
-                          disabled={copyingIdeaId === idea.id}
-                          className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
-                          aria-label="Transformar em atividade"
-                          title="Transformar em atividade"
-                        >
-                          {copyingIdeaId === idea.id ? (
-                            <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <CalendarPlus size={20} />
-                          )}
-                        </button>
-                      )}
+                        )}
+                      </button>
                       {canManage && (
                         <>
                           <button
