@@ -46,11 +46,6 @@
     transition-property: background-color, border-color, color, opacity, box-shadow;
   }
 
-  /* Garante que motion.div não sofra transições CSS adicionais */
-  [style*="will-change"] {
-    transition: none !important;
-  }
-  
   /* LAYOUT FIX: cards com sombra do tema */
   .theme-card {
     box-shadow: var(--card-shadow);
