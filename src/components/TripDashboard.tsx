@@ -104,26 +104,14 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     enter: (dir: number) => ({
       x: dir === 0 ? 0 : (dir < 0 ? "100%" : "-100%"),
       opacity: 0,
-      position: "absolute" as const,
-      width: "100%",
-      backfaceVisibility: "hidden" as const,
-      WebkitBackfaceVisibility: "hidden" as const,
     }),
     center: {
       x: 0,
       opacity: 1,
-      position: "relative" as const,
-      width: "100%",
-      backfaceVisibility: "hidden" as const,
-      WebkitBackfaceVisibility: "hidden" as const,
     },
     exit: (dir: number) => ({
       x: dir === 0 ? 0 : (dir < 0 ? "-100%" : "100%"),
       opacity: 0,
-      position: "absolute" as const,
-      width: "100%",
-      backfaceVisibility: "hidden" as const,
-      WebkitBackfaceVisibility: "hidden" as const,
     }),
   };
   
@@ -588,53 +576,55 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="popLayout" custom={direction} initial={false}>
-          {activeTab === "itinerary" && (
-            <motion.div key="itinerary" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
-              <ItineraryTab
-                onOpenModal={() => openModal('itinerary')}
-                onTripUpdate={setTrip}
-              />
-            </motion.div>
-          )}
-          {activeTab === "expenses" && (
-            <motion.div key="expenses" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
-              <ExpensesTab
-                onOpenModal={() => openModal('expense')}
-                onSetActiveTab={setActiveTab}
-                onTripUpdate={setTrip}
-              />
-            </motion.div>
-          )}
-          {activeTab === "ideas" && (
-            <motion.div key="ideas" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
-              <IdeasTab
-                onOpenModal={() => openModal('idea')}
-                onSetActiveTab={setActiveTab}
-                onTripUpdate={setTrip}
-              />
-            </motion.div>
-          )}
-          {activeTab === "documents" && (
-            <motion.div key="documents" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
-              <DocumentsTab
-                onTripUpdate={setTrip}
-              />
-            </motion.div>
-          )}
-          {activeTab === "people" && (
-            <motion.div key="people" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
-              <PeopleTab
-                onTripUpdate={setTrip}
-              />
-            </motion.div>
-          )}
-          {activeTab === "settings" && (
-            <motion.div key="settings" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
-              <SettingsTab />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="relative overflow-hidden w-full">
+          <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+            {activeTab === "itinerary" && (
+              <motion.div key="itinerary" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
+                <ItineraryTab
+                  onOpenModal={() => openModal('itinerary')}
+                  onTripUpdate={setTrip}
+                />
+              </motion.div>
+            )}
+            {activeTab === "expenses" && (
+              <motion.div key="expenses" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
+                <ExpensesTab
+                  onOpenModal={() => openModal('expense')}
+                  onSetActiveTab={setActiveTab}
+                  onTripUpdate={setTrip}
+                />
+              </motion.div>
+            )}
+            {activeTab === "ideas" && (
+              <motion.div key="ideas" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
+                <IdeasTab
+                  onOpenModal={() => openModal('idea')}
+                  onSetActiveTab={setActiveTab}
+                  onTripUpdate={setTrip}
+                />
+              </motion.div>
+            )}
+            {activeTab === "documents" && (
+              <motion.div key="documents" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
+                <DocumentsTab
+                  onTripUpdate={setTrip}
+                />
+              </motion.div>
+            )}
+            {activeTab === "people" && (
+              <motion.div key="people" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
+                <PeopleTab
+                  onTripUpdate={setTrip}
+                />
+              </motion.div>
+            )}
+            {activeTab === "settings" && (
+              <motion.div key="settings" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
+                <SettingsTab />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
       {/* Modals */}
