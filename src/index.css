@@ -39,6 +39,15 @@
     transition-property: background-color, border-color, color, opacity, box-shadow;
   }
 
+/* Transição suave de tema, mas SEM afetar elementos animados */
+  *:not([style*="opacity"]):not([style*="transform"]):not([style*="will-change"]),
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+  }
+
   /* LAYOUT FIX: cards com sombra do tema */
   .theme-card {
     box-shadow: var(--card-shadow);

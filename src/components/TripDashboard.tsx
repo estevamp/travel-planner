@@ -576,14 +576,22 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           )}
         </AnimatePresence>
 
-        <div className="w-full">
-          {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} />}
-          {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} />}
-          {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip} />}
-          {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} />}
-          {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} />}
-          {activeTab === "settings"  && <SettingsTab />}
-        </div>    
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} />}
+            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} />}
+            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip} />}
+            {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} />}
+            {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} />}
+            {activeTab === "settings"  && <SettingsTab />}
+          </motion.div>
+        </AnimatePresence>   
       </main>
 
       {/* Modals */}
