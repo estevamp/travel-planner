@@ -396,7 +396,13 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               <button
                 key={option.id}
                 onClick={() => navigate(`/trip/${option.id}`)}
-                className={cn("w-full text-left rounded-xl border px-3 py-2", option.id === tripId ? "bg-[var(--sidebar-hover)] border-[var(--sidebar-active-bg)]" : "border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)]")}
+                // LAYOUT: cards de viagem com melhor separação visual e padding
+                className={cn(
+                  "w-full text-left rounded-xl border px-3 py-2.5 transition-all duration-150",
+                  option.id === tripId
+                    ? "bg-[var(--sidebar-hover)] border-[var(--sidebar-active-bg)] shadow-sm"
+                    : "border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)] hover:border-[var(--sidebar-active-bg)]/40"
+                )}
               >
                 <p className="text-sm font-semibold truncate">{option.name}</p>
                 <p className="text-xs opacity-80 truncate">{option.destination || "Sem destino"}</p>
@@ -912,25 +918,146 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       </Modal>
 
       {/* Mobile Navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)]">
+      {/* LAYOUT: nav com relative para dot indicator */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)] relative">
         <div className="grid grid-cols-6">
-          <button type="button" onClick={() => setActiveTab("itinerary")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "itinerary" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
-            <LayoutDashboard size={24} />
+          {/* LAYOUT: bottom nav com label, indicador ativo e touch target adequado */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("itinerary")}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
+              activeTab === "itinerary"
+                ? "text-[var(--sidebar-active-bg)]"
+                : "text-[var(--sidebar-text)] opacity-60"
+            )}
+          >
+            <LayoutDashboard size={22} strokeWidth={activeTab === "itinerary" ? 2.5 : 2} />
+            <span className={cn(
+              "text-[10px] tracking-wide",
+              activeTab === "itinerary" ? "font-bold" : "font-normal"
+            )}>
+              Roteiro
+            </span>
+            {/* LAYOUT: dot indicator no item ativo */}
+            {activeTab === "itinerary" && (
+              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
+            )}
           </button>
-          <button type="button" onClick={() => setActiveTab("expenses")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "expenses" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
-            <DollarSign size={24} />
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("expenses")}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
+              activeTab === "expenses"
+                ? "text-[var(--sidebar-active-bg)]"
+                : "text-[var(--sidebar-text)] opacity-60"
+            )}
+          >
+            <DollarSign size={22} strokeWidth={activeTab === "expenses" ? 2.5 : 2} />
+            <span className={cn(
+              "text-[10px] tracking-wide",
+              activeTab === "expenses" ? "font-bold" : "font-normal"
+            )}>
+              Gastos
+            </span>
+            {/* LAYOUT: dot indicator no item ativo */}
+            {activeTab === "expenses" && (
+              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
+            )}
           </button>
-          <button type="button" onClick={() => setActiveTab("ideas")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "ideas" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
-            <Lightbulb size={24} />
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("ideas")}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
+              activeTab === "ideas"
+                ? "text-[var(--sidebar-active-bg)]"
+                : "text-[var(--sidebar-text)] opacity-60"
+            )}
+          >
+            <Lightbulb size={22} strokeWidth={activeTab === "ideas" ? 2.5 : 2} />
+            <span className={cn(
+              "text-[10px] tracking-wide",
+              activeTab === "ideas" ? "font-bold" : "font-normal"
+            )}>
+              Ideias
+            </span>
+            {/* LAYOUT: dot indicator no item ativo */}
+            {activeTab === "ideas" && (
+              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
+            )}
           </button>
-          <button type="button" onClick={() => setActiveTab("documents")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "documents" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
-            <FileText size={24} />
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("documents")}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
+              activeTab === "documents"
+                ? "text-[var(--sidebar-active-bg)]"
+                : "text-[var(--sidebar-text)] opacity-60"
+            )}
+          >
+            <FileText size={22} strokeWidth={activeTab === "documents" ? 2.5 : 2} />
+            <span className={cn(
+              "text-[10px] tracking-wide",
+              activeTab === "documents" ? "font-bold" : "font-normal"
+            )}>
+              Docs
+            </span>
+            {/* LAYOUT: dot indicator no item ativo */}
+            {activeTab === "documents" && (
+              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
+            )}
           </button>
-          <button type="button" onClick={() => setActiveTab("people")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "people" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
-            <Users size={24} />
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("people")}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
+              activeTab === "people"
+                ? "text-[var(--sidebar-active-bg)]"
+                : "text-[var(--sidebar-text)] opacity-60"
+            )}
+          >
+            <Users size={22} strokeWidth={activeTab === "people" ? 2.5 : 2} />
+            <span className={cn(
+              "text-[10px] tracking-wide",
+              activeTab === "people" ? "font-bold" : "font-normal"
+            )}>
+              Pessoas
+            </span>
+            {/* LAYOUT: dot indicator no item ativo */}
+            {activeTab === "people" && (
+              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
+            )}
           </button>
-          <button type="button" onClick={() => setActiveTab("settings")} className={cn("flex flex-col items-center justify-center py-4", activeTab === "settings" ? "text-[var(--sidebar-active-bg)]" : "text-[var(--sidebar-text)]")}>
-            <Settings size={24} />
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("settings")}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
+              activeTab === "settings"
+                ? "text-[var(--sidebar-active-bg)]"
+                : "text-[var(--sidebar-text)] opacity-60"
+            )}
+          >
+            <Settings size={22} strokeWidth={activeTab === "settings" ? 2.5 : 2} />
+            <span className={cn(
+              "text-[10px] tracking-wide",
+              activeTab === "settings" ? "font-bold" : "font-normal"
+            )}>
+              Config
+            </span>
+            {/* LAYOUT: dot indicator no item ativo */}
+            {activeTab === "settings" && (
+              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
+            )}
           </button>
         </div>
       </nav>

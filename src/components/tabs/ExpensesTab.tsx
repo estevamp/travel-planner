@@ -289,23 +289,31 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
         )}
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          {/* LAYOUT: header responsivo — empilha no mobile, lado a lado no sm+ */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>Orçamento da Viagem</h3>
+              <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                Orçamento da Viagem
+              </h3>
               <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
                 {budgetLimit > 0
-                  ? `${formatCurrency(budgetLimit, settings.default_currency)}`
+                  ? `Limite: ${formatCurrency(budgetLimit, settings.default_currency)}`
                   : "Nenhum orçamento definido"}
               </p>
             </div>
-            <div className="text-right space-y-1">
+            {/* LAYOUT: valores lado a lado no mobile, coluna no sm+ */}
+            <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
               <div>
                 <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Confirmado</p>
-                <p className="text-lg font-bold text-emerald-600">{formatCurrency(confirmedTotal, settings.default_currency)}</p>
+                <p className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">
+                  {formatCurrency(confirmedTotal, settings.default_currency)}
+                </p>
               </div>
               <div>
                 <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Total Previsto</p>
-                <p className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>{formatCurrency(predictedTotal, settings.default_currency)}</p>
+                <p className={cn("text-base sm:text-lg font-bold tabular-nums", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>
+                  {formatCurrency(predictedTotal, settings.default_currency)}
+                </p>
               </div>
             </div>
           </div>
@@ -376,12 +384,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                   ? (settings.dark_mode ? "bg-red-950/30 border-red-900/50" : "bg-red-50 border-red-300")
                   : (settings.dark_mode ? "bg-emerald-950/30 border-emerald-900/50" : "bg-emerald-50 border-emerald-300")
               )}>
-                <div className="flex items-center justify-between">
+                {/* LAYOUT: flex-wrap para não quebrar em telas estreitas */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
                     {isOverBudget ? "Acima do orçamento" : "Restante"}
                   </span>
                   <span className={cn(
-                    "text-xl font-bold",
+                    "text-lg sm:text-xl font-bold tabular-nums",
                     isOverBudget ? "text-red-600" : "text-emerald-600"
                   )}>
                     {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
