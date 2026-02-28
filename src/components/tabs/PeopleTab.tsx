@@ -57,7 +57,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
       .eq("is_confirmed", true);
     
     // Buscar settlements
-    const { data: settlementsData, error: setError } = await supabase
+    const { data: settlementsData, error: settlementsError } = await supabase
       .from("settlements")
       .select("*")
       .eq("trip_id", tripId);
@@ -73,14 +73,41 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
       setExpensesWithSplits(expensesWithSplitsData);
     }
     
-    if (!setError) {
+    if (!settlementsError) {
       setSettlements(settlementsData || []);
     }
   }, [tripId]);
 
   useEffect(() => {
     fetchBalanceData();
-  }, [fetchBalanceData, trip]);
+
+    const expensesChannel = supabase
+      .channel('expenses-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${tripId}` }, () => {
+        fetchBalanceData();
+      })
+      .subscribe();
+
+    const expenseSplitsChannel = supabase
+      .channel('expense-splits-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expense_splits' }, () => {
+        fetchBalanceData();
+      })
+      .subscribe();
+
+    const settlementsChannel = supabase
+      .channel('settlements-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settlements', filter: `trip_id=eq.${tripId}` }, () => {
+        fetchBalanceData();
+      })
+      .subscribe();
+
+    return () => {
+      if (expensesChannel) void supabase.removeChannel(expensesChannel);
+      if (expenseSplitsChannel) void supabase.removeChannel(expenseSplitsChannel);
+      if (settlementsChannel) void supabase.removeChannel(settlementsChannel);
+    };
+  }, [fetchBalanceData, tripId]);
   
   // Buscar taxas de câmbio
   useEffect(() => {
