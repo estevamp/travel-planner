@@ -475,30 +475,30 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               >
                 {trip.name}
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {isAdmin && (
-                  <div className="md:hidden px-2 py-1 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
-                    <Shield size={13} />
+                  <div className="md:hidden w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md" title="Admin">
+                    <Shield size={18} />
                   </div>
                 )}
                 <button
                   onClick={() => setShowMobileTripSelector(true)}
-                  className="md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px]"
+                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
                   aria-label="Trocar viagem"
                 >
-                  <Briefcase size={13} />
+                  <Briefcase size={20} />
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
                   className={cn(
-                    "md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-colors min-h-[44px] min-w-[44px]",
+                    "md:hidden flex items-center justify-center w-9 h-9 rounded-xl transition-colors",
                     activeTab === "settings"
-                      ? "bg-[var(--sidebar-active-bg)]/10 text-[var(--sidebar-active-bg)]"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      ? "text-[var(--sidebar-active-bg)] bg-[var(--sidebar-active-bg)]/10"
+                      : "text-zinc-500 hover:bg-zinc-100"
                   )}
                   aria-label="Configurações"
                 >
-                  <Settings size={13} />
+                  <Settings size={20} />
                 </button>
               </div>
             </div>
