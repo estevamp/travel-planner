@@ -394,24 +394,22 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   };
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
       {/* Tab Progress Indicator — mobile only */}
-      <div className="fixed top-0 inset-x-0 z-50 md:hidden flex gap-1 px-4 pt-1 pointer-events-none">
+      <div className="fixed top-0 inset-x-0 z-[60] md:hidden flex gap-1 px-4 pt-1 pointer-events-none">
         {VALID_TABS.map((tab) => (
           <motion.div
             key={tab}
-            className="h-[3px] flex-1 rounded-full"
+            className="h-[3px] flex-1 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             animate={{
-              opacity: activeTab === tab ? 1 : 0.25,
-              scaleY: activeTab === tab ? 1 : 0.8,
+              opacity: activeTab === tab ? 1 : 0.3,
+              scaleY: activeTab === tab ? 1 : 0.7,
             }}
             transition={{ duration: 0.2 }}
             style={{ backgroundColor: 'var(--sidebar-active-bg)' }}
           />
         ))}
       </div>
-
-      <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
         {/* Sidebar Desktop */}
       <aside className="w-64 border-r p-6 hidden md:flex flex-col flex-shrink-0 gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
@@ -981,8 +979,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           }
         }}
       />
-      </div>
-    </>
+    </div>
   );
 }
 
