@@ -188,7 +188,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
               currentUserId={currentMember.user_id}
               members={members}
               currency={settings.default_currency}
-              isDark={Boolean(settings.dark_mode)}             // <<< add isto
+              isDark={Boolean(settings.dark_mode)}
               onSettleClick={() => {
                 const simplified = simplifyDebts(balances, settings.default_currency);
                 setTransfers(simplified);
@@ -198,6 +198,55 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
         </Card>
       )}
       
+      <Card className="p-0 overflow-hidden">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr className="bg-[var(--sidebar-hover)]">
+              <th className="px-4 py-3 uppercase">Pessoa</th>
+              <th className="px-4 py-3 uppercase">Papel</th>
+              <th className="px-4 py-3 uppercase">Cônjuge</th>
+              {isAdmin && <th className="px-4 py-3 uppercase text-right"></th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--sidebar-border)]">
+            {members.map((member) => {
+              const spouseUserId = spouseByUserId.get(member.user_id) || null;
+              const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
+              return (
+                <tr key={member.id}>
+                  <td className="px-4 py-3">{member.display_name || member.user_id}</td>
+                  <td className="px-4 py-3 uppercase">{member.role}</td>
+                  <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
+                  {isAdmin && (
+                    <td className="px-4 py-3 text-right">
+                      {member.user_id !== currentMember?.user_id && (
+                        <button
+                          onClick={async () => {
+                            const confirmed = await confirm({
+                              title: 'Remover pessoa?',
+                              message: `Remover ${member.display_name || member.user_id} da viagem?`,
+                              variant: 'danger',
+                              isDark: settings.dark_mode
+                            });
+                            if (!confirmed) return;
+                            const { error } = await supabase.from("trip_members").delete().eq("id", member.id);
+                            if (error) toast(getErrorMessage(error), 'error');
+                            else reloadTrip();
+                          }}
+                          className="text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+
       {currentMember && (
         <Card>
           <h3 className="font-bold mb-4">Seu cônjuge (global)</h3>
@@ -263,55 +312,6 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
           )}
         </Card>
       )}
-
-      <Card className="p-0 overflow-hidden">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="bg-[var(--sidebar-hover)]">
-              <th className="px-4 py-3 uppercase">Pessoa</th>
-              <th className="px-4 py-3 uppercase">Papel</th>
-              <th className="px-4 py-3 uppercase">Cônjuge</th>
-              {isAdmin && <th className="px-4 py-3 uppercase text-right"></th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--sidebar-border)]">
-            {members.map((member) => {
-              const spouseUserId = spouseByUserId.get(member.user_id) || null;
-              const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
-              return (
-                <tr key={member.id}>
-                  <td className="px-4 py-3">{member.display_name || member.user_id}</td>
-                  <td className="px-4 py-3 uppercase">{member.role}</td>
-                  <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-right">
-                      {member.user_id !== currentMember?.user_id && (
-                        <button
-                          onClick={async () => {
-                            const confirmed = await confirm({
-                              title: 'Remover pessoa?',
-                              message: `Remover ${member.display_name || member.user_id} da viagem?`,
-                              variant: 'danger',
-                              isDark: settings.dark_mode
-                            });
-                            if (!confirmed) return;
-                            const { error } = await supabase.from("trip_members").delete().eq("id", member.id);
-                            if (error) toast(getErrorMessage(error), 'error');
-                            else reloadTrip();
-                          }}
-                          className="text-zinc-400 hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
 
       {isAdmin && (
         <Card>
