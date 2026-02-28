@@ -486,8 +486,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   className="md:hidden flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors min-h-[44px] min-w-[44px]"
                   aria-label="Trocar viagem"
                 >
-                  <Briefcase size={20} />
-                  <span className="text-[10px] font-bold uppercase">Viagens</span>
+                  <Briefcase size={13} />
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
@@ -499,8 +498,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   )}
                   aria-label="Configurações"
                 >
-                  <Settings size={20} />
-                  <span className="text-[10px] font-bold uppercase">Config</span>
+                  <Settings size={13} />
                 </button>
               </div>
             </div>
