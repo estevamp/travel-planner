@@ -474,11 +474,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
                 {trip.name}
-              </h2>
-              <div className="flex items-center gap-1">
                 {isAdmin && (
                   <Crown size={14} className="md:hidden text-amber-400 opacity-80" title="Administrador da viagem" />
-                )}
+                )} 
+              </h2>
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowMobileTripSelector(true)}
                   className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"

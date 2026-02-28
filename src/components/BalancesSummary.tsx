@@ -1,6 +1,6 @@
 import { TripMember } from "../types";
 import { MemberBalance } from "../types/splitting";
-import { formatCurrency } from "../utils/splitting";
+import { formatCurrency, simplifyDebts } from "../utils/splitting";
 
 interface BalancesSummaryProps {
   balances: MemberBalance[];
@@ -8,7 +8,7 @@ interface BalancesSummaryProps {
   members: TripMember[];
   currency: string;
   onSettleClick: () => void;
-  isDark?: boolean; // <<< novo
+  isDark?: boolean;
 }
 
 export function BalancesSummary({
@@ -26,22 +26,9 @@ export function BalancesSummary({
 
   const netBalance = currentMemberBalance?.net_balance ?? 0;
 
-  const individualBalances = balances
-    .filter((b) => b.member_id !== currentMember?.id)
-    .map((balance) => ({
-      ...balance,
-      isOwed: balance.net_balance < 0,
-    }));
-
-  const totalOwed = balances
-    .filter((b) => b.net_balance > 0)
-    .reduce((sum, b) => sum + b.net_balance, 0);
-
-  const totalOwing = balances
-    .filter((b) => b.net_balance < 0)
-    .reduce((sum, b) => sum + Math.abs(b.net_balance), 0);
-
-  const hasBalances = balances.some(b => Math.abs(b.net_balance) > 0.01);
+  // Usa simplifyDebts para obter as transferências reais entre todos os membros
+  const allTransfers = simplifyDebts(balances, currency);
+  const hasBalances = allTransfers.length > 0;
 
   // Helpers de classe por tema
   const surfaceNeutral = isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200";
@@ -54,7 +41,6 @@ export function BalancesSummary({
       if (pos === "neg") return "bg-red-950 border-red-700";
       return "bg-slate-900 border-slate-700";
     } else {
-      // Light bem claro (quase branco) para ficar “light mode de verdade”
       if (pos === "pos") return "bg-white border-green-300";
       if (pos === "neg") return "bg-white border-red-300";
       return "bg-white border-slate-200";
@@ -67,9 +53,6 @@ export function BalancesSummary({
       if (pos === "neg") return "text-red-100";
       return "text-slate-100";
     } else {
-      // Em light, usar texto escuro para contraste
-      if (pos === "pos") return "text-slate-900";
-      if (pos === "neg") return "text-slate-900";
       return "text-slate-900";
     }
   };
@@ -80,39 +63,24 @@ export function BalancesSummary({
       if (pos === "neg") return "text-red-200";
       return "text-slate-200";
     } else {
-      if (pos === "pos") return "text-slate-600";
-      if (pos === "neg") return "text-slate-600";
       return "text-slate-600";
     }
   };
 
-  const summaryBg = (pos: "pos" | "neg") => {
-    if (isDark) {
-      return pos === "pos" ? "bg-green-950 border-green-700" : "bg-red-950 border-red-700";
-    } else {
-      // leve no light
-      return pos === "pos" ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300";
-    }
-  };
+  const chipBg = (isDebtor: boolean) =>
+    isDebtor ? "bg-red-600 text-white" : "bg-green-600 text-white";
 
-  const summaryTextTitle = (pos: "pos" | "neg") =>
-    isDark ? (pos === "pos" ? "text-green-200" : "text-red-200")
-           : (pos === "pos" ? "text-green-900" : "text-red-900");
+  const lineText = (isCreditor: boolean) =>
+    isDark
+      ? isCreditor ? "text-green-200" : "text-red-200"
+      : isCreditor ? "text-green-800" : "text-red-800";
 
-  const summaryTextValue = (pos: "pos" | "neg") =>
-    isDark ? (pos === "pos" ? "text-green-100" : "text-red-100")
-           : (pos === "pos" ? "text-green-900" : "text-red-900");
-
-  const chipBg = (pos: boolean) => (pos ? "bg-green-600 text-white" : "bg-red-600 text-white");
-  const lineText = (pos: boolean) =>
-    isDark ? (pos ? "text-green-200" : "text-red-200")
-           : (pos ? "text-green-800" : "text-red-800");
-
-  const overallKind: "pos" | "neg" | "neu" = netBalance > 0 ? "pos" : netBalance < 0 ? "neg" : "neu";
+  const overallKind: "pos" | "neg" | "neu" =
+    netBalance > 0 ? "pos" : netBalance < 0 ? "neg" : "neu";
 
   return (
     <div className="space-y-4">
-      {/* Overall Status */}
+      {/* Saldo geral do usuário atual */}
       <div className={`p-6 rounded-xl border ${statusBg(overallKind)}`}>
         <div className="text-center">
           <p className={`text-sm mb-2 ${statusTextSub(overallKind)}`}>Seu saldo</p>
@@ -120,52 +88,63 @@ export function BalancesSummary({
             {formatCurrency(Math.abs(netBalance), currency)}
           </p>
           <p className={`text-sm mt-1 ${statusTextSub(overallKind)}`}>
-            {netBalance > 0 ? "Você tem a receber" : netBalance < 0 ? "Você deve" : "Tudo acertado! 🎉"}
+            {netBalance > 0
+              ? "Você tem a receber"
+              : netBalance < 0
+              ? "Você deve"
+              : "Tudo acertado! 🎉"}
           </p>
         </div>
       </div>
 
-      {/* Individual Balances - Show who owes whom relative to current user */}
+      {/* Detalhamento — todas as transferências simplificadas da viagem */}
       {hasBalances && (
         <div className="space-y-3">
           <h3 className={`font-bold mb-4 ${textNeutralMain}`}>Detalhamento</h3>
 
-          {individualBalances.map((balance) => {
-            const amount = Math.abs(balance.net_balance);
-            // In MemberBalance, positive means they are owed money, negative means they owe money.
-            // But here we want to show it relative to the current user.
-            // If balance.net_balance is positive, the member is a creditor (they are owed money).
-            // If balance.net_balance is negative, the member is a debtor (they owe money).
-            const isMemberDebtor = balance.net_balance < 0;
+          {allTransfers.map((transfer) => {
+            const isCurrentUserDebtor =
+              transfer.from_member_id === currentMember?.id;
+            const isCurrentUserCreditor =
+              transfer.to_member_id === currentMember?.id;
+
+            const fromName = isCurrentUserDebtor
+              ? "Você"
+              : transfer.from_member_name;
+            const toName = isCurrentUserCreditor
+              ? "Você"
+              : transfer.to_member_name;
+
+            const fromInitial = isCurrentUserDebtor
+              ? "V"
+              : transfer.from_member_name.charAt(0).toUpperCase();
+
+            // Chip vermelho para quem deve, neutro para terceiros
+            const chipColor = isCurrentUserDebtor
+              ? "bg-red-600 text-white"
+              : isCurrentUserCreditor
+              ? "bg-green-600 text-white"
+              : "bg-slate-400 text-white";
+
+            // Texto da linha: verde quando você recebe, vermelho quando você paga
+            const textColor = lineText(isCurrentUserCreditor);
 
             return (
               <div
-                key={balance.member_id}
-                className={`flex items-center justify-between p-4 rounded-lg border ${surfaceNeutral}`}
+                key={`${transfer.from_member_id}-${transfer.to_member_id}`}
+                className={`flex items-center p-4 rounded-lg border ${surfaceNeutral}`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${chipBg(
-                      isMemberDebtor
-                    )}`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${chipColor}`}
                   >
-                    {isMemberDebtor ? balance.member_name.charAt(0).toUpperCase() : "V"}
+                    {fromInitial}
                   </div>
-
                   <div>
-                    <p className={`font-medium ${textNeutralMain}`}>
-                      {isMemberDebtor ? balance.member_name : "Você"}
-                    </p>
-                    <p className={`text-sm ${lineText(isMemberDebtor)}`}>
-                      {isMemberDebtor ? (
-                        <>
-                          deve {formatCurrency(amount, currency)} para <strong>Você</strong>
-                        </>
-                      ) : (
-                        <>
-                          deve {formatCurrency(amount, currency)} para <strong>{balance.member_name}</strong>
-                        </>
-                      )}
+                    <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
+                    <p className={`text-sm ${textColor}`}>
+                      deve {formatCurrency(transfer.amount, currency)} para{" "}
+                      <strong>{toName}</strong>
                     </p>
                   </div>
                 </div>
@@ -175,12 +154,15 @@ export function BalancesSummary({
         </div>
       )}
 
-      {/* Settle Button */}
+      {/* Botão de quitar */}
       {hasBalances && (
         <button
           onClick={onSettleClick}
-          className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors
-            ${isDark ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+          className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
+            isDark
+              ? "bg-blue-600 hover:bg-blue-500 text-white"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}
         >
           Quitar viagem
         </button>
