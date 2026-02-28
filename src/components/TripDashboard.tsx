@@ -570,10 +570,6 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           {activeTab === "itinerary" && (
             <motion.div key="itinerary" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: "easeInOut" }}>
               <ItineraryTab
-                trip={trip}
-                currentMember={currentMember}
-                settings={settings}
-                itineraryTypes={itineraryTypes}
                 onOpenModal={() => openModal('itinerary')}
                 onTripUpdate={setTrip}
               />
@@ -582,13 +578,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           {activeTab === "expenses" && (
             <motion.div key="expenses" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: "easeInOut" }}>
               <ExpensesTab
-                trip={trip}
-                currentMember={currentMember}
-                categories={categories}
-                settings={settings}
-                tripBudget={tripBudget}
                 onOpenModal={() => openModal('expense')}
-                onOpenEditModal={openEditExpenseModal}
                 onSetActiveTab={setActiveTab}
                 onTripUpdate={setTrip}
               />
@@ -597,10 +587,6 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           {activeTab === "ideas" && (
             <motion.div key="ideas" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: "easeInOut" }}>
               <IdeasTab
-                trip={trip}
-                currentMember={currentMember}
-                isAdmin={isAdmin}
-                settings={settings}
                 onOpenModal={() => openModal('idea')}
                 onSetActiveTab={setActiveTab}
                 onTripUpdate={setTrip}
@@ -610,55 +596,20 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           {activeTab === "documents" && (
             <motion.div key="documents" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: "easeInOut" }}>
               <DocumentsTab
-                trip={trip}
-                currentMember={currentMember}
-                tripId={id!}
-                settings={settings}
                 onTripUpdate={setTrip}
-                isDark={settings.dark_mode}
               />
             </motion.div>
           )}
           {activeTab === "people" && (
             <motion.div key="people" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: "easeInOut" }}>
               <PeopleTab
-                tripId={id!}
-                members={members}
-                invites={invites}
-                currentMember={currentMember}
-                isAdmin={isAdmin}
-                settings={settings}
-                spouseByUserId={spouseByUserId}
-                trip={trip}
-                onSettingsChange={onSettingsChange}
-                onReloadTrip={reloadTrip}
+                onTripUpdate={setTrip}
               />
             </motion.div>
           )}
           {activeTab === "settings" && (
             <motion.div key="settings" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: "easeInOut" }}>
-              <SettingsTab
-                trip={trip}
-                tripId={id!}
-                currentMember={currentMember}
-                isAdmin={isAdmin}
-                settings={settings}
-                members={members}
-                categories={categories}
-                itineraryTypes={itineraryTypes}
-                onSetItineraryTypes={setItineraryTypes}
-                tripBudget={tripBudget}
-                budgetOwnerUserId={budgetOwnerUserId}
-                budgetCurrency={budgetCurrency}
-                userId={session.user.id}
-                onSettingsChange={onSettingsChange}
-                onSetCategories={setCategories}
-                onSetTripBudget={setTripBudget}
-                onSetTrip={setTrip}
-                onDeleteTrip={deleteCurrentTrip}
-                onReloadTripOptions={reloadTripOptions}
-                onNavigateToAbout={() => navigate("/about")}
-              />
+              <SettingsTab />
             </motion.div>
           )}
         </AnimatePresence>
