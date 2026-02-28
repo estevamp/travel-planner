@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus, X } from "lucide-react";
+import { FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -560,7 +560,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                           aria-label="Ver no roteiro"
                           title="Ver no roteiro"
                         >
-                          <CopyPlus size={20} />
+                          <CalendarPlus size={20} />
                         </button>
                       ) : (
                         <button
@@ -574,7 +574,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                           {copyingIdeaId === idea.id ? (
                             <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
                           ) : (
-                            <CopyPlus size={20} />
+                            <CalendarPlus size={20} />
                           )}
                         </button>
                       )}
