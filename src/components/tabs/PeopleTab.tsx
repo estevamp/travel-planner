@@ -163,6 +163,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     }
     onSettingsChange({ ...settings, spouse_user_id: spouseUserId });
     setSelfSpouseUserId(spouseUserId || "");
+    await reloadTrip();
   };
 
   const cancelInvite = async (inviteId: string) => {
