@@ -1,6 +1,17 @@
+import type { LucideIcon } from 'lucide-react';
 import { cn } from "../utils";
 
-export const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any; label: string; active?: boolean; onClick: () => void }) => (
+export const SidebarItem = ({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) => (
   <button
     onClick={onClick}
     className={cn(

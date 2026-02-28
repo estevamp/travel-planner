@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
-import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus, Train, Ship, Car, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, CheckCircle2, Circle, ChevronDown, ChevronRight } from "lucide-react";
+import { Calendar, FilePenLine, Trash2, Plus, CheckCircle2, Circle, ChevronDown, ChevronRight, MapPin } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
 import { useToast } from "../../hooks/useToast";
@@ -10,15 +10,12 @@ import { useTripContext } from "../../context/TripContext";
 import type { Trip, ItineraryItem, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
+import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
 
 interface ItineraryTabProps {
   onOpenModal: () => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
-
-const ICON_COMPONENTS: Record<string, any> = {
-  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar
-};
 
 export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
   const { trip, currentMember, settings, itineraryTypes } = useTripContext();
@@ -210,7 +207,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
         </button>
         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-50 text-zinc-600")}>
           {(() => {
-            const Icon = (item.type?.icon && ICON_COMPONENTS[item.type.icon]) || Calendar;
+            const Icon = (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) || Calendar;
             return <Icon size={20} />;
           })()}
         </div>

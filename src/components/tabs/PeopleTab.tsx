@@ -7,7 +7,15 @@ import { UserPlus, Trash2 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage } from "../../utils";
 import type { Trip, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
+import type { ExpenseSplit } from '../../types/splitting';
 import { Card } from "../Card";
+
+// Tipo da resposta bruta do Supabase para a query "*, expense_splits(*)"
+// O Supabase retorna o join sob o nome da tabela (expense_splits),
+// enquanto ExpenseWithSplits usa a chave "splits".
+type ExpenseRowFromSupabase = Omit<ExpenseWithSplits, 'splits'> & {
+  expense_splits: ExpenseSplit[];
+};
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
 import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
@@ -56,7 +64,9 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     
     if (!expError) {
       // Transformar para ExpenseWithSplits
-      const expensesWithSplitsData: ExpenseWithSplits[] = (expensesData || []).map((exp: any) => ({
+      const expensesWithSplitsData: ExpenseWithSplits[] = (
+        (expensesData as ExpenseRowFromSupabase[]) || []
+      ).map((exp) => ({
         ...exp,
         splits: exp.expense_splits || [],
       }));

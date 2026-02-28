@@ -3,20 +3,17 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Briefcase, Calendar } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
 import type { Trip, UserSettings } from "../../types";
 import { Card } from "../Card";
+import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
 
 interface SettingsTabProps {
   // Nenhuma prop necessária — tudo vem do contexto
 }
-
-const ICON_COMPONENTS: Record<string, any> = {
-  Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar
-};
 
 export function SettingsTab() {
   const {
@@ -572,7 +569,7 @@ export function SettingsTab() {
                 settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
               )}>
                 {ACTIVITY_ICONS.map((iconName) => {
-                  const Icon = ICON_COMPONENTS[iconName] || Calendar;
+                  const Icon = ACTIVITY_ICON_COMPONENTS[iconName] || Calendar;
                   return (
                     <label key={iconName} className="cursor-pointer group">
                       <input type="radio" name="icon" value={iconName} className="hidden peer" defaultChecked={iconName === "Calendar"} />
@@ -591,7 +588,7 @@ export function SettingsTab() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {itineraryTypes.map((type) => {
-              const Icon = ICON_COMPONENTS[type.icon] || Calendar;
+              const Icon = ACTIVITY_ICON_COMPONENTS[type.icon] || Calendar;
               const isEditing = editingTypeId === type.id;
 
               if (isEditing) {
@@ -658,7 +655,7 @@ export function SettingsTab() {
                         settings.dark_mode ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-100"
                       )}>
                         {ACTIVITY_ICONS.map((iconName) => {
-                          const IconComp = ICON_COMPONENTS[iconName] || Calendar;
+                          const IconComp = ACTIVITY_ICON_COMPONENTS[iconName] || Calendar;
                           return (
                             <button
                               key={iconName}
