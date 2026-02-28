@@ -647,7 +647,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               exit="exit"
               transition={{ duration: 0.2, ease: "easeInOut" }}
             >
-              <ItineraryTab ... />
+              <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={() => {}} />
             </motion.div>
           )}
           {/* Repetir para cada aba */}
