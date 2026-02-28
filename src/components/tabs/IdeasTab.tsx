@@ -10,6 +10,7 @@ import { DOCS_BUCKET } from "../../constants";
 import type { Trip, Idea, IdeaLink, IdeaAsset, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
+import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 
 interface IdeasTabProps {
   onOpenModal: () => void;
@@ -39,6 +40,12 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     maps_url: "",
     visibility: "public",
   });
+  const [visibilitySheet, setVisibilitySheet] = useState<{
+    open: boolean;
+    itemId: string | null;
+    currentVisibility: Visibility;
+    onConfirm: (() => void) | null;
+  }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
 
   const ideaLinksByIdeaId = useMemo(() => {
     const map = new Map<string, IdeaLink[]>();
@@ -562,32 +569,37 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                           <span className="break-words">{idea.title}</span>
                         </p>
                         <button
-                          onClick={async () => {
-                            const nextVisibility = idea.visibility === 'public' ? 'private' : 'public';
-                            // Optimistic update
-                            onTripUpdate((prev) => ({
-                              ...prev,
-                              ideas: prev.ideas.map((i) =>
-                                i.id === idea.id ? { ...i, visibility: nextVisibility } : i
-                              ),
-                            }));
-
-                            const { error } = await supabase
-                              .from("ideas")
-                              .update({ visibility: nextVisibility })
-                              .eq("id", idea.id);
-
-                            if (error) {
-                              toast(getErrorMessage(error), 'error');
-                              // Rollback
+                          onClick={() => setVisibilitySheet({
+                            open: true,
+                            itemId: idea.id,
+                            currentVisibility: idea.visibility,
+                            onConfirm: async () => {
+                              const nextVisibility = idea.visibility === 'public' ? 'private' : 'public';
+                              // Optimistic update
                               onTripUpdate((prev) => ({
                                 ...prev,
                                 ideas: prev.ideas.map((i) =>
-                                  i.id === idea.id ? { ...i, visibility: idea.visibility } : i
+                                  i.id === idea.id ? { ...i, visibility: nextVisibility } : i
                                 ),
                               }));
+
+                              const { error } = await supabase
+                                .from("ideas")
+                                .update({ visibility: nextVisibility })
+                                .eq("id", idea.id);
+
+                              if (error) {
+                                toast(getErrorMessage(error), 'error');
+                                // Rollback
+                                onTripUpdate((prev) => ({
+                                  ...prev,
+                                  ideas: prev.ideas.map((i) =>
+                                    i.id === idea.id ? { ...i, visibility: idea.visibility } : i
+                                  ),
+                                }));
+                              }
                             }
-                          }}
+                          })}
                           className={cn(
                             "p-1 rounded-lg transition-colors",
                             idea.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
@@ -772,6 +784,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
         </div>
       )}
       {ConfirmDialogNode}
+
+      <VisibilityBottomSheet
+        isOpen={visibilitySheet.open}
+        currentVisibility={visibilitySheet.currentVisibility}
+        onConfirm={() => visibilitySheet.onConfirm?.()}
+        onClose={() => setVisibilitySheet(prev => ({ ...prev, open: false }))}
+        isDark={settings.dark_mode}
+      />
     </motion.div>
   );
 }

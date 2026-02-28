@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import { FilePenLine, Trash2, Lock, Unlock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType } from "../../types";
@@ -14,6 +14,7 @@ import { CurrencySelector } from "../CurrencySelector";
 import { PayerSelector } from "../PayerSelector";
 import { SplitSelector } from "../SplitSelector";
 import { useCurrencyConversion } from "../../hooks/useCurrencyConversion";
+import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 
 interface ExpensesTabProps {
   onOpenModal: () => void;
@@ -66,6 +67,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
   const [editExpenseCurrency, setEditExpenseCurrency] = useState(settings.default_currency);
   const [isEditExpenseSplitValid, setIsEditExpenseSplitValid] = useState(true);
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+  const [visibilitySheet, setVisibilitySheet] = useState<{
+    open: boolean;
+    itemId: string | null;
+    currentVisibility: Visibility;
+    onConfirm: (() => void) | null;
+  }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
 
   const startEditExpense = (expense: Expense) => {
     setEditingExpenseId(expense.id);
@@ -522,9 +529,51 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {!editingExpenseId && (
-                          <button type="button" onClick={() => openEditExpenseModal(exp)} className="text-zinc-400 hover:text-zinc-700">
-                            <FilePenLine size={16} />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => setVisibilitySheet({
+                                open: true,
+                                itemId: exp.id,
+                                currentVisibility: exp.visibility,
+                                onConfirm: async () => {
+                                  const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
+                                  // Optimistic update
+                                  onTripUpdate((prev) => ({
+                                    ...prev,
+                                    expenses: prev.expenses.map((e) =>
+                                      e.id === exp.id ? { ...e, visibility: nextVisibility } : e
+                                    ),
+                                  }));
+
+                                  const { error } = await supabase
+                                    .from("expenses")
+                                    .update({ visibility: nextVisibility })
+                                    .eq("id", exp.id);
+
+                                  if (error) {
+                                    toast(getErrorMessage(error), 'error');
+                                    // Rollback
+                                    onTripUpdate((prev) => ({
+                                      ...prev,
+                                      expenses: prev.expenses.map((e) =>
+                                        e.id === exp.id ? { ...e, visibility: exp.visibility } : e
+                                      ),
+                                    }));
+                                  }
+                                }
+                              })}
+                              className={cn(
+                                "p-1 rounded-lg transition-colors",
+                                exp.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
+                              )}
+                              title={exp.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)"}
+                            >
+                              {exp.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
+                            </button>
+                            <button type="button" onClick={() => openEditExpenseModal(exp)} className="text-zinc-400 hover:text-zinc-700">
+                              <FilePenLine size={16} />
+                            </button>
+                          </>
                         )}
                         <button
                           onClick={() => void deleteExpense(exp)}
@@ -639,13 +688,54 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     {!editingExpenseId && (
-                      <button
-                        type="button"
-                        onClick={() => openEditExpenseModal(exp)}
-                        className="p-2 text-zinc-400 hover:text-zinc-700"
-                      >
-                        <FilePenLine size={16} />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setVisibilitySheet({
+                            open: true,
+                            itemId: exp.id,
+                            currentVisibility: exp.visibility,
+                            onConfirm: async () => {
+                              const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
+                              // Optimistic update
+                              onTripUpdate((prev) => ({
+                                ...prev,
+                                expenses: prev.expenses.map((e) =>
+                                  e.id === exp.id ? { ...e, visibility: nextVisibility } : e
+                                ),
+                              }));
+
+                              const { error } = await supabase
+                                .from("expenses")
+                                .update({ visibility: nextVisibility })
+                                .eq("id", exp.id);
+
+                              if (error) {
+                                toast(getErrorMessage(error), 'error');
+                                // Rollback
+                                onTripUpdate((prev) => ({
+                                  ...prev,
+                                  expenses: prev.expenses.map((e) =>
+                                    e.id === exp.id ? { ...e, visibility: exp.visibility } : e
+                                  ),
+                                }));
+                              }
+                            }
+                          })}
+                          className={cn(
+                            "p-2 transition-colors",
+                            exp.visibility === 'private' ? "text-amber-500" : "text-zinc-300"
+                          )}
+                        >
+                          {exp.visibility === 'private' ? <Lock size={16} /> : <Unlock size={16} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditExpenseModal(exp)}
+                          className="p-2 text-zinc-400 hover:text-zinc-700"
+                        >
+                          <FilePenLine size={16} />
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => void deleteExpense(exp)}
@@ -783,6 +873,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
           </button>
         </form>
       </Modal>
+
+      <VisibilityBottomSheet
+        isOpen={visibilitySheet.open}
+        currentVisibility={visibilitySheet.currentVisibility}
+        onConfirm={() => visibilitySheet.onConfirm?.()}
+        onClose={() => setVisibilitySheet(prev => ({ ...prev, open: false }))}
+        isDark={settings.dark_mode}
+      />
     </motion.div>
   );
 }

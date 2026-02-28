@@ -11,6 +11,7 @@ import type { Trip, ItineraryItem, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
+import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 
 interface ItineraryTabProps {
   onOpenModal: () => void;
@@ -44,6 +45,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
     is_all_day: false,
   });
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [visibilitySheet, setVisibilitySheet] = useState<{
+    open: boolean;
+    itemId: string | null;
+    currentVisibility: Visibility;
+    onConfirm: (() => void) | null;
+  }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
 
 
   const startEditItinerary = (item: ItineraryItem) => {
@@ -397,32 +404,37 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                 <div className="flex items-center justify-between gap-2">
                   <h4 className={cn("font-bold truncate", item.is_completed && "line-through text-zinc-400")}>{item.title}</h4>
                   <button
-                    onClick={async () => {
-                      const nextVisibility = item.visibility === 'public' ? 'private' : 'public';
-                      // Optimistic update
-                      onTripUpdate((prev) => ({
-                        ...prev,
-                        itinerary: prev.itinerary.map((i) =>
-                          i.id === item.id ? { ...i, visibility: nextVisibility } : i
-                        ),
-                      }));
-
-                      const { error } = await supabase
-                        .from("itinerary")
-                        .update({ visibility: nextVisibility })
-                        .eq("id", item.id);
-
-                      if (error) {
-                        toast(getErrorMessage(error), 'error');
-                        // Rollback
+                    onClick={() => setVisibilitySheet({
+                      open: true,
+                      itemId: item.id,
+                      currentVisibility: item.visibility,
+                      onConfirm: async () => {
+                        const nextVisibility = item.visibility === 'public' ? 'private' : 'public';
+                        // Optimistic update
                         onTripUpdate((prev) => ({
                           ...prev,
                           itinerary: prev.itinerary.map((i) =>
-                            i.id === item.id ? { ...i, visibility: item.visibility } : i
+                            i.id === item.id ? { ...i, visibility: nextVisibility } : i
                           ),
                         }));
+
+                        const { error } = await supabase
+                          .from("itinerary")
+                          .update({ visibility: nextVisibility })
+                          .eq("id", item.id);
+
+                        if (error) {
+                          toast(getErrorMessage(error), 'error');
+                          // Rollback
+                          onTripUpdate((prev) => ({
+                            ...prev,
+                            itinerary: prev.itinerary.map((i) =>
+                              i.id === item.id ? { ...i, visibility: item.visibility } : i
+                            ),
+                          }));
+                        }
                       }
-                    }}
+                    })}
                     className={cn(
                       "p-1 rounded-lg transition-colors",
                       item.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
@@ -580,6 +592,14 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
       
       <FloatingActionButton onClick={onOpenModal} />
       {ConfirmDialogNode}
+
+      <VisibilityBottomSheet
+        isOpen={visibilitySheet.open}
+        currentVisibility={visibilitySheet.currentVisibility}
+        onConfirm={() => visibilitySheet.onConfirm?.()}
+        onClose={() => setVisibilitySheet(prev => ({ ...prev, open: false }))}
+        isDark={settings.dark_mode}
+      />
     </motion.div>
   );
 }

@@ -214,14 +214,26 @@ export function SplitSelector({
       </div>
 
       {validationError && (
-        <div className="p-3 rounded-lg border-2 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+        <div
+          className="p-3 rounded-lg border-2"
+          style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderColor: 'rgb(239, 68, 68)'
+          }}
+        >
           <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
         </div>
       )}
 
       {selectedMembers.size > 0 && (
-        <div className="p-3 rounded-lg border-2 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-600 dark:text-blue-400">
+        <div
+          className="p-3 rounded-lg border-2"
+          style={{
+            backgroundColor: 'var(--input-focus-ring)',
+            borderColor: 'var(--accent-color)'
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--accent-color)' }}>
             {selectedMembers.size} {selectedMembers.size === 1 ? "pessoa" : "pessoas"}{" "}
             selecionada{selectedMembers.size === 1 ? "" : "s"}
           </p>
