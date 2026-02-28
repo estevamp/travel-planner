@@ -121,16 +121,20 @@ export function SettingsTab() {
 
   return (
     <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+
+      {/* ── 1. FINANCEIRO & ORÇAMENTO (unified card) ── */}
       <Card className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
             <DollarSign size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Financeiro</h3>
-            <p className="text-sm text-zinc-500">Configure suas preferências monetárias</p>
+            <h3 className="font-bold text-lg">Financeiro & Orçamento</h3>
+            <p className="text-sm text-zinc-500">Moeda padrão e limite de gastos da viagem</p>
           </div>
         </div>
+
+        {/* Moeda Padrão */}
         <div className="space-y-3">
           <label className="text-sm font-semibold block">Moeda Padrão</label>
           <div className="grid grid-cols-3 gap-3">
@@ -156,18 +160,11 @@ export function SettingsTab() {
             ))}
           </div>
         </div>
-      </Card>
 
-      <Card className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-            <DollarSign size={20} className="text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-lg">Orçamento da Viagem</h3>
-            <p className="text-sm text-zinc-500">Defina um limite de gastos</p>
-          </div>
-        </div>
+        {/* Divider */}
+        <div className={cn("border-t", settings.dark_mode ? "border-zinc-700" : "border-zinc-100")} />
+
+        {/* Orçamento da Viagem */}
         <div className="space-y-4">
           <label className="text-sm font-semibold block">Limite de Orçamento</label>
           <div className="flex gap-3">
@@ -233,195 +230,7 @@ export function SettingsTab() {
         </div>
       </Card>
 
-      <Card className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <Palette size={20} className="text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-lg">Aparência</h3>
-            <p className="text-sm text-zinc-500">Modo de exibição global</p>
-          </div>
-        </div>
-        
-        <div>
-          <label className="text-sm font-semibold mb-3 block">Modo de Exibição</label>
-          <button
-            type="button"
-            onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
-            className={cn(
-              "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
-              settingsDraft.dark_mode
-                ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
-                : "border-zinc-200 hover:border-zinc-300 shadow-sm"
-            )}
-            style={!settingsDraft.dark_mode ? {
-              background: `linear-gradient(to bottom right, var(--card-bg), var(--card-bg))`
-            } : undefined}
-          >
-            <div className="flex items-center gap-3">
-              {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
-              <span className="text-base">{settingsDraft.dark_mode ? "Modo Escuro" : "Modo Claro"}</span>
-            </div>
-            <div className={cn(
-              "px-3 py-1 rounded-full text-xs font-bold",
-              settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
-            )}>
-              {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
-            </div>
-          </button>
-        </div>
-      </Card>
-
-      {isAdmin && trip && (
-        <Card className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-              <Settings size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Gerenciar Viagem</h3>
-              <p className="text-sm text-zinc-500">Edite ou exclua esta viagem</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold block required-indicator">Nome da Viagem</label>
-              <input
-                value={editTripName}
-                onChange={(e) => setEditTripName(e.target.value)}
-                placeholder="Nome da viagem"
-                className={cn(
-                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
-                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-                )}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold block required-indicator">Destino</label>
-              <input
-                value={editTripDestination}
-                onChange={(e) => setEditTripDestination(e.target.value)}
-                placeholder="Destino"
-                className={cn(
-                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
-                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-                )}
-                required
-              />
-            </div>
-            <div className="flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                type="button"
-                onClick={deleteCurrentTrip}
-                disabled={updatingTrip}
-                className={cn(
-                  "px-4 py-3 rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
-                  settings.dark_mode
-                    ? "border-red-900/50 bg-red-950/20 text-red-400 hover:bg-red-950/40"
-                    : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                )}
-              >
-                <Trash2 size={16} />
-                Excluir Viagem
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveTripInfo}
-                disabled={updatingTrip || (editTripName.trim() === trip.name && editTripDestination.trim() === trip.destination)}
-                className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {updatingTrip ? "Salvando..." : "Salvar Alterações"}
-              </button>
-            </div>
-            <div className="space-y-3">
-              <label className="text-sm font-semibold block">Tema da Viagem</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach"] as const).map((theme) => {
-                  const palette = THEME_PALETTES[theme];
-                  const isActive = (trip?.theme_palette || 'default') === theme;
-                  const themeNames: Record<string, string> = {
-                    default: "Padrão",
-                    ocean: "Oceano",
-                    coastal: "Coastal",
-                    sunset: "Pôr do Sol",
-                    lavender: "Lavanda",
-                    rose: "Rosa",
-                    tropic: "Tropical",
-                    candy: "Candy",
-                    galaxy: "Galaxy",
-                    jade: "Jade",
-                    peach: "Peach",
-                  };
-                  
-                  return (
-                    <button
-                      key={theme}
-                      type="button"
-                      onClick={async () => {
-                        if (isActive) return; // Don't update if already active
-                        
-                        // Optimistic update
-                        setTrip({ ...trip, theme_palette: theme });
-
-                        const { error } = await supabase
-                          .from("trips")
-                          .update({ theme_palette: theme })
-                          .eq("id", tripId);
-                        if (error) {
-                          toast(getErrorMessage(error), 'error');
-                          // Rollback
-                          setTrip(trip);
-                          return;
-                        }
-                      }}
-                      disabled={isActive}
-                      className={cn(
-                        "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
-                        isActive
-                          ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
-                          : cn(
-                              "shadow-sm",
-                              settings.dark_mode
-                                ? "border-zinc-700 hover:border-zinc-600"
-                                : "border-zinc-200 hover:border-zinc-300"
-                            )
-                      )}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
-                          <div
-                            className="flex-1"
-                            style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkSidebarActiveBg : palette.lightSidebarActiveBg }}
-                          />
-                          <div
-                            className="flex-1"
-                            style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
-                          />
-                          <div
-                            className="flex-1"
-                            style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkBg : palette.lightBg }}
-                          />
-                        </div>
-                        <p className="text-xs font-semibold text-center">{themeNames[theme]}</p>
-                      </div>
-                      {isActive && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--accent-color)] flex items-center justify-center shadow-lg">
-                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
+      {/* ── 2. CATEGORIAS DE DESPESAS ── */}
       <Card className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
@@ -461,23 +270,24 @@ export function SettingsTab() {
                 )}
               />
             </div>
-            <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
-              <Plus size={16} />
-              Adicionar
-            </button>
+            <div className="flex items-end">
+              <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
+                <Plus size={16} />
+                Adicionar
+              </button>
+            </div>
           </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {categories.map((cat) => (
               <div
                 key={cat.id}
-                className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
-                style={{
-                  backgroundColor: 'var(--card-bg)',
-                  borderColor: 'var(--card-border)'
-                }}
+                className={cn(
+                  "flex items-center justify-between px-4 py-3 rounded-xl border-2",
+                  settings.dark_mode ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-100 bg-zinc-50/50"
+                )}
               >
-                <span className="text-sm font-semibold">{cat.name}</span>
+                <span className="text-sm font-medium">{cat.name}</span>
                 <button
                   onClick={async () => {
                     const confirmed = await confirm({
@@ -487,7 +297,7 @@ export function SettingsTab() {
                       isDark: settings.dark_mode
                     });
                     if (!confirmed) return;
-                    
+
                     // Optimistic update
                     setCategories(categories.filter(c => c.id !== cat.id));
 
@@ -520,6 +330,7 @@ export function SettingsTab() {
         </div>
       </Card>
 
+      {/* ── 3. TIPOS DE ATIVIDADE ── */}
       <Card className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
@@ -561,7 +372,7 @@ export function SettingsTab() {
                   )}
                 />
               </div>
-              <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
+              <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2 self-end">
                 <Plus size={16} />
                 Adicionar
               </button>
@@ -613,69 +424,73 @@ export function SettingsTab() {
                           )}
                         />
                       </div>
-                      <div className="flex items-end gap-2">
-                        <button
-                          onClick={async () => {
-                            if (!editTypeName.trim() || savingType) return;
-                            setSavingType(true);
-                            
-                            const { error } = await supabase
-                              .from("itinerary_types")
-                              .update({ name: editTypeName.trim(), icon: editTypeIcon })
-                              .eq("id", type.id);
-
-                            if (error) {
-                              toast(getErrorMessage(error), 'error');
-                            } else {
-                              setItineraryTypes(
-                                itineraryTypes.map((t) =>
-                                  t.id === type.id ? { ...t, name: editTypeName.trim(), icon: editTypeIcon } : t
-                                ).sort((a, b) => a.name.localeCompare(b.name))
-                              );
-                              setEditingTypeId(null);
-                            }
-                            setSavingType(false);
-                          }}
-                          disabled={savingType}
-                          className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 disabled:opacity-50"
-                        >
-                          Salvar
-                        </button>
-                        <button
-                          onClick={() => setEditingTypeId(null)}
-                          className={cn(
-                            "px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all",
-                            settings.dark_mode ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                          )}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Ícone</label>
                       <div className={cn(
-                        "flex flex-wrap gap-2 p-2 rounded-lg border-2 max-h-32 overflow-y-auto",
-                        settings.dark_mode ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-100"
+                        "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
+                        settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
                       )}>
                         {ACTIVITY_ICONS.map((iconName) => {
                           const IconComp = ACTIVITY_ICON_COMPONENTS[iconName] || Calendar;
                           return (
                             <button
                               key={iconName}
+                              type="button"
                               onClick={() => setEditTypeIcon(iconName)}
                               className={cn(
                                 "p-2 rounded-lg border-2 transition-all",
                                 editTypeIcon === iconName
-                                  ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10"
+                                  ? "border-[var(--accent-color)] bg-[var(--accent-color)]/5"
                                   : cn("border-transparent", settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50")
                               )}
                             >
-                              <IconComp size={18} className={editTypeIcon === iconName ? "text-[var(--accent-color)]" : (settings.dark_mode ? "text-zinc-500" : "text-zinc-500")} />
+                              <IconComp size={20} className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-600")} />
                             </button>
                           );
                         })}
                       </div>
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setEditingTypeId(null)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl border-2 text-sm font-bold",
+                          settings.dark_mode ? "border-zinc-700 text-zinc-300" : "border-zinc-200 text-zinc-600"
+                        )}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingType}
+                        onClick={async () => {
+                          if (!editTypeName.trim() || savingType) return;
+                          setSavingType(true);
+
+                          // Optimistic update
+                          setItineraryTypes(itineraryTypes.map(t =>
+                            t.id === editingTypeId ? { ...t, name: editTypeName.trim(), icon: editTypeIcon } : t
+                          ));
+
+                          const { error } = await supabase
+                            .from("itinerary_types")
+                            .update({ name: editTypeName.trim(), icon: editTypeIcon })
+                            .eq("id", editingTypeId);
+
+                          setSavingType(false);
+                          if (error) {
+                            toast(getErrorMessage(error), 'error');
+                            setItineraryTypes(itineraryTypes);
+                          } else {
+                            setEditingTypeId(null);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold disabled:opacity-50"
+                      >
+                        {savingType ? "Salvando..." : "Salvar Alterações"}
+                      </button>
                     </div>
                   </div>
                 );
@@ -684,27 +499,24 @@ export function SettingsTab() {
               return (
                 <div
                   key={type.id}
-                  className="flex items-center justify-between p-4 rounded-xl border-2 transition-all group"
-                  style={{
-                    backgroundColor: 'var(--card-bg)',
-                    borderColor: 'var(--card-border)'
-                  }}
+                  className={cn(
+                    "flex items-center justify-between px-4 py-3 rounded-xl border-2",
+                    settings.dark_mode ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-100 bg-zinc-50/50"
+                  )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg", settings.dark_mode ? "bg-zinc-800 text-zinc-400" : "bg-zinc-50 text-zinc-600")}>
-                      <Icon size={18} />
-                    </div>
-                    <span className="text-sm font-semibold">{type.name}</span>
+                    <Icon size={18} className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-600")} />
+                    <span className="text-sm font-medium">{type.name}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
                         setEditingTypeId(type.id);
                         setEditTypeName(type.name);
-                        setEditTypeIcon(type.icon);
+                        setEditTypeIcon(type.icon || "Calendar");
                       }}
                       className={cn(
-                        "text-zinc-400 hover:text-[var(--accent-color)] transition-colors p-1 rounded-lg",
+                        "text-zinc-400 hover:text-blue-500 transition-colors p-1 rounded-lg",
                         settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50"
                       )}
                     >
@@ -752,6 +564,205 @@ export function SettingsTab() {
           </div>
         </div>
       </Card>
+
+      {/* ── 4. APARÊNCIA & TEMAS (moved to end, dark mode included) ── */}
+      {isAdmin && trip && (
+        <Card className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Palette size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Aparência</h3>
+              <p className="text-sm text-zinc-500">Modo de exibição e tema da viagem</p>
+            </div>
+          </div>
+
+          {/* Dark Mode */}
+          <div>
+            <label className="text-sm font-semibold mb-3 block">Modo de Exibição</label>
+            <button
+              type="button"
+              onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
+              className={cn(
+                "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
+                settingsDraft.dark_mode
+                  ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
+                  : "border-zinc-200 hover:border-zinc-300 shadow-sm"
+              )}
+              style={!settingsDraft.dark_mode ? {
+                background: `linear-gradient(to bottom right, var(--card-bg), var(--card-bg))`
+              } : undefined}
+            >
+              <div className="flex items-center gap-3">
+                {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
+                <span className="text-base">{settingsDraft.dark_mode ? "Modo Escuro" : "Modo Claro"}</span>
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-full text-xs font-bold",
+                settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
+              )}>
+                {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
+              </div>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className={cn("border-t", settings.dark_mode ? "border-zinc-700" : "border-zinc-100")} />
+
+          {/* Tema da Viagem */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold block">Tema da Viagem</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach"] as const).map((theme) => {
+                const palette = THEME_PALETTES[theme];
+                const isActive = (trip?.theme_palette || 'default') === theme;
+                const themeNames: Record<string, string> = {
+                  default: "Padrão",
+                  ocean: "Oceano",
+                  coastal: "Coastal",
+                  sunset: "Pôr do Sol",
+                  lavender: "Lavanda",
+                  rose: "Rosa",
+                  tropic: "Tropical",
+                  candy: "Candy",
+                  galaxy: "Galaxy",
+                  jade: "Jade",
+                  peach: "Peach",
+                };
+                
+                return (
+                  <button
+                    key={theme}
+                    type="button"
+                    onClick={async () => {
+                      if (isActive) return;
+                      
+                      // Optimistic update
+                      setTrip({ ...trip, theme_palette: theme });
+
+                      const { error } = await supabase
+                        .from("trips")
+                        .update({ theme_palette: theme })
+                        .eq("id", tripId);
+                      if (error) {
+                        toast(getErrorMessage(error), 'error');
+                        // Rollback
+                        setTrip(trip);
+                        return;
+                      }
+                    }}
+                    disabled={isActive}
+                    className={cn(
+                      "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
+                      isActive
+                        ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
+                        : cn(
+                            "shadow-sm",
+                            settings.dark_mode
+                              ? "border-zinc-700 hover:border-zinc-600"
+                              : "border-zinc-200 hover:border-zinc-300"
+                          )
+                    )}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
+                        <div
+                          className="flex-1"
+                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkSidebarActiveBg : palette.lightSidebarActiveBg }}
+                        />
+                        <div
+                          className="flex-1"
+                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
+                        />
+                        <div
+                          className="flex-1"
+                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkBg : palette.lightBg }}
+                        />
+                      </div>
+                      <p className="text-xs font-semibold text-center">{themeNames[theme]}</p>
+                    </div>
+                    {isActive && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--accent-color)] flex items-center justify-center shadow-lg">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ── 5. GERENCIAR VIAGEM ── */}
+      {isAdmin && trip && (
+        <Card className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+              <Settings size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Gerenciar Viagem</h3>
+              <p className="text-sm text-zinc-500">Edite ou exclua esta viagem</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold block required-indicator">Nome da Viagem</label>
+              <input
+                value={editTripName}
+                onChange={(e) => setEditTripName(e.target.value)}
+                placeholder="Nome da viagem"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold block required-indicator">Destino</label>
+              <input
+                value={editTripDestination}
+                onChange={(e) => setEditTripDestination(e.target.value)}
+                placeholder="Destino"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
+                required
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                type="button"
+                onClick={deleteCurrentTrip}
+                disabled={updatingTrip}
+                className={cn(
+                  "px-4 py-3 rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
+                  settings.dark_mode
+                    ? "border-red-900 text-red-400 hover:bg-red-950/30"
+                    : "border-red-200 text-red-600 hover:bg-red-50"
+                )}
+              >
+                <Trash2 size={16} />
+                Excluir Viagem
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTripInfo}
+                disabled={updatingTrip}
+                className="px-6 py-3 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {updatingTrip ? "Salvando..." : "Salvar Alterações"}
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {savingSettings && (
         <div className={cn(
