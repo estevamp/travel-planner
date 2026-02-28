@@ -125,38 +125,53 @@ export function BalancesSummary({
         </div>
       </div>
 
-      {/* Individual Balances - Only show debts (negative balances) */}
+      {/* Individual Balances - Show who owes whom relative to current user */}
       {hasBalances && (
         <div className="space-y-3">
           <h3 className={`font-bold mb-4 ${textNeutralMain}`}>Detalhamento</h3>
 
-            {individualBalances
-              .filter((balance) => balance.net_balance < 0) // Only show when you owe someone
-              .map((balance) => {
-              const amount = Math.abs(balance.net_balance);
+          {individualBalances.map((balance) => {
+            const amount = Math.abs(balance.net_balance);
+            // In MemberBalance, positive means they are owed money, negative means they owe money.
+            // But here we want to show it relative to the current user.
+            // If balance.net_balance is positive, the member is a creditor (they are owed money).
+            // If balance.net_balance is negative, the member is a debtor (they owe money).
+            const isMemberDebtor = balance.net_balance < 0;
 
-              return (
-                <div
-                  key={balance.member_id}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${surfaceNeutral}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${chipBg(false)}`}
-                    >
-                      V
-                    </div>
+            return (
+              <div
+                key={balance.member_id}
+                className={`flex items-center justify-between p-4 rounded-lg border ${surfaceNeutral}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${chipBg(
+                      isMemberDebtor
+                    )}`}
+                  >
+                    {isMemberDebtor ? balance.member_name.charAt(0).toUpperCase() : "V"}
+                  </div>
 
-                    <div>
-                      <p className={`font-medium ${textNeutralMain}`}>Você</p>
-                      <p className={`text-sm ${lineText(false)}`}>
-                        deve {formatCurrency(amount, currency)} para <strong>{balance.member_name}</strong>
-                      </p>
-                    </div>
+                  <div>
+                    <p className={`font-medium ${textNeutralMain}`}>
+                      {isMemberDebtor ? balance.member_name : "Você"}
+                    </p>
+                    <p className={`text-sm ${lineText(isMemberDebtor)}`}>
+                      {isMemberDebtor ? (
+                        <>
+                          deve {formatCurrency(amount, currency)} para <strong>Você</strong>
+                        </>
+                      ) : (
+                        <>
+                          deve {formatCurrency(amount, currency)} para <strong>{balance.member_name}</strong>
+                        </>
+                      )}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
         </div>
       )}
 
