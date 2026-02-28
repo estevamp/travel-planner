@@ -473,8 +473,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 onClick={() => setActiveTab("itinerary")}
                 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
-                {trip.name}
-                {isAdmin && (
+                {trip.name} {isAdmin && (
                   <Crown size={14} className="md:hidden text-amber-400 opacity-80" title="Administrador da viagem" />
                 )} 
               </h2>
