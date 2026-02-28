@@ -185,8 +185,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     
     setIsSubmittingExpense(true);
     try {
-      const visibility = "public";
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+      // Despesas com rateio devem ser obrigatoriamente públicas
+      const visibility = editExpenseSplits.length > 0 ? "public" : editingExpense.visibility;
       const description = (form.get("description") as string) || "Despesa";
       const category_id = (form.get("category_id") as string) || null;
       const is_confirmed = form.get("is_confirmed") === "on";
@@ -563,14 +564,21 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                                 }
                               })}
                               className={cn(
-                                "p-1 rounded-lg transition-colors",
+                                "p-1 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed",
                                 exp.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
                               )}
-                              title={exp.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)"}
+                              disabled={(exp as any).splits && (exp as any).splits.length > 0}
+                              title={(exp as any).splits && (exp as any).splits.length > 0
+                                ? "Despesas com rateio devem ser públicas"
+                                : (exp.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)")}
                             >
                               {exp.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
                             </button>
-                            <button type="button" onClick={() => openEditExpenseModal(exp)} className="text-zinc-400 hover:text-zinc-700">
+                            <button
+                              type="button"
+                              onClick={() => openEditExpenseModal(exp)}
+                              className="text-zinc-400 hover:text-zinc-700"
+                            >
                               <FilePenLine size={16} />
                             </button>
                           </>
@@ -722,9 +730,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                             }
                           })}
                           className={cn(
-                            "p-2 transition-colors",
+                            "p-2 transition-colors disabled:opacity-30",
                             exp.visibility === 'private' ? "text-amber-500" : "text-zinc-300"
                           )}
+                          disabled={(exp as any).splits && (exp as any).splits.length > 0}
                         >
                           {exp.visibility === 'private' ? <Lock size={16} /> : <Unlock size={16} />}
                         </button>
@@ -850,19 +859,30 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
               onSelect={setEditExpensePayerId}
             />
             
-            <SplitSelector
-              key={`edit-expense-split-${editingExpense?.id || 'new'}`}
-              members={members}
-              totalAmount={parseCurrencyToNumber(editExpenseAmount) || 0}
-              currentUserId={currentMember?.user_id || ""}
-              onSplitsChange={(splits, splitType, isValid) => {
-                setEditExpenseSplits(splits);
-                setEditExpenseSplitType(splitType);
-                setIsEditExpenseSplitValid(isValid);
-              }}
-              initialSplits={editExpenseSplits}
-              initialSplitType={editExpenseSplitType}
-            />
+            <div className="space-y-2">
+              <SplitSelector
+                key={`edit-expense-split-${editingExpense?.id || 'new'}`}
+                members={members}
+                totalAmount={parseCurrencyToNumber(editExpenseAmount) || 0}
+                currentUserId={currentMember?.user_id || ""}
+                onSplitsChange={(splits, splitType, isValid) => {
+                  setEditExpenseSplits(splits);
+                  setEditExpenseSplitType(splitType);
+                  setIsEditExpenseSplitValid(isValid);
+                }}
+                initialSplits={editExpenseSplits}
+                initialSplitType={editExpenseSplitType}
+              />
+              
+              {editExpenseSplits.length > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                  <Unlock size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                    Despesas com rateio são obrigatoriamente públicas para que todos os envolvidos possam visualizá-las.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           
           <button
