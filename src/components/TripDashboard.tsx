@@ -188,7 +188,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     try {
       const itineraryId = crypto.randomUUID();
       const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
-      const visibility = "public";
+      const visibility = (form.get("visibility") as string) === "private" ? "private" : "public";
       const type_id = (form.get("type_id") as string) || null;
       const description = (form.get("description") as string) || "";
       const location = (form.get("location") as string) || "";
@@ -347,7 +347,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       const title = ((form.get("title") as string) || "").trim();
       if (!title) return;
       
-      const visibility = "public";
+      const visibility = (form.get("visibility") as string) === "private" ? "private" : "public";
       const notes = ((form.get("notes") as string) || "").trim() || null;
       const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
       const ideaId = crypto.randomUUID();
@@ -642,6 +642,22 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               <option key={type.id} value={type.id}>{type.name}</option>
             ))}
           </select>
+
+          <div className="flex items-center gap-2 px-1">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                name="visibility"
+                value="private"
+                disabled={isSubmittingItinerary}
+                className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)]"
+              />
+              <div className="flex items-center gap-1.5 text-zinc-600">
+                <Lock size={14} />
+                <span>Privado (apenas eu e cônjuge)</span>
+              </div>
+            </label>
+          </div>
           
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
@@ -925,7 +941,22 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               )}
             />
           </div>
-          
+
+          <div className="flex items-center gap-2 px-1">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                name="visibility"
+                value="private"
+                disabled={isSubmittingIdea}
+                className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)]"
+              />
+              <div className="flex items-center gap-1.5 text-zinc-600">
+                <Lock size={14} />
+                <span>Privado (apenas eu e cônjuge)</span>
+              </div>
+            </label>
+          </div>
           
           <p className="text-[10px] text-zinc-400 px-1 italic">Dica: Você poderá adicionar fotos, anexos e links extras após salvar a ideia, editando-a.</p>
           

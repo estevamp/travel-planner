@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X } from "lucide-react";
+import { FilePenLine, Trash2, Lock, Unlock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -557,9 +557,46 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                 <>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold flex items-center gap-2 flex-wrap">
-                        <span className="break-words">{idea.title}</span>
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold flex items-center gap-2 flex-wrap">
+                          <span className="break-words">{idea.title}</span>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            const nextVisibility = idea.visibility === 'public' ? 'private' : 'public';
+                            // Optimistic update
+                            onTripUpdate((prev) => ({
+                              ...prev,
+                              ideas: prev.ideas.map((i) =>
+                                i.id === idea.id ? { ...i, visibility: nextVisibility } : i
+                              ),
+                            }));
+
+                            const { error } = await supabase
+                              .from("ideas")
+                              .update({ visibility: nextVisibility })
+                              .eq("id", idea.id);
+
+                            if (error) {
+                              toast(getErrorMessage(error), 'error');
+                              // Rollback
+                              onTripUpdate((prev) => ({
+                                ...prev,
+                                ideas: prev.ideas.map((i) =>
+                                  i.id === idea.id ? { ...i, visibility: idea.visibility } : i
+                                ),
+                              }));
+                            }
+                          }}
+                          className={cn(
+                            "p-1 rounded-lg transition-colors",
+                            idea.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
+                          )}
+                          title={idea.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)"}
+                        >
+                          {idea.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
+                        </button>
+                      </div>
                       {idea.notes && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.notes}</p>}
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">

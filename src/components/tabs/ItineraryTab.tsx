@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
-import { Calendar, FilePenLine, Trash2, Plus, CheckCircle2, Circle, ChevronDown, ChevronRight, MapPin } from "lucide-react";
+import { Calendar, FilePenLine, Trash2, Plus, CheckCircle2, Circle, ChevronDown, ChevronRight, MapPin, Lock, Unlock } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
 import { useToast } from "../../hooks/useToast";
@@ -394,8 +394,43 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
           ) : (
             <>
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <h4 className={cn("font-bold truncate", item.is_completed && "line-through text-zinc-400")}>{item.title}</h4>
+                  <button
+                    onClick={async () => {
+                      const nextVisibility = item.visibility === 'public' ? 'private' : 'public';
+                      // Optimistic update
+                      onTripUpdate((prev) => ({
+                        ...prev,
+                        itinerary: prev.itinerary.map((i) =>
+                          i.id === item.id ? { ...i, visibility: nextVisibility } : i
+                        ),
+                      }));
+
+                      const { error } = await supabase
+                        .from("itinerary")
+                        .update({ visibility: nextVisibility })
+                        .eq("id", item.id);
+
+                      if (error) {
+                        toast(getErrorMessage(error), 'error');
+                        // Rollback
+                        onTripUpdate((prev) => ({
+                          ...prev,
+                          itinerary: prev.itinerary.map((i) =>
+                            i.id === item.id ? { ...i, visibility: item.visibility } : i
+                          ),
+                        }));
+                      }
+                    }}
+                    className={cn(
+                      "p-1 rounded-lg transition-colors",
+                      item.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
+                    )}
+                    title={item.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)"}
+                  >
+                    {item.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
+                  </button>
                 </div>
                 <div className="flex flex-col items-start">
                   {item.start_time && (
