@@ -55,9 +55,9 @@ export function CreateTripModal({ isOpen, isDark = false, onClose, onSubmit }: C
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={cn(
-              "w-full px-4 py-3 rounded-xl border transition-all outline-none focus:ring-2",
-              isDark 
-                ? "bg-zinc-800 border-zinc-700 text-white focus:ring-zinc-600 placeholder:text-zinc-600" 
+              "w-full px-4 py-3 rounded-xl border transition-all outline-none focus:ring-2 text-base sm:text-sm",
+              isDark
+                ? "bg-zinc-800 border-zinc-700 text-white focus:ring-zinc-600 placeholder:text-zinc-600"
                 : "bg-white border-zinc-200 text-zinc-900 focus:ring-zinc-200 placeholder:text-zinc-400"
             )}
           />
@@ -78,9 +78,9 @@ export function CreateTripModal({ isOpen, isDark = false, onClose, onSubmit }: C
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
             className={cn(
-              "w-full px-4 py-3 rounded-xl border transition-all outline-none focus:ring-2",
-              isDark 
-                ? "bg-zinc-800 border-zinc-700 text-white focus:ring-zinc-600 placeholder:text-zinc-600" 
+              "w-full px-4 py-3 rounded-xl border transition-all outline-none focus:ring-2 text-base sm:text-sm",
+              isDark
+                ? "bg-zinc-800 border-zinc-700 text-white focus:ring-zinc-600 placeholder:text-zinc-600"
                 : "bg-white border-zinc-200 text-zinc-900 focus:ring-zinc-200 placeholder:text-zinc-400"
             )}
           />

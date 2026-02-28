@@ -629,7 +629,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             name="type_id"
             disabled={isSubmittingItinerary}
             className={cn(
-              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           >
@@ -647,7 +647,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               required
               placeholder="Ex: Jantar no restaurante"
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -659,7 +659,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               disabled={isSubmittingItinerary}
               placeholder="Ex: Rua Augusta, 123"
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -684,7 +684,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   name="start_date" 
                   disabled={isSubmittingItinerary} 
                   className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
                     settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
                   )}
                 />
@@ -694,7 +694,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   name="start_time"
                   disabled={isSubmittingItinerary}
                   className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
                     settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
                   )}
                 />
@@ -708,7 +708,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   name="end_date"
                   disabled={isSubmittingItinerary}
                   className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
                     settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
                   )}
                 />
@@ -718,7 +718,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   name="end_time"
                   disabled={isSubmittingItinerary}
                   className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
                     settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
                   )}
                 />
@@ -731,7 +731,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             disabled={isSubmittingItinerary}
             placeholder="Notas"
             className={cn(
-              "w-full px-3 py-2 rounded-xl border text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
+              "w-full px-3 py-2 rounded-xl border text-base sm:text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           />
@@ -743,7 +743,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               name="photo"
               accept="image/*"
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
               disabled={isSubmittingItinerary}
@@ -779,7 +779,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               required
               placeholder="Ex: Almoço"
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -789,7 +789,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             name="category_id"
             disabled={isSubmittingExpense}
             className={cn(
-              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           >
@@ -809,7 +809,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 placeholder="0,00"
                 value={expenseAmount}
                 className={cn(
-                  "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                  "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                 )}
                 onChange={(e) => {
@@ -892,7 +892,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               required
               placeholder="Ex: Museu do Louvre"
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -904,7 +904,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               disabled={isSubmittingIdea}
               placeholder="Detalhes da ideia..."
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -916,7 +916,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               disabled={isSubmittingIdea}
               placeholder="https://goo.gl/maps/..."
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />

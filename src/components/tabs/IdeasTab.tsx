@@ -466,19 +466,19 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                       value={ideaDraft.title}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
                       placeholder="Titulo"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
                     />
                     <textarea
                       value={ideaDraft.notes}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, notes: e.target.value }))}
                       placeholder="Notas"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all h-20"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all h-20"
                     />
                     <input
                       value={ideaDraft.maps_url}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))}
                       placeholder="URL do Google Maps"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
                     />
                     
                     <div className="flex flex-wrap gap-2 pt-1">
