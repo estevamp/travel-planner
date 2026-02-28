@@ -24,6 +24,9 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
   const [selectedDoc, setSelectedDoc] = useState<{ name: string; url: string } | null>(null);
 
   const deleteDocument = async (docId: string, docUrl: string, docName: string) => {
+    const docToDelete = trip.documents.find((d) => d.id === docId);
+    if (!docToDelete) return;
+
     const confirmed = await confirm({
       title: 'Excluir documento?',
       message: `Deseja realmente excluir o documento "${docName}"?`,
@@ -38,13 +41,24 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
       documents: prev.documents.filter((d) => d.id !== docId),
     }));
 
+    const rollback = () => {
+      onTripUpdate((prev) => ({
+        ...prev,
+        documents: [...prev.documents, docToDelete],
+      }));
+    };
+
     const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([docUrl]);
     if (storageError) {
       toast(getErrorMessage(storageError), 'error');
+      rollback();
       return;
     }
     const { error } = await supabase.from("documents").delete().eq("id", docId);
-    if (error) toast(getErrorMessage(error), 'error');
+    if (error) {
+      toast(getErrorMessage(error), 'error');
+      rollback();
+    }
   };
 
   return (

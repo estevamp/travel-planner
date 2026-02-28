@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { Plane, Bus, Hotel, Calendar, FilePenLine, Trash2, Lock, Plus, Train, Ship, Car, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, CheckCircle2, Circle, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
 import type { Trip, ItineraryItem, Visibility } from "../../types";
 import { Card } from "../Card";
@@ -20,6 +22,8 @@ const ICON_COMPONENTS: Record<string, any> = {
 
 export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
   const { trip, currentMember, settings, itineraryTypes } = useTripContext();
+  const { toast } = useToast();
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -128,7 +132,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
 
     if (error) {
       setSavingItinerary(false);
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
+      // Rollback to the original sourceItem
+      onTripUpdate((prev) => ({
+        ...prev,
+        itinerary: prev.itinerary.map((i) => (i.id === itemId ? sourceItem : i)),
+      }));
       return;
     }
 
@@ -145,7 +154,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
 
     const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
+      // Rollback
+      onTripUpdate((prev) => ({
+        ...prev,
+        itinerary: [...prev.itinerary, item],
+      }));
       return;
     }
   };
@@ -167,7 +181,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
       .eq("id", item.id);
 
     if (error) {
-      alert(getErrorMessage(error));
+      toast(getErrorMessage(error), 'error');
       // Rollback
       onTripUpdate((prev) => ({
         ...prev,
@@ -327,7 +341,13 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                   <button
                     type="button"
                     onClick={async () => {
-                      if (!window.confirm("Remover foto?")) return;
+                      const confirmed = await confirm({
+                        title: 'Remover foto?',
+                        message: 'Deseja realmente remover a foto desta atividade?',
+                        variant: 'danger',
+                        isDark: settings.dark_mode
+                      });
+                      if (!confirmed) return;
                       
                       // Optimistic update
                       onTripUpdate((prev) => ({
@@ -339,7 +359,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
 
                       const { error } = await supabase.from("itinerary").update({ photo_url: null }).eq("id", item.id);
                       if (error) {
-                        alert(getErrorMessage(error));
+                        toast(getErrorMessage(error), 'error');
                         // Rollback if needed (optional, but good practice)
                         onTripUpdate((prev) => ({
                           ...prev,
@@ -457,7 +477,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                   throw error;
                 }
               } catch (error) {
-                alert(getErrorMessage(error));
+                toast(getErrorMessage(error), 'error');
               }
               e.target.value = "";
             }}
@@ -473,7 +493,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
           </button>
           <button
             onClick={async () => {
-              const confirmed = window.confirm(`Remover "${item.title}" do itinerário?`);
+              const confirmed = await confirm({
+                title: 'Remover do itinerário?',
+                message: `Deseja realmente remover "${item.title}" do itinerário?`,
+                variant: 'danger',
+                isDark: settings.dark_mode
+              });
               if (!confirmed) return;
               await deleteItineraryItem(item);
             }}
@@ -520,6 +545,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
       </div>
       
       <FloatingActionButton onClick={onOpenModal} />
+      {ConfirmDialogNode}
     </motion.div>
   );
 }

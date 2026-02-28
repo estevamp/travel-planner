@@ -74,6 +74,9 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     if (!title) return;
     const notes = ideaDraft.notes.trim() || null;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
+
+    const originalIdea = trip.ideas.find((i) => i.id === ideaId);
+    if (!originalIdea) return;
     
     // Optimistic update
     onTripUpdate((prev) => ({
@@ -103,6 +106,13 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     
     if (error) {
       toast(getErrorMessage(error), 'error');
+      // Rollback
+      onTripUpdate((prev) => ({
+        ...prev,
+        ideas: prev.ideas.map((idea) =>
+          idea.id === ideaId ? originalIdea : idea
+        ),
+      }));
       return;
     }
 
@@ -133,23 +143,46 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     });
     if (!confirmed) return;
 
-    // Optimistic update
+    // Snapshot for rollback
+    const previousIdeas = trip.ideas;
+    const previousLinks = trip.idea_links || [];
+    const previousAssets = trip.idea_assets || [];
+
+    // Optimistic update: remove idea + its links and assets from state
+    const ideaAssets = ideaAssetsByIdeaId.get(idea.id) || [];
     onTripUpdate((prev) => ({
       ...prev,
       ideas: prev.ideas.filter((i) => i.id !== idea.id),
+      idea_links: (prev.idea_links || []).filter((l) => l.idea_id !== idea.id),
+      idea_assets: (prev.idea_assets || []).filter((a) => a.idea_id !== idea.id),
     }));
 
-    const assets = ideaAssetsByIdeaId.get(idea.id) || [];
-    const paths = assets.map((asset) => asset.url);
+    const rollback = () => {
+      onTripUpdate((prev) => ({
+        ...prev,
+        ideas: previousIdeas,
+        idea_links: previousLinks,
+        idea_assets: previousAssets,
+      }));
+    };
+
+    // Phase 1: delete assets from Storage
+    const paths = ideaAssets.map((a) => a.url);
     if (paths.length > 0) {
       const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove(paths);
       if (storageError) {
         toast(getErrorMessage(storageError), 'error');
+        rollback();
         return;
       }
     }
+
+    // Phase 2: delete the idea (cascade in DB removes links and assets automatically)
     const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
-    if (error) toast(getErrorMessage(error), 'error');
+    if (error) {
+      toast(getErrorMessage(error), 'error');
+      rollback();
+    }
   };
 
   const convertIdeaToActivity = async (idea: Idea) => {
@@ -255,7 +288,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
         asset_type: type,
       });
 
-      if (dbError) toast(getErrorMessage(dbError), 'error');
+      if (dbError) {
+        toast(getErrorMessage(dbError), 'error');
+        // Rollback: remove the asset that was just added optimistically
+        onTripUpdate((prev) => ({
+          ...prev,
+          idea_assets: (prev.idea_assets || []).filter((a) => a.id !== assetId),
+        }));
+      }
     }
     e.target.value = "";
   };
@@ -286,8 +326,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
       label: linkData.label,
     });
 
-    if (error) toast(getErrorMessage(error), 'error');
-    else {
+    if (error) {
+      toast(getErrorMessage(error), 'error');
+      // Rollback: remove the ghost link
+      onTripUpdate((prev) => ({
+        ...prev,
+        idea_links: (prev.idea_links || []).filter((l) => l.id !== linkId),
+      }));
+    } else {
       setNewLink({ label: "", url: "" });
       setShowLinkForm(null);
     }
@@ -302,6 +348,9 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     });
     if (!confirmed) return;
     
+    const linkToDelete = (trip.idea_links || []).find((l) => l.id === linkId);
+    if (!linkToDelete) return;
+
     // Optimistic update
     onTripUpdate(prev => ({
       ...prev,
@@ -309,7 +358,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     }));
 
     const { error } = await supabase.from("idea_links").delete().eq("id", linkId);
-    if (error) toast(getErrorMessage(error), 'error');
+    if (error) {
+      toast(getErrorMessage(error), 'error');
+      // Rollback: re-insert the link
+      onTripUpdate((prev) => ({
+        ...prev,
+        idea_links: [...(prev.idea_links || []), linkToDelete],
+      }));
+    }
   };
 
   const handleDeleteAsset = async (asset: IdeaAsset) => {
@@ -327,13 +383,24 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
       idea_assets: (prev.idea_assets || []).filter(a => a.id !== asset.id)
     }));
 
+    const rollback = () => {
+      onTripUpdate((prev) => ({
+        ...prev,
+        idea_assets: [...(prev.idea_assets || []), asset],
+      }));
+    };
+
     const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove([asset.url]);
     if (storageError) {
       toast(getErrorMessage(storageError), 'error');
+      rollback();
       return;
     }
     const { error: dbError } = await supabase.from("idea_assets").delete().eq("id", asset.id);
-    if (dbError) toast(getErrorMessage(dbError), 'error');
+    if (dbError) {
+      toast(getErrorMessage(dbError), 'error');
+      rollback();
+    }
   };
 
   return (
