@@ -26,6 +26,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
   const [newLink, setNewLink] = useState({ label: "", url: "" });
   const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
+  const signedUrlCache = useRef<Map<string, string>>(new Map());
+  const [cachedUrls, setCachedUrls] = useState<Record<string, string>>({});
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
     notes: string;
@@ -119,18 +121,34 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     setEditingIdeaId(null);
   };
 
-  const openIdeaAsset = async (asset: IdeaAsset) => {
-    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(asset.url, 60);
-    if (error || !data) {
-      toast(getErrorMessage(error), 'error');
-      return;
+  const getSignedUrl = async (path: string) => {
+    if (signedUrlCache.current.has(path)) {
+      return signedUrlCache.current.get(path);
     }
-    
-    // If it's a photo, show in modal
-    if (asset.asset_type === "photo") {
-      setViewingPhotoUrl(data.signedUrl);
-    } else {
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+
+    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
+    if (error || !data) {
+      throw error || new Error("Failed to generate signed URL");
+    }
+
+    signedUrlCache.current.set(path, data.signedUrl);
+    setCachedUrls(prev => ({ ...prev, [path]: data.signedUrl }));
+    return data.signedUrl;
+  };
+
+  const openIdeaAsset = async (asset: IdeaAsset) => {
+    try {
+      const signedUrl = await getSignedUrl(asset.url);
+      if (!signedUrl) return;
+
+      // If it's a photo, show in modal
+      if (asset.asset_type === "photo") {
+        setViewingPhotoUrl(signedUrl);
+      } else {
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      toast(getErrorMessage(error), 'error');
     }
   };
 
@@ -595,7 +613,10 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                               onClick={() => void openIdeaAsset(asset)}
                               className="w-full h-full rounded-lg border border-zinc-200 overflow-hidden bg-zinc-100 hover:opacity-90 transition-opacity"
                             >
-                              <PhotoThumbnail asset={asset} />
+                              <PhotoThumbnail asset={asset} signedUrl={cachedUrls[asset.url] || null} onUrlLoad={(url) => {
+                                signedUrlCache.current.set(asset.url, url);
+                                setCachedUrls(prev => ({ ...prev, [asset.url]: url }));
+                              }} />
                             </button>
                             {canManage && (
                               <button
@@ -713,22 +734,27 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
 }
 
 // Component to display photo thumbnail
-function PhotoThumbnail({ asset }: { asset: IdeaAsset }) {
-  const [signedUrl, setSignedUrl] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(true);
+function PhotoThumbnail({ asset, signedUrl, onUrlLoad }: { asset: IdeaAsset; signedUrl: string | null; onUrlLoad: (url: string) => void }) {
+  const [loading, setLoading] = React.useState(!signedUrl);
 
   React.useEffect(() => {
+    if (signedUrl) {
+      setLoading(false);
+      return;
+    }
+
     const loadUrl = async () => {
+      setLoading(true);
       const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(asset.url, 3600);
       if (data && !error) {
-        setSignedUrl(data.signedUrl);
+        onUrlLoad(data.signedUrl);
       }
       setLoading(false);
     };
     void loadUrl();
-  }, [asset.url]);
+  }, [asset.url, signedUrl, onUrlLoad]);
 
-  if (loading) {
+  if (loading && !signedUrl) {
     return <div className="w-full h-full flex items-center justify-center bg-zinc-100">
       <div className="w-6 h-6 border-2 border-zinc-300 border-t-transparent rounded-full animate-spin" />
     </div>;

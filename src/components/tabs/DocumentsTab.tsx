@@ -21,7 +21,22 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const signedUrlCache = useRef<Map<string, string>>(new Map());
   const [selectedDoc, setSelectedDoc] = useState<{ name: string; url: string } | null>(null);
+
+  const getSignedUrl = async (path: string) => {
+    if (signedUrlCache.current.has(path)) {
+      return signedUrlCache.current.get(path);
+    }
+
+    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
+    if (error || !data) {
+      throw error || new Error("Failed to generate signed URL");
+    }
+
+    signedUrlCache.current.set(path, data.signedUrl);
+    return data.signedUrl;
+  };
 
   const deleteDocument = async (docId: string, docUrl: string, docName: string) => {
     const docToDelete = trip.documents.find((d) => d.id === docId);
@@ -129,12 +144,14 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
               <button
                 type="button"
                 onClick={async () => {
-                  const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 3600);
-                  if (error || !data) {
+                  try {
+                    const signedUrl = await getSignedUrl(doc.url);
+                    if (signedUrl) {
+                      setSelectedDoc({ name: doc.name, url: signedUrl });
+                    }
+                  } catch (error) {
                     toast(getErrorMessage(error), 'error');
-                    return;
                   }
-                  setSelectedDoc({ name: doc.name, url: data.signedUrl });
                 }}
                 className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1"
               >
@@ -144,12 +161,14 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
               <button
                 type="button"
                 onClick={async () => {
-                  const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(doc.url, 60);
-                  if (error || !data) {
+                  try {
+                    const signedUrl = await getSignedUrl(doc.url);
+                    if (signedUrl) {
+                      window.open(signedUrl, "_blank", "noopener,noreferrer");
+                    }
+                  } catch (error) {
                     toast(getErrorMessage(error), 'error');
-                    return;
                   }
-                  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
                 }}
                 className="text-xs text-zinc-500 hover:underline"
               >
