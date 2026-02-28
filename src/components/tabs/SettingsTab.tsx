@@ -180,7 +180,7 @@ export function SettingsTab() {
               }}
               placeholder="0,00"
               className={cn(
-                "flex-1 px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                "flex-1 px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -292,7 +292,7 @@ export function SettingsTab() {
                 onChange={(e) => setEditTripName(e.target.value)}
                 placeholder="Nome da viagem"
                 className={cn(
-                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                 )}
                 required
@@ -305,7 +305,7 @@ export function SettingsTab() {
                 onChange={(e) => setEditTripDestination(e.target.value)}
                 placeholder="Destino"
                 className={cn(
-                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                 )}
                 required
@@ -337,8 +337,9 @@ export function SettingsTab() {
             </div>
             <div className="space-y-3">
               <label className="text-sm font-semibold block">Tema da Viagem</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(["default", "ocean", "forest", "sunset", "lavender", "midnight", "rose"] as const).map((theme) => {
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                {(["default", "ocean", "forest", "sunset", "lavender", "midnight", "rose",
+                   "tropic", "aurora", "coastal", "terra"] as const).map((theme) => {
                   const palette = THEME_PALETTES[theme];
                   const isActive = (trip?.theme_palette || 'default') === theme;
                   const themeNames: Record<string, string> = {
@@ -348,7 +349,11 @@ export function SettingsTab() {
                     sunset: "Pôr do Sol",
                     lavender: "Lavanda",
                     midnight: "Meia-Noite",
-                    rose: "Rosa"
+                    rose: "Rosa",
+                    tropic: "Tropical",   // LAYOUT FIX
+                    aurora: "Aurora",     // LAYOUT FIX
+                    coastal: "Coastal",   // LAYOUT FIX
+                    terra: "Terra",       // LAYOUT FIX
                   };
                   
                   return (
@@ -452,7 +457,7 @@ export function SettingsTab() {
                 required
                 placeholder="Ex: Alimentação"
                 className={cn(
-                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                 )}
               />
@@ -552,7 +557,7 @@ export function SettingsTab() {
                   required
                   placeholder="Ex: Voo"
                   className={cn(
-                    "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 transition-all",
+                    "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                     settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                   )}
                 />

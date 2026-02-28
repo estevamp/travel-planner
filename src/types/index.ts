@@ -6,7 +6,8 @@ export interface ItineraryType {
 }
 
 export type Visibility = "public" | "private";
-export type ThemePalette = "default" | "ocean" | "forest" | "sunset" | "lavender" | "midnight" | "rose";
+export type ThemePalette = "default" | "ocean" | "forest" | "sunset" | "lavender" | "midnight" | "rose"
+  | "tropic" | "aurora" | "coastal" | "terra"; // LAYOUT FIX: novos temas
 
 export interface UserSettings {
   theme_palette: ThemePalette;

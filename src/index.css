@@ -33,6 +33,33 @@
   textarea::placeholder {
     opacity: 0.5;
   }
+
+  /* LAYOUT FIX: transição suave na troca de tema */
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+  }
+
+  /* LAYOUT FIX: exceção para elementos animados — não interferir com Framer Motion */
+  [data-framer-component-type], [style*="transform"], button, a {
+    transition-property: background-color, border-color, color, opacity, box-shadow;
+  }
+
+  /* LAYOUT FIX: cards com sombra do tema */
+  .theme-card {
+    box-shadow: var(--card-shadow);
+    border-color: var(--card-border);
+  }
+
+  /* LAYOUT FIX: inputs com foco temático */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 3px var(--input-focus-ring);
+    outline: none;
+  }
 }
 
 @layer components {

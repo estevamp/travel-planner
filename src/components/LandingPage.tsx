@@ -102,11 +102,11 @@ export function LandingPage({ session, settings }: { session: Session; settings:
             <form onSubmit={createTrip} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">Nome da viagem</label>
-                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Férias de Verão" className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20" />
+                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Férias de Verão" className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">Destino</label>
-                <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Ex: Paris, França" className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20" />
+                <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Ex: Paris, França" className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none" />
               </div>
               <button disabled={creating} className="w-full bg-[var(--accent-color)] text-white py-2 rounded-xl font-semibold mt-2 hover:opacity-90 transition-colors disabled:opacity-50">{creating ? "Criando..." : "Criar"}</button>
             </form>
