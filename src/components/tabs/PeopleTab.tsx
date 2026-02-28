@@ -236,9 +236,22 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                               isDark: settings.dark_mode
                             });
                             if (!confirmed) return;
-                            const { error } = await supabase.from("trip_members").delete().eq("id", member.id);
-                            if (error) toast(getErrorMessage(error), 'error');
-                            else reloadTrip();
+                            // Ao remover um membro, também removemos o convite associado se ele existir.
+                            // Buscamos o convite pelo user_id que aceitou (accepted_by_user_id)
+                            const { error: memberError } = await supabase.from("trip_members").delete().eq("id", member.id);
+                            
+                            if (memberError) {
+                              toast(getErrorMessage(memberError), 'error');
+                            } else {
+                              // Tentar remover o convite associado a este usuário nesta viagem
+                              await supabase
+                                .from("trip_invites")
+                                .delete()
+                                .eq("trip_id", tripId)
+                                .eq("accepted_by_user_id", member.user_id);
+                                
+                              reloadTrip();
+                            }
                           }}
                           className="text-zinc-400 hover:text-red-500"
                         >
