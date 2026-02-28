@@ -6,20 +6,23 @@ import { useTripContext } from "../../context/TripContext";
 import { FilePenLine, Trash2, Lock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
-import type { Trip, Expense, Visibility } from "../../types";
+import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
+import { Modal } from "../Modal";
+import { CurrencySelector } from "../CurrencySelector";
+import { PayerSelector } from "../PayerSelector";
+import { SplitSelector } from "../SplitSelector";
 import { currencyService } from "../../services/currencyService";
 
 interface ExpensesTabProps {
   onOpenModal: () => void;
-  onOpenEditModal: (expense: Expense) => void;
   onSetActiveTab: (tab: string) => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
-  const { trip, currentMember, categories, settings, tripBudget } = useTripContext();
+export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
+  const { trip, currentMember, members, categories, settings, tripBudget } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [rates, setRates] = useState<Record<string, number>>({});
@@ -64,6 +67,17 @@ export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTr
     visibility: "public",
     is_confirmed: false,
   });
+
+  // Estados para modal de edição completo (com splits)
+  const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editExpensePayerId, setEditExpensePayerId] = useState<string>("");
+  const [editExpenseSplits, setEditExpenseSplits] = useState<CreateExpenseSplitInput[]>([]);
+  const [editExpenseSplitType, setEditExpenseSplitType] = useState<SplitType>("equal");
+  const [editExpenseAmount, setEditExpenseAmount] = useState<string>("0");
+  const [editExpenseCurrency, setEditExpenseCurrency] = useState(settings.default_currency);
+  const [isEditExpenseSplitValid, setIsEditExpenseSplitValid] = useState(true);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
 
   const startEditExpense = (expense: Expense) => {
     setEditingExpenseId(expense.id);
@@ -121,6 +135,127 @@ export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTr
     }
 
     setEditingExpenseId(null);
+  };
+
+  const openEditExpenseModal = async (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditExpenseAmount(maskCurrency(String((expense.amount || 0) * 100)));
+    setEditExpenseCurrency(expense.currency || settings.default_currency);
+    
+    // Buscar dados extras da despesa (pagador e tipo de rateio)
+    const { data: expenseData } = await supabase
+      .from("expenses")
+      .select("paid_by_member_id, split_type")
+      .eq("id", expense.id)
+      .single();
+    
+    if (expenseData) {
+      setEditExpensePayerId(expenseData.paid_by_member_id || currentMember?.id || "");
+      setEditExpenseSplitType(expenseData.split_type || "equal");
+    } else {
+      setEditExpensePayerId(currentMember?.id || "");
+      setEditExpenseSplitType("equal");
+    }
+
+    // Buscar splits existentes
+    const { data: splitsData } = await supabase
+      .from("expense_splits")
+      .select("*")
+      .eq("expense_id", expense.id);
+    
+    if (splitsData) {
+      setEditExpenseSplits(splitsData.map(s => ({
+        member_id: s.member_id,
+        amount: s.amount,
+        percentage: s.percentage,
+      })));
+    } else {
+      setEditExpenseSplits([]);
+    }
+
+    setShowEditExpenseModal(true);
+  };
+
+  const closeEditExpenseModal = () => {
+    setShowEditExpenseModal(false);
+    setEditingExpense(null);
+    setEditExpensePayerId("");
+    setEditExpenseSplits([]);
+    setEditExpenseSplitType("equal");
+    setEditExpenseAmount("0");
+  };
+
+  const saveEditExpense = async (form: FormData) => {
+    if (!editingExpense || !currentMember) return;
+    
+    setIsSubmittingExpense(true);
+    try {
+      const visibility = "public";
+      const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+      const description = (form.get("description") as string) || "Despesa";
+      const category_id = (form.get("category_id") as string) || null;
+      const is_confirmed = form.get("is_confirmed") === "on";
+      
+      // Optimistic update
+      onTripUpdate((prev) => ({
+        ...prev,
+        expenses: prev.expenses.map((exp) =>
+          exp.id === editingExpense.id
+            ? {
+                ...exp,
+                description,
+                category_id,
+                amount,
+                currency: editExpenseCurrency,
+                visibility,
+                is_confirmed,
+                category: category_id ? categories.find(c => c.id === category_id) || null : null
+              }
+            : exp
+        ),
+      }));
+
+      const { error } = await supabase
+        .from("expenses")
+        .update({
+          description,
+          amount,
+          currency: editExpenseCurrency,
+          category_id,
+          visibility,
+          is_confirmed,
+          paid_by_member_id: editExpensePayerId,
+          split_type: editExpenseSplitType,
+        })
+        .eq("id", editingExpense.id);
+      
+      if (error) {
+        toast(getErrorMessage(error), 'error');
+      } else {
+        // Deletar splits antigos
+        await supabase.from("expense_splits").delete().eq("expense_id", editingExpense.id);
+
+        // Salvar novos splits se houver e for pública
+        if (editExpenseSplits.length > 0 && visibility === "public") {
+          const { error: splitsError } = await supabase.from("expense_splits").insert(
+            editExpenseSplits.map(split => ({
+              expense_id: editingExpense.id,
+              member_id: split.member_id,
+              amount: split.amount || 0,
+              percentage: split.percentage,
+            }))
+          );
+          
+          if (splitsError) {
+            console.error("Erro ao salvar splits na edição:", splitsError);
+          }
+        }
+        
+        closeEditExpenseModal();
+      }
+    } finally {
+      setIsSubmittingExpense(false);
+    }
   };
 
   const deleteExpense = async (expense: Expense) => {
@@ -389,7 +524,7 @@ export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTr
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => onOpenEditModal(exp)} className="text-zinc-400 hover:text-zinc-700">
+                        <button type="button" onClick={() => openEditExpenseModal(exp)} className="text-zinc-400 hover:text-zinc-700">
                           <FilePenLine size={16} />
                         </button>
                         <button
@@ -506,7 +641,7 @@ export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTr
                   <div className="flex flex-col items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => onOpenEditModal(exp)}
+                      onClick={() => openEditExpenseModal(exp)}
                       className="p-2 text-zinc-400 hover:text-zinc-700"
                     >
                       <FilePenLine size={16} />
@@ -527,6 +662,126 @@ export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTr
 
       <FloatingActionButton onClick={onOpenModal} />
       {ConfirmDialogNode}
+
+      {/* Modal de Edição Completo (com splits) */}
+      <Modal
+        isOpen={showEditExpenseModal}
+        onClose={closeEditExpenseModal}
+        title="Editar Despesa"
+        size="lg"
+        isDark={settings.dark_mode}
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await saveEditExpense(new FormData(e.currentTarget));
+          }}
+        >
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
+            <input
+              name="description"
+              disabled={isSubmittingExpense}
+              required
+              defaultValue={editingExpense?.description}
+              placeholder="Ex: Almoço"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
+          </div>
+          
+          <select
+            name="category_id"
+            disabled={isSubmittingExpense}
+            defaultValue={editingExpense?.category_id || ""}
+            className={cn(
+              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+            )}
+          >
+            <option value="">Sem categoria</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Valor</label>
+              <input
+                name="amount"
+                disabled={isSubmittingExpense}
+                required
+                placeholder="0,00"
+                value={editExpenseAmount}
+                className={cn(
+                  "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
+                onChange={(e) => {
+                  const masked = maskCurrency(e.target.value);
+                  setEditExpenseAmount(masked);
+                  e.target.value = masked;
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Moeda</label>
+              <CurrencySelector
+                value={editExpenseCurrency}
+                onChange={setEditExpenseCurrency}
+                disabled={isSubmittingExpense}
+              />
+            </div>
+          </div>
+          
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="is_confirmed"
+              disabled={isSubmittingExpense}
+              defaultChecked={editingExpense?.is_confirmed}
+            />
+            Marcar como confirmada
+          </label>
+          
+          {/* Seção de Rateio */}
+          <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
+            
+            <PayerSelector
+              members={members}
+              selectedPayerId={editExpensePayerId}
+              currentUserId={currentMember?.user_id || ""}
+              onSelect={setEditExpensePayerId}
+            />
+            
+            <SplitSelector
+              key={`edit-expense-split-${editingExpense?.id || 'new'}`}
+              members={members}
+              totalAmount={parseCurrencyToNumber(editExpenseAmount) || 0}
+              currentUserId={currentMember?.user_id || ""}
+              onSplitsChange={(splits, splitType, isValid) => {
+                setEditExpenseSplits(splits);
+                setEditExpenseSplitType(splitType);
+                setIsEditExpenseSplitValid(isValid);
+              }}
+              initialSplits={editExpenseSplits}
+              initialSplitType={editExpenseSplitType}
+            />
+          </div>
+          
+          <button
+            disabled={isSubmittingExpense || !isEditExpenseSplitValid}
+            className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmittingExpense ? "Salvando..." : "Salvar Alterações"}
+          </button>
+        </form>
+      </Modal>
     </motion.div>
   );
 }
