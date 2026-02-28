@@ -38,7 +38,15 @@ interface TripDashboardProps {
   onSettingsChange: (next: UserSettings) => void;
 }
 
-type TabType = "itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings";
+type ActiveTab = "itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings";
+
+const VALID_TABS: readonly ActiveTab[] = [
+  "itinerary", "expenses", "ideas", "documents", "people", "settings",
+] as const;
+
+function isValidTab(value: string): value is ActiveTab {
+  return (VALID_TABS as readonly string[]).includes(value);
+}
 
 function TripDashboard({ session, settings, onSettingsChange }: TripDashboardProps) {
   const { id } = useParams();
@@ -76,8 +84,18 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   const { toast } = useToast();
   
   // Estado local apenas para UI
-  const [activeTab, setActiveTab] = useState<TabType>("itinerary");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("itinerary");
 
+  // Restaurar aba salva quando a viagem carrega (uma vez por id)
+  useEffect(() => {
+    if (!tripId) return;
+    const saved = localStorage.getItem(`activeTab_${tripId}`);
+    if (saved && isValidTab(saved)) {
+      setActiveTab(saved);
+    }
+  }, [tripId]);
+
+  // Persistir aba atual
   useEffect(() => {
     if (tripId) {
       localStorage.setItem(`activeTab_${tripId}`, activeTab);
