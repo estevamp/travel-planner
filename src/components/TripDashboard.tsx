@@ -102,22 +102,28 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   // variants para slide horizontal
   const tabVariants = {
     enter: (dir: number) => ({
-      x: dir === 0 ? 0 : (dir < 0 ? 100 : -100),
+      x: dir === 0 ? 0 : (dir < 0 ? "100%" : "-100%"),
       opacity: 0,
       position: "absolute" as const,
-      width: "100%"
+      width: "100%",
+      backfaceVisibility: "hidden" as const,
+      WebkitBackfaceVisibility: "hidden" as const,
     }),
     center: {
       x: 0,
       opacity: 1,
       position: "relative" as const,
-      width: "100%"
+      width: "100%",
+      backfaceVisibility: "hidden" as const,
+      WebkitBackfaceVisibility: "hidden" as const,
     },
     exit: (dir: number) => ({
-      x: dir === 0 ? 0 : (dir < 0 ? -100 : 100),
+      x: dir === 0 ? 0 : (dir < 0 ? "-100%" : "100%"),
       opacity: 0,
       position: "absolute" as const,
-      width: "100%"
+      width: "100%",
+      backfaceVisibility: "hidden" as const,
+      WebkitBackfaceVisibility: "hidden" as const,
     }),
   };
   
@@ -452,7 +458,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:p-10"
+      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:p-10 relative"
+        style={{ WebkitOverflowScrolling: 'touch' }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         >
@@ -581,7 +588,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="popLayout" custom={direction}>
+        <AnimatePresence mode="popLayout" custom={direction} initial={false}>
           {activeTab === "itinerary" && (
             <motion.div key="itinerary" custom={direction} variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: "easeInOut" }}>
               <ItineraryTab
