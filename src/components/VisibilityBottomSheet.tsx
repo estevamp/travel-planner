@@ -39,7 +39,7 @@ export const VisibilityBottomSheet: React.FC<VisibilityBottomSheetProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`fixed bottom-0 left-0 right-0 z-[101] rounded-t-3xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl ${
+            className={`fixed bottom-0 left-0 right-0 z-[101] rounded-t-3xl p-6 pb-[calc(5rem+env(safe-area-inset-bottom))] shadow-2xl ${
               isDark ? 'bg-gray-900 text-white' : 'bg-[var(--card-bg)] text-[var(--foreground)]'
             }`}
           >
