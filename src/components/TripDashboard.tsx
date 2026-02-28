@@ -421,7 +421,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <SidebarItem icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
           <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
           <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
-          <SidebarItem icon={Users} label="Pessoas" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
+          <SidebarItem icon={Users} label="Amigos" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
           <SidebarItem icon={Settings} label="Configurações" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
         <div className="flex-1 flex flex-col min-h-0">
@@ -974,7 +974,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             { tab: "ideas",      icon: Lightbulb,        label: "Ideias"    },
             { tab: "expenses",   icon: DollarSign,       label: "Despesas"  },
             { tab: "documents",  icon: FileText,          label: "Docs"      },
-            { tab: "people",     icon: Users,             label: "Pessoas"   },
+            { tab: "people",     icon: Users,             label: "Amigos"   },
           ] as const).map(({ tab, icon: Icon, label }) => {
             const isActive = activeTab === tab;
             return (

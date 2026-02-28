@@ -302,7 +302,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
 
       {isAdmin && (
         <Card>
-          <h3 className="font-bold mb-4">Convidar pessoa</h3>
+          <h3 className="font-bold mb-4">Convidar um amigo</h3>
           <div className="flex flex-col md:flex-row gap-3">
             <input
               value={inviteEmail}
