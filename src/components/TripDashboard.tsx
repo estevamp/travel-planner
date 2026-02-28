@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
 import { getThemeStyles } from "../utils/theme";
+import { useSwipeTabs } from "../hooks/useSwipeTabs";
 import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType } from "../types";
 
 // Context
@@ -86,7 +87,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   // Estado local apenas para UI
   const [activeTab, setActiveTab] = useState<ActiveTab>("itinerary");
 
-  // Restaurar aba salva quando a viagem carrega (uma vez por id)
+    // Restaurar aba salva quando a viagem carrega (uma vez por id)
   useEffect(() => {
     if (!tripId) return;
     const saved = localStorage.getItem(`activeTab_${tripId}`);
@@ -95,6 +96,16 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     }
   }, [tripId]);
 
+  const [swipeDirection, setSwipeDirection] = useState(0); // -1 esq, 1 dir
+  const { onTouchStart, onTouchEnd, direction } = useSwipeTabs(activeTab, setActiveTab);
+
+  // variants para slide horizontal
+  const tabVariants = {
+    enter: (dir: number) => ({ x: dir < 0 ? 80 : -80, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir < 0 ? -80 : 80, opacity: 0 }),
+  };
+  
   // Persistir aba atual
   useEffect(() => {
     if (tripId) {
@@ -426,7 +437,10 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:p-10">
+      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:p-10"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        >
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
@@ -553,46 +567,92 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
         </AnimatePresence>
 
         {/* Tabs Content - Componentes separados */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction}>
           {activeTab === "itinerary" && (
-            <ItineraryTab
-              onOpenModal={() => openModal('itinerary')}
-              onTripUpdate={setTrip}
+            <motion.div
+              key="itinerary"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             />
           )}
-
           {activeTab === "expenses" && (
-            <ExpensesTab
-              onOpenModal={() => openModal('expense')}
-              onSetActiveTab={setActiveTab}
-              onTripUpdate={setTrip}
+            <motion.div
+              key="expenses"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             />
           )}
-
           {activeTab === "ideas" && (
-            <IdeasTab
-              onOpenModal={() => openModal('idea')}
-              onSetActiveTab={setActiveTab}
-              onTripUpdate={setTrip}
+            <motion.div
+              key="ideas"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             />
           )}
-
           {activeTab === "documents" && (
-            <DocumentsTab
-              onTripUpdate={setTrip}
+            <motion.div
+              key="documents"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             />
           )}
-
           {activeTab === "people" && (
-            <PeopleTab
-              onTripUpdate={setTrip}
+            <motion.div
+              key="people"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             />
           )}
-
           {activeTab === "settings" && (
-            <SettingsTab />
+            <motion.div
+              key="settings"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+            />
           )}
         </AnimatePresence>
+
+        <AnimatePresence mode="wait" custom={direction}>
+          {activeTab === "itinerary" && (
+            <motion.div
+              key="itinerary"
+              custom={direction}
+              variants={tabVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+            >
+              <ItineraryTab ... />
+            </motion.div>
+          )}
+          {/* Repetir para cada aba */}
+        </AnimatePresence>
+
       </main>
 
       {/* Modals */}
@@ -918,147 +978,37 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       </Modal>
 
       {/* Mobile Navigation */}
-      {/* LAYOUT: nav com relative para dot indicator */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 text-[var(--sidebar-text)] relative">
-        <div className="grid grid-cols-6">
-          {/* LAYOUT: bottom nav com label, indicador ativo e touch target adequado */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("itinerary")}
-            className={cn(
-              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
-              activeTab === "itinerary"
-                ? "text-[var(--sidebar-active-bg)]"
-                : "text-[var(--sidebar-text)] opacity-60"
-            )}
-          >
-            <LayoutDashboard size={22} strokeWidth={activeTab === "itinerary" ? 2.5 : 2} />
-            <span className={cn(
-              "text-[10px] tracking-wide",
-              activeTab === "itinerary" ? "font-bold" : "font-normal"
-            )}>
-              Roteiro
-            </span>
-            {/* LAYOUT: dot indicator no item ativo */}
-            {activeTab === "itinerary" && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("expenses")}
-            className={cn(
-              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
-              activeTab === "expenses"
-                ? "text-[var(--sidebar-active-bg)]"
-                : "text-[var(--sidebar-text)] opacity-60"
-            )}
-          >
-            <DollarSign size={22} strokeWidth={activeTab === "expenses" ? 2.5 : 2} />
-            <span className={cn(
-              "text-[10px] tracking-wide",
-              activeTab === "expenses" ? "font-bold" : "font-normal"
-            )}>
-              Gastos
-            </span>
-            {/* LAYOUT: dot indicator no item ativo */}
-            {activeTab === "expenses" && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("ideas")}
-            className={cn(
-              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
-              activeTab === "ideas"
-                ? "text-[var(--sidebar-active-bg)]"
-                : "text-[var(--sidebar-text)] opacity-60"
-            )}
-          >
-            <Lightbulb size={22} strokeWidth={activeTab === "ideas" ? 2.5 : 2} />
-            <span className={cn(
-              "text-[10px] tracking-wide",
-              activeTab === "ideas" ? "font-bold" : "font-normal"
-            )}>
-              Ideias
-            </span>
-            {/* LAYOUT: dot indicator no item ativo */}
-            {activeTab === "ideas" && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("documents")}
-            className={cn(
-              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
-              activeTab === "documents"
-                ? "text-[var(--sidebar-active-bg)]"
-                : "text-[var(--sidebar-text)] opacity-60"
-            )}
-          >
-            <FileText size={22} strokeWidth={activeTab === "documents" ? 2.5 : 2} />
-            <span className={cn(
-              "text-[10px] tracking-wide",
-              activeTab === "documents" ? "font-bold" : "font-normal"
-            )}>
-              Docs
-            </span>
-            {/* LAYOUT: dot indicator no item ativo */}
-            {activeTab === "documents" && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("people")}
-            className={cn(
-              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
-              activeTab === "people"
-                ? "text-[var(--sidebar-active-bg)]"
-                : "text-[var(--sidebar-text)] opacity-60"
-            )}
-          >
-            <Users size={22} strokeWidth={activeTab === "people" ? 2.5 : 2} />
-            <span className={cn(
-              "text-[10px] tracking-wide",
-              activeTab === "people" ? "font-bold" : "font-normal"
-            )}>
-              Pessoas
-            </span>
-            {/* LAYOUT: dot indicator no item ativo */}
-            {activeTab === "people" && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("settings")}
-            className={cn(
-              "flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] flex-1 transition-all duration-150",
-              activeTab === "settings"
-                ? "text-[var(--sidebar-active-bg)]"
-                : "text-[var(--sidebar-text)] opacity-60"
-            )}
-          >
-            <Settings size={22} strokeWidth={activeTab === "settings" ? 2.5 : 2} />
-            <span className={cn(
-              "text-[10px] tracking-wide",
-              activeTab === "settings" ? "font-bold" : "font-normal"
-            )}>
-              Config
-            </span>
-            {/* LAYOUT: dot indicator no item ativo */}
-            {activeTab === "settings" && (
-              <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--sidebar-active-bg)]" />
-            )}
-          </button>
+      <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md text-[var(--sidebar-text)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="grid grid-cols-6 h-16">
+          {([
+            { tab: "itinerary",  icon: LayoutDashboard, label: "Roteiro"   },
+            { tab: "expenses",   icon: DollarSign,       label: "Despesas"  },
+            { tab: "ideas",      icon: Lightbulb,        label: "Ideias"    },
+            { tab: "documents",  icon: FileText,          label: "Docs"      },
+            { tab: "people",     icon: Users,             label: "Pessoas"   },
+            { tab: "settings",   icon: Settings,          label: "Config"    },
+          ] as const).map(({ tab, icon: Icon, label }) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
+                style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+              >
+                {/* Indicador ativo */}
+                {isActive && (
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full transition-all duration-300"
+                    style={{ backgroundColor: 'var(--sidebar-active-bg)' }}
+                  />
+                )}
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                <span className="text-[9px] font-medium tracking-wide">{label}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
 
