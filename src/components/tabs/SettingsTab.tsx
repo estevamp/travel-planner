@@ -231,8 +231,9 @@ export function SettingsTab() {
       </Card>
 
       {/* ── 2. CATEGORIAS DE DESPESAS ── */}
-      <Card className="space-y-6">
-        <div className="flex items-center gap-3">
+      {isAdmin && (
+        <Card className="space-y-6">
+          <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
             <FileText size={20} className="text-white" />
           </div>
@@ -327,12 +328,14 @@ export function SettingsTab() {
               </div>
             )}
           </div>
-        </div>
-      </Card>
+          </div>
+        </Card>
+      )}
 
       {/* ── 3. TIPOS DE ATIVIDADE ── */}
-      <Card className="space-y-6">
-        <div className="flex items-center gap-3">
+      {isAdmin && (
+        <Card className="space-y-6">
+          <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
             <Plus size={20} className="text-white" />
           </div>
@@ -562,8 +565,9 @@ export function SettingsTab() {
               </div>
             )}
           </div>
-        </div>
-      </Card>
+          </div>
+        </Card>
+      )}
 
       {/* ── 4. APARÊNCIA & TEMAS (moved to end, dark mode included) ── */}
       {isAdmin && trip && (
