@@ -2,25 +2,23 @@ import React, { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useTripContext } from "../../context/TripContext";
 import { Plus, FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CopyPlus, ImagePlus, X } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
-import type { Trip, Idea, IdeaLink, IdeaAsset, TripMember, UserSettings, Visibility } from "../../types";
+import type { Trip, Idea, IdeaLink, IdeaAsset, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 
 interface IdeasTabProps {
-  trip: Trip;
-  currentMember: TripMember | null;
-  isAdmin: boolean;
-  settings: UserSettings;
   onOpenModal: () => void;
   onSetActiveTab: (tab: string) => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function IdeasTab({ trip, currentMember, isAdmin, settings, onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
+export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
+  const { trip, currentMember, isAdmin, settings } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);

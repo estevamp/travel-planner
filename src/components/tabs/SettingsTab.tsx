@@ -2,62 +2,29 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useTripContext } from "../../context/TripContext";
 import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
-import type { Trip, TripMember, UserSettings, ExpenseCategory, ItineraryType, TripBudget } from "../../types";
+import type { Trip, UserSettings } from "../../types";
 import { Card } from "../Card";
 
 interface SettingsTabProps {
-  trip: Trip;
-  tripId: string;
-  currentMember: TripMember | null;
-  isAdmin: boolean;
-  settings: UserSettings;
-  members: TripMember[];
-  categories: ExpenseCategory[];
-  itineraryTypes: ItineraryType[];
-  onSetItineraryTypes: (types: ItineraryType[]) => void;
-  tripBudget: TripBudget | null;
-  budgetOwnerUserId: string;
-  budgetCurrency: string;
-  userId: string;
-  onSettingsChange: (next: UserSettings) => void;
-  onSetCategories: (categories: ExpenseCategory[]) => void;
-  onSetTripBudget: (budget: TripBudget | null) => void;
-  onSetTrip: (trip: Trip) => void;
-  onDeleteTrip: () => void;
-  onReloadTripOptions: () => void;
-  onNavigateToAbout: () => void;
+  // Nenhuma prop necessária — tudo vem do contexto
 }
 
 const ICON_COMPONENTS: Record<string, any> = {
   Plane, Bus, Train, Ship, Car, Hotel, Utensils, Coffee, ShoppingBag, Camera, MapPin, Music, Ticket, Umbrella, Mountain, Waves, Palmtree, Wine, Beer, Footprints, Bike, Theater, Landmark, Castle, Church, Stethoscope, Briefcase, Calendar
 };
 
-export function SettingsTab({
-  trip,
-  tripId,
-  currentMember,
-  isAdmin,
-  settings,
-  members,
-  categories,
-  itineraryTypes,
-  onSetItineraryTypes,
-  tripBudget,
-  budgetOwnerUserId,
-  budgetCurrency,
-  userId,
-  onSettingsChange,
-  onSetCategories,
-  onSetTripBudget,
-  onSetTrip,
-  onDeleteTrip,
-  onReloadTripOptions,
-  onNavigateToAbout,
-}: SettingsTabProps) {
+export function SettingsTab() {
+  const {
+    trip, tripId, currentMember, isAdmin, settings, onSettingsChange,
+    members, categories, setCategories, itineraryTypes, setItineraryTypes,
+    tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency,
+    userId, deleteCurrentTrip, navigateToAbout, reloadTripOptions, setTrip
+  } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [settingsDraft, setSettingsDraft] = useState<UserSettings>(settings);
@@ -138,7 +105,7 @@ export function SettingsTab({
     setUpdatingTrip(true);
 
     // Optimistic update
-    onSetTrip({ ...trip, name, destination });
+    setTrip({ ...trip, name, destination });
 
     const { error } = await supabase.from("trips").update({
       name,
@@ -149,10 +116,10 @@ export function SettingsTab({
     if (error) {
       toast(getErrorMessage(error), 'error');
       // Rollback
-      onSetTrip(trip);
+      setTrip(trip);
       return;
     }
-    await onReloadTripOptions();
+    await reloadTripOptions();
   };
 
   return (
@@ -226,7 +193,7 @@ export function SettingsTab({
                 setSavingBudget(true);
                 
                 // Optimistic update
-                onSetTripBudget({
+                setTripBudget({
                   id: tripBudget?.id || "",
                   trip_id: tripId,
                   owner_user_id: budgetOwnerUserId || userId,
@@ -248,7 +215,7 @@ export function SettingsTab({
                 if (error) {
                   toast(getErrorMessage(error), 'error');
                   // Rollback
-                  onSetTripBudget(tripBudget);
+                  setTripBudget(tripBudget);
                 } else {
                   setBudgetDraft(null);
                 }
@@ -350,7 +317,7 @@ export function SettingsTab({
             <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
-                onClick={onDeleteTrip}
+                onClick={deleteCurrentTrip}
                 disabled={updatingTrip}
                 className={cn(
                   "px-4 py-3 rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
@@ -395,7 +362,7 @@ export function SettingsTab({
                         if (isActive) return; // Don't update if already active
                         
                         // Optimistic update
-                        onSetTrip({ ...trip, theme_palette: theme });
+                        setTrip({ ...trip, theme_palette: theme });
 
                         const { error } = await supabase
                           .from("trips")
@@ -404,7 +371,7 @@ export function SettingsTab({
                         if (error) {
                           toast(getErrorMessage(error), 'error');
                           // Rollback
-                          onSetTrip(trip);
+                          setTrip(trip);
                           return;
                         }
                       }}
@@ -476,7 +443,7 @@ export function SettingsTab({
               if (error) {
                 toast(getErrorMessage(error), 'error');
               } else {
-                if (data) onSetCategories([...categories, data as ExpenseCategory].sort((a, b) => a.name.localeCompare(b.name)));
+                if (data) setCategories([...categories, data].sort((a, b) => a.name.localeCompare(b.name)));
                 (e.target as HTMLFormElement).reset();
               }
             }}
@@ -521,13 +488,13 @@ export function SettingsTab({
                     if (!confirmed) return;
                     
                     // Optimistic update
-                    onSetCategories(categories.filter(c => c.id !== cat.id));
+                    setCategories(categories.filter(c => c.id !== cat.id));
 
                     const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
                     if (error) {
                       toast(getErrorMessage(error), 'error');
                       // Rollback
-                      onSetCategories(categories);
+                      setCategories(categories);
                     }
                   }}
                   className={cn(
@@ -575,7 +542,7 @@ export function SettingsTab({
               if (error) {
                 toast(getErrorMessage(error), 'error');
               } else {
-                if (data) onSetItineraryTypes([...itineraryTypes, data as ItineraryType].sort((a, b) => a.name.localeCompare(b.name)));
+                if (data) setItineraryTypes([...itineraryTypes, data].sort((a, b) => a.name.localeCompare(b.name)));
                 (e.target as HTMLFormElement).reset();
               }
             }}
@@ -659,7 +626,7 @@ export function SettingsTab({
                             if (error) {
                               toast(getErrorMessage(error), 'error');
                             } else {
-                              onSetItineraryTypes(
+                              setItineraryTypes(
                                 itineraryTypes.map((t) =>
                                   t.id === type.id ? { ...t, name: editTypeName.trim(), icon: editTypeIcon } : t
                                 ).sort((a, b) => a.name.localeCompare(b.name))
@@ -753,13 +720,13 @@ export function SettingsTab({
                         if (!confirmed) return;
                         
                         // Optimistic update
-                        onSetItineraryTypes(itineraryTypes.filter(t => t.id !== type.id));
+                        setItineraryTypes(itineraryTypes.filter(t => t.id !== type.id));
 
                         const { error } = await supabase.from("itinerary_types").delete().eq("id", type.id);
                         if (error) {
                           toast(getErrorMessage(error), 'error');
                           // Rollback
-                          onSetItineraryTypes(itineraryTypes);
+                          setItineraryTypes(itineraryTypes);
                         }
                       }}
                       className={cn(
@@ -796,7 +763,7 @@ export function SettingsTab({
 
       <div className="pt-4">
         <button
-          onClick={onNavigateToAbout}
+          onClick={navigateToAbout}
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <Info size={18} />

@@ -8,13 +8,12 @@ import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage }
 import { getThemeStyles } from "../utils/theme";
 import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType } from "../types";
 
+// Context
+import { TripProvider, useTripContext } from "../context/TripContext";
+
 // Hooks customizados
-import { useTripData } from "../hooks/useTripData";
-import { useTripBudget } from "../hooks/useTripBudget";
 import { useTripList } from "../hooks/useTripList";
 import { useToast } from "../hooks/useToast";
-import { useConfirm } from "../hooks/useConfirm";
-import { useRealtimeTrip } from "../hooks/useRealtimeTrip";
 
 // Componentes de abas
 import { ItineraryTab } from "./tabs/ItineraryTab";
@@ -39,37 +38,51 @@ interface TripDashboardProps {
   onSettingsChange: (next: UserSettings) => void;
 }
 
+type TabType = "itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings";
+
 function TripDashboard({ session, settings, onSettingsChange }: TripDashboardProps) {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  if (!id) return null;
+
+  return (
+    <TripProvider
+      tripId={id}
+      userId={session.user.id}
+      settings={settings}
+      onSettingsChange={onSettingsChange}
+      onTripDeleted={() => navigate('/')}
+    >
+      <TripDashboardContent session={session} />
+    </TripProvider>
+  );
+}
+
+interface TripDashboardContentProps {
+  session: Session;
+}
+
+function TripDashboardContent({ session }: TripDashboardContentProps) {
+  const navigate = useNavigate();
   
-  // Hooks customizados - toda lógica de dados encapsulada
+  // Get data from context
   const {
-    trip, setTrip, members, invites, categories, setCategories,
-    itineraryTypes, setItineraryTypes, loading, loadError, notAuthorized,
-    spouseByUserId, setSpouseByUserId, reloadTrip,
-    reloadItinerary, reloadExpenses, reloadDocuments, reloadIdeas, reloadMembers,
-  } = useTripData(id, session.user.id);
-  const { tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency, reloadBudget } = useTripBudget(id, session.user.id);
-  const { tripOptions, createTripFromSidebar, creatingTripFromSidebar, reloadTripOptions } = useTripList();
+    trip, setTrip, members, categories, itineraryTypes, currentMember, isAdmin,
+    settings, tripId, tripBudget
+  } = useTripContext();
+  
+  const { tripOptions, createTripFromSidebar, creatingTripFromSidebar } = useTripList();
   const { toast } = useToast();
-  const { confirm, ConfirmDialogNode } = useConfirm();
   
   // Estado local apenas para UI
-  const [activeTab, setActiveTab] = useState<"itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings">("itinerary");
+  const [activeTab, setActiveTab] = useState<TabType>("itinerary");
 
   useEffect(() => {
-    if (notAuthorized) {
-      toast('Você não tem acesso a esta viagem.', 'error');
-      navigate('/');
+    if (tripId) {
+      localStorage.setItem(`activeTab_${tripId}`, activeTab);
     }
-  }, [notAuthorized, navigate, toast]);
-
-  useEffect(() => {
-    if (id) {
-      localStorage.setItem(`activeTab_${id}`, activeTab);
-    }
-  }, [activeTab, id]);
+  }, [activeTab, tripId]);
   const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -105,10 +118,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   const [editExpenseCurrency, setEditExpenseCurrency] = useState(settings.default_currency);
   const [isEditExpenseSplitValid, setIsEditExpenseSplitValid] = useState(true);
 
-  // Computed values
-  const currentMember = useMemo(() => members.find((member) => member.user_id === session.user.id) || null, [members, session.user.id]);
-  const isAdmin = currentMember?.role === "admin";
-  
   const themedStyles = useMemo(() => {
     const effectivePalette = trip?.theme_palette && trip.theme_palette !== 'default'
       ? trip.theme_palette
@@ -191,20 +200,9 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
     setEditExpenseAmount("0");
   };
 
-  // Realtime subscriptions centralizadas
-  useRealtimeTrip(id, {
-    onItineraryChange: reloadItinerary,
-    onExpensesChange: reloadExpenses,
-    onDocumentsChange: reloadDocuments,
-    onIdeasChange: reloadIdeas,
-    onMembersChange: reloadMembers,
-    onBudgetChange: reloadBudget,
-    onGlobalCatalogChange: reloadTrip,
-  });
-
   // Funções de criação (mantidas aqui pois são usadas nos modais)
   const createItinerary = async (form: FormData) => {
-    if (!id || !currentMember) return;
+    if (!tripId || !currentMember) return;
     
     setIsSubmittingItinerary(true);
     try {
@@ -244,7 +242,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       // Optimistic update
       const newItem: ItineraryItem = {
         id: itineraryId,
-        trip_id: id,
+        trip_id: tripId,
         created_by_member_id: currentMember.id,
         type_id,
         type: type_id ? itineraryTypes.find(t => t.id === type_id) : null,
@@ -264,7 +262,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
       const { error } = await supabase.from("itinerary").insert({
         id: itineraryId,
-      trip_id: id,
+      trip_id: tripId,
       created_by_member_id: currentMember.id,
       type_id,
       title,
@@ -290,7 +288,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   };
 
   const createExpense = async (form: FormData) => {
-    if (!id || !currentMember) return;
+    if (!tripId || !currentMember) return;
     
     setIsSubmittingExpense(true);
     try {
@@ -304,7 +302,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       // Optimistic update
       const newExpense: Expense = {
         id: expenseId,
-        trip_id: id,
+        trip_id: tripId,
         created_by_member_id: currentMember.id,
         description,
         amount,
@@ -320,7 +318,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
       const { error } = await supabase.from("expenses").insert({
         id: expenseId,
-        trip_id: id,
+        trip_id: tripId,
         created_by_member_id: currentMember.id,
         description,
         amount,
@@ -362,7 +360,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   };
 
   const saveEditExpense = async (form: FormData) => {
-    if (!editingExpense || !id || !currentMember) return;
+    if (!editingExpense || !tripId || !currentMember) return;
     
     setIsSubmittingExpense(true);
     try {
@@ -435,7 +433,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
   };
 
   const createIdea = async (form: FormData) => {
-    if (!id || !currentMember) return;
+    if (!tripId || !currentMember) return;
     
     setIsSubmittingIdea(true);
     try {
@@ -450,7 +448,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       // Optimistic update
       const newIdea: Idea = {
         id: ideaId,
-        trip_id: id,
+        trip_id: tripId,
         created_by_member_id: currentMember.id,
         title,
         notes,
@@ -458,6 +456,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         estimated_amount: 0,
         currency: ideaCurrency,
         visibility,
+        is_converted: false,
         created_at: new Date().toISOString(),
       };
 
@@ -465,7 +464,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
       const { error } = await supabase.from("ideas").insert({
         id: ideaId,
-        trip_id: id,
+        trip_id: tripId,
         created_by_member_id: currentMember.id,
         title,
         notes,
@@ -486,56 +485,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       setIsSubmittingIdea(false);
     }
   };
-
-  const deleteCurrentTrip = async () => {
-    if (!id || !trip || !isAdmin) return;
-    const confirmed = await confirm({
-      title: 'Excluir viagem?',
-      message: `Excluir a viagem "${trip.name}"? Esta ação não pode ser desfeita.`,
-      variant: 'danger',
-      isDark: settings.dark_mode
-    });
-    if (!confirmed) return;
-
-    const { error } = await supabase.from("trips").delete().eq("id", id);
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-      return;
-    }
-
-    await reloadTripOptions();
-    navigate("/");
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)]" style={themedStyles}>
-        <p className="text-zinc-500 animate-pulse">Carregando viagem...</p>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 bg-[var(--bg-color)]" style={themedStyles}>
-        <p className="text-red-500 font-semibold text-center">{loadError}</p>
-        <button
-          onClick={() => void reloadTrip()}
-          className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-bold hover:bg-zinc-700 transition-colors"
-        >
-          Tentar novamente
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          className="text-sm text-zinc-500 hover:underline"
-        >
-          Voltar para minhas viagens
-        </button>
-      </div>
-    );
-  }
-
-  if (!trip) return null; // notAuthorized vai redirecionar via useEffect acima
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
@@ -560,7 +509,7 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
               <button
                 key={option.id}
                 onClick={() => navigate(`/trip/${option.id}`)}
-                className={cn("w-full text-left rounded-xl border px-3 py-2", option.id === id ? "bg-[var(--sidebar-hover)] border-[var(--sidebar-active-bg)]" : "border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)]")}
+                className={cn("w-full text-left rounded-xl border px-3 py-2", option.id === tripId ? "bg-[var(--sidebar-hover)] border-[var(--sidebar-active-bg)]" : "border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)]")}
               >
                 <p className="text-sm font-semibold truncate">{option.name}</p>
                 <p className="text-xs opacity-80 truncate">{option.destination || "Sem destino"}</p>
@@ -678,11 +627,11 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
                         }}
                         className={cn(
                           "w-full text-left rounded-2xl border p-4 transition-all",
-                          option.id === id
+                          option.id === tripId
                             ? "bg-[var(--sidebar-active-bg)] border-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
                             : ""
                         )}
-                        style={option.id !== id ? {
+                        style={option.id !== tripId ? {
                           backgroundColor: 'var(--card-bg)',
                           borderColor: 'var(--card-border)'
                         } : undefined}
@@ -714,10 +663,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
         <AnimatePresence mode="wait">
           {activeTab === "itinerary" && (
             <ItineraryTab
-              trip={trip}
-              currentMember={currentMember}
-              settings={settings}
-              itineraryTypes={itineraryTypes}
               onOpenModal={() => openModal('itinerary')}
               onTripUpdate={setTrip}
             />
@@ -725,11 +670,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
           {activeTab === "expenses" && (
             <ExpensesTab
-              trip={trip}
-              currentMember={currentMember}
-              categories={categories}
-              settings={settings}
-              tripBudget={tripBudget}
               onOpenModal={() => openModal('expense')}
               onOpenEditModal={openEditExpenseModal}
               onSetActiveTab={setActiveTab}
@@ -739,10 +679,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
           {activeTab === "ideas" && (
             <IdeasTab
-              trip={trip}
-              currentMember={currentMember}
-              isAdmin={isAdmin}
-              settings={settings}
               onOpenModal={() => openModal('idea')}
               onSetActiveTab={setActiveTab}
               onTripUpdate={setTrip}
@@ -751,52 +687,18 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
 
           {activeTab === "documents" && (
             <DocumentsTab
-              trip={trip}
-              currentMember={currentMember}
-              tripId={id!}
               onTripUpdate={setTrip}
-              isDark={settings.dark_mode}
             />
           )}
 
           {activeTab === "people" && (
             <PeopleTab
-              tripId={id!}
-              members={members}
-              invites={invites}
-              currentMember={currentMember}
-              isAdmin={isAdmin}
-              settings={settings}
-              spouseByUserId={spouseByUserId}
-              trip={trip}
-              onSettingsChange={onSettingsChange}
-              onReloadTrip={reloadTrip}
+              onTripUpdate={setTrip}
             />
           )}
 
           {activeTab === "settings" && (
-            <SettingsTab
-              trip={trip}
-              tripId={id!}
-              currentMember={currentMember}
-              isAdmin={isAdmin}
-              settings={settings}
-              members={members}
-              categories={categories}
-              itineraryTypes={itineraryTypes}
-              onSetItineraryTypes={setItineraryTypes}
-              tripBudget={tripBudget}
-              budgetOwnerUserId={budgetOwnerUserId}
-              budgetCurrency={budgetCurrency}
-              userId={session.user.id}
-              onSettingsChange={onSettingsChange}
-              onSetCategories={setCategories}
-              onSetTripBudget={setTripBudget}
-              onSetTrip={setTrip}
-              onDeleteTrip={deleteCurrentTrip}
-              onReloadTripOptions={reloadTripOptions}
-              onNavigateToAbout={() => navigate("/about")}
-            />
+            <SettingsTab />
           )}
         </AnimatePresence>
       </main>
@@ -1279,8 +1181,6 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
           }
         }}
       />
-
-      {ConfirmDialogNode}
     </div>
   );
 }

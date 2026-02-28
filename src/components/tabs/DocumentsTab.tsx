@@ -2,23 +2,22 @@ import React, { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useTripContext } from "../../context/TripContext";
 import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { supabase } from "../../supabase";
 import { getErrorMessage, resizeImage } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
-import type { Trip, TripMember } from "../../types";
+import type { Trip } from "../../types";
 import { Card } from "../Card";
 import { DocumentViewer } from "../DocumentViewer";
 
 interface DocumentsTabProps {
-  trip: Trip;
-  currentMember: TripMember | null;
-  tripId: string;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
-  isDark?: boolean;
 }
 
-export function DocumentsTab({ trip, currentMember, tripId, onTripUpdate, isDark = false }: DocumentsTabProps) {
+export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
+  const { trip, currentMember, tripId, settings } = useTripContext();
+  const isDark = settings.dark_mode;
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const documentInputRef = useRef<HTMLInputElement | null>(null);

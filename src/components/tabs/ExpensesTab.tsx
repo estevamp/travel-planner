@@ -2,27 +2,24 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useTripContext } from "../../context/TripContext";
 import { FilePenLine, Trash2, Lock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
-import type { Trip, Expense, ExpenseCategory, TripMember, UserSettings, Visibility, TripBudget } from "../../types";
+import type { Trip, Expense, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { currencyService } from "../../services/currencyService";
 
 interface ExpensesTabProps {
-  trip: Trip;
-  currentMember: TripMember | null;
-  categories: ExpenseCategory[];
-  settings: UserSettings;
-  tripBudget: TripBudget | null;
   onOpenModal: () => void;
   onOpenEditModal: (expense: Expense) => void;
   onSetActiveTab: (tab: string) => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function ExpensesTab({ trip, currentMember, categories, settings, tripBudget, onOpenModal, onOpenEditModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
+export function ExpensesTab({ onOpenModal, onOpenEditModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
+  const { trip, currentMember, categories, settings, tripBudget } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [rates, setRates] = useState<Record<string, number>>({});

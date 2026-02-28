@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useTripContext } from "../../context/TripContext";
 import { UserPlus, Trash2 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage } from "../../utils";
-import type { TripMember, TripInvite, UserSettings, Trip, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
+import type { Trip, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
 import { Card } from "../Card";
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
@@ -13,32 +14,14 @@ import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
 import { currencyService } from "../../services/currencyService";
 
 interface PeopleTabProps {
-  tripId: string;
-  members: TripMember[];
-  invites: TripInvite[];
-  currentMember: TripMember | null;
-  isAdmin: boolean;
-  settings: UserSettings;
-  spouseByUserId: Map<string, string | null>;
-  trip: Trip;
-  onSettingsChange: (next: UserSettings) => void;
-  onReloadTrip: () => void;
-  onTripUpdate?: (updater: (prev: Trip) => Trip) => void;
+  onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
-export function PeopleTab({
-  tripId,
-  members,
-  invites,
-  currentMember,
-  isAdmin,
-  settings,
-  spouseByUserId,
-  trip,
-  onSettingsChange,
-  onReloadTrip,
-  onTripUpdate,
-}: PeopleTabProps) {
+export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
+  const {
+    trip, tripId, members, invites, currentMember, isAdmin,
+    settings, onSettingsChange, spouseByUserId, reloadTrip,
+  } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [inviteEmail, setInviteEmail] = useState("");
@@ -138,7 +121,7 @@ export function PeopleTab({
     setGeneratedLink(link);
     setInviteEmail("");
     await navigator.clipboard.writeText(link);
-    onReloadTrip();
+    reloadTrip();
     toast("Link copiado!", 'success');
   };
 
@@ -163,7 +146,7 @@ export function PeopleTab({
       toast(getErrorMessage(error), 'error');
       return;
     }
-    onReloadTrip();
+    reloadTrip();
   };
 
   return (
@@ -286,7 +269,7 @@ export function PeopleTab({
                             if (!confirmed) return;
                             const { error } = await supabase.from("trip_members").delete().eq("id", member.id);
                             if (error) toast(getErrorMessage(error), 'error');
-                            else onReloadTrip();
+                            else reloadTrip();
                           }}
                           className="text-zinc-400 hover:text-red-500"
                         >
@@ -388,7 +371,7 @@ export function PeopleTab({
             } else {
               setShowSettlement(false);
               toast("Viagem quitada com sucesso! 🎉", 'success');
-              onReloadTrip();
+              reloadTrip();
             }
           }}
         />
