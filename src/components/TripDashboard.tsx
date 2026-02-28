@@ -413,7 +413,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
         {/* Sidebar Desktop */}
       <aside className="w-64 border-r p-6 hidden md:flex flex-col flex-shrink-0 gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
-          <Plane size={18} />
+          <img src="/favicon.svg" alt="Partiu!" className="w-6 h-6" />
           <span className="font-bold text-xl">Partiu!</span>
         </button>
         <nav className="space-y-2">
