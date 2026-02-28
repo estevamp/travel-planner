@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -13,7 +13,7 @@ import { Modal } from "../Modal";
 import { CurrencySelector } from "../CurrencySelector";
 import { PayerSelector } from "../PayerSelector";
 import { SplitSelector } from "../SplitSelector";
-import { currencyService } from "../../services/currencyService";
+import { useCurrencyConversion } from "../../hooks/useCurrencyConversion";
 
 interface ExpensesTabProps {
   onOpenModal: () => void;
@@ -25,32 +25,20 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
   const { trip, currentMember, members, categories, settings, tripBudget } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
-  const [rates, setRates] = useState<Record<string, number>>({});
+  const { convert } = useCurrencyConversion(settings.default_currency);
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
-
-  useEffect(() => {
-    const fetchRates = async () => {
-      const data = await currencyService.getExchangeRates(settings.default_currency);
-      setRates(data.rates);
-    };
-    fetchRates();
-  }, [settings.default_currency]);
 
   const convertedExpenses = useMemo(() => {
     return trip.expenses.map(exp => {
       const currency = exp.currency || settings.default_currency;
-      let convertedAmount = Number(exp.amount) || 0;
-      
-      if (currency !== settings.default_currency && rates[currency]) {
-        convertedAmount = (Number(exp.amount) || 0) / rates[currency];
-      }
+      const convertedAmount = convert(Number(exp.amount) || 0, currency);
 
       return {
         ...exp,
         convertedAmount
       };
     });
-  }, [trip.expenses, settings.default_currency, rates]);
+  }, [trip.expenses, settings.default_currency, convert]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);

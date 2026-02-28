@@ -19,7 +19,7 @@ type ExpenseRowFromSupabase = Omit<ExpenseWithSplits, 'splits'> & {
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
 import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
-import { currencyService } from "../../services/currencyService";
+import { useCurrencyConversion } from "../../hooks/useCurrencyConversion";
 
 interface PeopleTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -42,7 +42,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
   const [balances, setBalances] = useState<MemberBalance[]>([]);
   const [showSettlement, setShowSettlement] = useState(false);
   const [transfers, setTransfers] = useState<SimplifiedTransfer[]>([]);
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const { rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
 
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   
@@ -108,15 +108,6 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
       if (settlementsChannel) void supabase.removeChannel(settlementsChannel);
     };
   }, [fetchBalanceData, tripId]);
-  
-  // Buscar taxas de câmbio
-  useEffect(() => {
-    const fetchRates = async () => {
-      const data = await currencyService.getExchangeRates(settings.default_currency);
-      setExchangeRates(data.rates);
-    };
-    fetchRates();
-  }, [settings.default_currency]);
   
   // Calcular saldos com conversão de moedas
   useEffect(() => {
