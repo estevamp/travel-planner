@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Lock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
@@ -272,8 +272,9 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     
     setIsSubmittingExpense(true);
     try {
-      const visibility = "public";
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+      // Despesas com rateio devem ser obrigatoriamente públicas
+      const visibility = expenseSplits.length > 0 ? "public" : ((form.get("visibility") as string) === "private" ? "private" : "public");
       const description = (form.get("description") as string) || "Despesa";
       const category_id = (form.get("category_id") as string) || null;
       const is_confirmed = form.get("is_confirmed") === "on";
@@ -849,10 +850,29 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             </div>
           </div>
           
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_confirmed" disabled={isSubmittingExpense} />
-            Marcar como confirmada
-          </label>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="is_confirmed" disabled={isSubmittingExpense} />
+              Marcar como confirmada
+            </label>
+
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="visibility"
+                  value="private"
+                  disabled={isSubmittingExpense || expenseSplits.length > 0}
+                  checked={expenseSplits.length > 0 ? false : undefined}
+                  className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)] disabled:opacity-50"
+                />
+                <div className={cn("flex items-center gap-1.5 text-zinc-600", expenseSplits.length > 0 && "opacity-50")}>
+                  <Lock size={14} />
+                  <span>Privado (apenas eu e cônjuge)</span>
+                </div>
+              </label>
+            </div>
+          </div>
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
@@ -878,6 +898,15 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               initialSplits={expenseSplits}
               initialSplitType={expenseSplitType}
             />
+
+            {expenseSplits.length > 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                <Unlock size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                  Despesas com rateio são obrigatoriamente públicas para que todos os envolvidos possam visualizá-las.
+                </p>
+              </div>
+            )}
           </div>
           
           <button

@@ -327,7 +327,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     try {
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
       // Despesas com rateio devem ser obrigatoriamente públicas
-      const visibility = editExpenseSplits.length > 0 ? "public" : editingExpense.visibility;
+      const visibility = editExpenseSplits.length > 0 ? "public" : ((form.get("visibility") as string) === "private" ? "private" : "public");
       const description = (form.get("description") as string) || "Despesa";
       const category_id = (form.get("category_id") as string) || null;
       const is_confirmed = form.get("is_confirmed") === "on";
