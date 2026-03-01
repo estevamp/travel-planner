@@ -785,7 +785,7 @@ export function SettingsTab() {
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <HelpCircle size={18} />
-          Ajuda e Instruções
+          Como usar o 
         </a>
 
         <button
