@@ -83,6 +83,8 @@ export interface DocumentItem {
   created_by_member_id: string;
   name: string;
   url: string;
+  description?: string | null;
+  visibility: Visibility;
 }
 
 export interface Idea {

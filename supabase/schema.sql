@@ -1326,3 +1326,12 @@ begin
     alter publication supabase_realtime add table public.trip_budgets;
   end if;
 end $$;
+
+-- Adicionar description e visibility à tabela documents
+alter table public.documents add column if not exists description text;
+alter table public.documents add column if not exists visibility text not null default 'private' check (visibility in ('public', 'private'));
+
+-- Atualizar RLS: documentos públicos visíveis a todos da viagem
+drop policy if exists documents_select_owner_or_spouse on public.documents;
+create policy documents_select_visibility on public.documents
+for select using (public.can_view_scoped_data(trip_id, created_by_member_id, visibility));
