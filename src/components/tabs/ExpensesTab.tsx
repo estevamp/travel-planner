@@ -643,6 +643,35 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                             ≈ {formatCurrency(convertedExpenses.find(e => e.id === exp.id)?.convertedAmount || 0, settings.default_currency)}
                           </span>
                         )}
+                        
+                        {/* Split Summary */}
+                        {(() => {
+                          const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
+                          if (!expWithSplits || !expWithSplits.splits || expWithSplits.splits.length === 0) return null;
+                          
+                          const payer = members.find(m => m.id === expWithSplits.paid_by_member_id);
+                          const currency = exp.currency || settings.default_currency;
+
+                          return (
+                            <div className="mt-1 space-y-0.5">
+                              <p className="text-[10px] text-zinc-400 leading-tight">
+                                Pago por <span className="font-medium text-zinc-500">{payer?.display_name || 'Desconhecido'}</span>
+                              </p>
+                              <p className="text-[10px] text-zinc-400 leading-tight">
+                                {expWithSplits.splits.map((s, i) => (
+                                  <span key={s.member_id}>
+                                    {i > 0 && ' · '}
+                                    <span className="font-medium text-zinc-500">
+                                      {members.find(m => m.id === s.member_id)?.display_name || '?'}
+                                    </span>
+                                    {': '}
+                                    {formatCurrency(s.amount, currency)}
+                                  </span>
+                                ))}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -809,6 +838,35 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                             ≈ {formatCurrency(convertedExpenses.find(e => e.id === exp.id)?.convertedAmount || 0, settings.default_currency)}
                           </span>
                         )}
+
+                        {/* Split Summary */}
+                        {(() => {
+                          const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
+                          if (!expWithSplits || !expWithSplits.splits || expWithSplits.splits.length === 0) return null;
+                          
+                          const payer = members.find(m => m.id === expWithSplits.paid_by_member_id);
+                          const currency = exp.currency || settings.default_currency;
+
+                          return (
+                            <div className="mt-1 space-y-0.5">
+                              <p className="text-[10px] text-zinc-400 leading-tight">
+                                Pago por <span className="font-medium text-zinc-500">{payer?.display_name || 'Desconhecido'}</span>
+                              </p>
+                              <p className="text-[10px] text-zinc-400 leading-tight">
+                                {expWithSplits.splits.map((s, i) => (
+                                  <span key={s.member_id}>
+                                    {i > 0 && ' · '}
+                                    <span className="font-medium text-zinc-500">
+                                      {members.find(m => m.id === s.member_id)?.display_name || '?'}
+                                    </span>
+                                    {': '}
+                                    {formatCurrency(s.amount, currency)}
+                                  </span>
+                                ))}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
