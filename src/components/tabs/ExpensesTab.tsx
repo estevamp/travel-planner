@@ -50,8 +50,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     const { data: expensesData, error: expError } = await supabase
       .from("expenses")
       .select("*, expense_splits(*)")
-      .eq("trip_id", tripId)
-      .eq("is_confirmed", true);
+      .eq("trip_id", tripId);
     
     const { data: settlementsData, error: settlementsError } = await supabase
       .from("settlements")
@@ -139,6 +138,17 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
         } else {
           userAmount = 0;
         }
+
+        // Debug log
+        console.log(`[Budget Debug] Expense: ${exp.description}`, {
+          convertedAmount,
+          userAmount,
+          totalSplitAmount,
+          originalAmount,
+          relevantSplitsCount: relevantSplits.length,
+          currentMemberId: currentMember?.id,
+          spouseMemberId: currentMember?.spouse_member_id
+        });
       }
 
       return {
