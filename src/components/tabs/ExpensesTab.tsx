@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, Unlock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import { FilePenLine, Trash2, Lock, Unlock, CheckCircle2, Circle, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
@@ -733,15 +733,21 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                                 }
                               })}
                               className={cn(
-                                "p-1 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed",
-                                exp.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
+                                "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
+                                exp.visibility === 'public'
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-zinc-100 text-zinc-500"
                               )}
                               disabled={(exp as any).splits && (exp as any).splits.length > 0}
                               title={(exp as any).splits && (exp as any).splits.length > 0
                                 ? "Despesas com rateio devem ser públicas"
                                 : (exp.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)")}
                             >
-                              {exp.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
+                              {exp.visibility === 'public' ? (
+                                <><Users size={10} /> Público</>
+                              ) : (
+                                <><Lock size={10} /> Privado</>
+                              )}
                             </button>
                             <button
                               type="button"
@@ -928,12 +934,18 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                             }
                           })}
                           className={cn(
-                            "p-2 transition-colors disabled:opacity-30",
-                            exp.visibility === 'private' ? "text-amber-500" : "text-zinc-300"
+                            "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
+                            exp.visibility === 'public'
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-zinc-100 text-zinc-500"
                           )}
                           disabled={(exp as any).splits && (exp as any).splits.length > 0}
                         >
-                          {exp.visibility === 'private' ? <Lock size={16} /> : <Unlock size={16} />}
+                          {exp.visibility === 'public' ? (
+                            <><Users size={10} /> Público</>
+                          ) : (
+                            <><Lock size={10} /> Privado</>
+                          )}
                         </button>
                         <button
                           type="button"
