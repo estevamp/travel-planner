@@ -3,9 +3,9 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { UserPlus, Trash2, Crown } from "lucide-react";
+import { UserPlus, Trash2, Crown, Copy } from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage } from "../../utils";
+import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
 import { Card } from "../Card";
 
@@ -52,7 +52,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     const link = `${window.location.origin}/invite/${inviteToken}`;
     setGeneratedLink(link);
     setInviteEmail("");
-    await navigator.clipboard.writeText(link);
+    await copyToClipboard(link);
     reloadTrip();
     toast("Link copiado!", 'success');
   };
@@ -236,13 +236,27 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                     {invite.accepted_at ? "Aceito" : "Pendente"}
                   </span>
                   {!invite.accepted_at && (
-                    <button
-                      type="button"
-                      onClick={() => void cancelInvite(invite.id)}
-                      className="text-xs text-red-500"
-                    >
-                      Cancelar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const link = `${window.location.origin}/invite/${invite.token}`;
+                          await copyToClipboard(link);
+                          toast("Link copiado!", 'success');
+                        }}
+                        className="text-zinc-400 hover:text-[var(--sidebar-active-bg)]"
+                        title="Copiar link"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void cancelInvite(invite.id)}
+                        className="text-xs text-red-500"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
