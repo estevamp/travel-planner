@@ -121,12 +121,33 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
       const currency = exp.currency || settings.default_currency;
       const convertedAmount = convert(Number(exp.amount) || 0, currency);
 
+      // Calcular userAmount considerando splits
+      let userAmount = convertedAmount;
+      const expenseWithSplits = expensesWithSplits.find(e => e.id === exp.id);
+
+      if (expenseWithSplits && expenseWithSplits.splits && expenseWithSplits.splits.length > 0) {
+        const relevantSplits = expenseWithSplits.splits.filter(split =>
+          split.member_id === currentMember?.id ||
+          (currentMember?.spouse_member_id && split.member_id === currentMember.spouse_member_id)
+        );
+
+        const totalSplitAmount = relevantSplits.reduce((sum, split) => sum + (Number(split.amount) || 0), 0);
+        const originalAmount = Number(exp.amount) || 0;
+
+        if (originalAmount > 0) {
+          userAmount = (totalSplitAmount / originalAmount) * convertedAmount;
+        } else {
+          userAmount = 0;
+        }
+      }
+
       return {
         ...exp,
-        convertedAmount
+        convertedAmount,
+        userAmount
       };
     });
-  }, [trip.expenses, settings.default_currency, convert]);
+  }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -364,8 +385,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
 
   const confirmedTotal = convertedExpenses
     .filter(expense => expense.is_confirmed)
-    .reduce((total, expense) => total + expense.convertedAmount, 0);
-  const predictedTotal = convertedExpenses.reduce((total, expense) => total + expense.convertedAmount, 0);
+    .reduce((total, expense) => total + expense.userAmount, 0);
+  const predictedTotal = convertedExpenses.reduce((total, expense) => total + expense.userAmount, 0);
   const budgetLimit = Math.max(0, Number(tripBudget?.budget_limit) || 0);
   const confirmedProgress = budgetLimit > 0 ? Math.min((confirmedTotal / budgetLimit) * 100, 100) : 0;
   const predictedProgress = budgetLimit > 0 ? Math.min((predictedTotal / budgetLimit) * 100, 100) : 0;

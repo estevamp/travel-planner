@@ -124,6 +124,7 @@ export interface TripMember {
   user_id: string;
   role: "admin" | "member";
   display_name: string | null;
+  spouse_member_id: string | null;
 }
 
 export interface TripInvite {
