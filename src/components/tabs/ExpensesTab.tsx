@@ -701,37 +701,46 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                         {!editingExpenseId && (
                           <>
                             <button
-                              onClick={() => setVisibilitySheet({
-                                open: true,
-                                itemId: exp.id,
-                                currentVisibility: exp.visibility,
-                                onConfirm: async () => {
-                                  const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
-                                  // Optimistic update
-                                  onTripUpdate((prev) => ({
-                                    ...prev,
-                                    expenses: prev.expenses.map((e) =>
-                                      e.id === exp.id ? { ...e, visibility: nextVisibility } : e
-                                    ),
-                                  }));
-
-                                  const { error } = await supabase
-                                    .from("expenses")
-                                    .update({ visibility: nextVisibility })
-                                    .eq("id", exp.id);
-
-                                  if (error) {
-                                    toast(getErrorMessage(error), 'error');
-                                    // Rollback
+                              onClick={() => {
+                                // Check if expense has splits and is trying to become private
+                                const hasSplits = (exp as any).splits && (exp as any).splits.length > 0;
+                                if (hasSplits && exp.visibility === 'public') {
+                                  toast('Despesas com rateio devem ser públicas', 'error');
+                                  return;
+                                }
+                                
+                                setVisibilitySheet({
+                                  open: true,
+                                  itemId: exp.id,
+                                  currentVisibility: exp.visibility,
+                                  onConfirm: async () => {
+                                    const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
+                                    // Optimistic update
                                     onTripUpdate((prev) => ({
                                       ...prev,
                                       expenses: prev.expenses.map((e) =>
-                                        e.id === exp.id ? { ...e, visibility: exp.visibility } : e
+                                        e.id === exp.id ? { ...e, visibility: nextVisibility } : e
                                       ),
                                     }));
+
+                                    const { error } = await supabase
+                                      .from("expenses")
+                                      .update({ visibility: nextVisibility })
+                                      .eq("id", exp.id);
+
+                                    if (error) {
+                                      toast(getErrorMessage(error), 'error');
+                                      // Rollback
+                                      onTripUpdate((prev) => ({
+                                        ...prev,
+                                        expenses: prev.expenses.map((e) =>
+                                          e.id === exp.id ? { ...e, visibility: exp.visibility } : e
+                                        ),
+                                      }));
+                                    }
                                   }
-                                }
-                              })}
+                                });
+                              }}
                               className={cn(
                                 "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
                                 exp.visibility === 'public'
@@ -902,37 +911,46 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                     {!editingExpenseId && (
                       <>
                         <button
-                          onClick={() => setVisibilitySheet({
-                            open: true,
-                            itemId: exp.id,
-                            currentVisibility: exp.visibility,
-                            onConfirm: async () => {
-                              const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
-                              // Optimistic update
-                              onTripUpdate((prev) => ({
-                                ...prev,
-                                expenses: prev.expenses.map((e) =>
-                                  e.id === exp.id ? { ...e, visibility: nextVisibility } : e
-                                ),
-                              }));
-
-                              const { error } = await supabase
-                                .from("expenses")
-                                .update({ visibility: nextVisibility })
-                                .eq("id", exp.id);
-
-                              if (error) {
-                                toast(getErrorMessage(error), 'error');
-                                // Rollback
+                          onClick={() => {
+                            // Check if expense has splits and is trying to become private
+                            const hasSplits = (exp as any).splits && (exp as any).splits.length > 0;
+                            if (hasSplits && exp.visibility === 'public') {
+                              toast('Despesas com rateio devem ser públicas', 'error');
+                              return;
+                            }
+                            
+                            setVisibilitySheet({
+                              open: true,
+                              itemId: exp.id,
+                              currentVisibility: exp.visibility,
+                              onConfirm: async () => {
+                                const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
+                                // Optimistic update
                                 onTripUpdate((prev) => ({
                                   ...prev,
                                   expenses: prev.expenses.map((e) =>
-                                    e.id === exp.id ? { ...e, visibility: exp.visibility } : e
+                                    e.id === exp.id ? { ...e, visibility: nextVisibility } : e
                                   ),
                                 }));
+
+                                const { error } = await supabase
+                                  .from("expenses")
+                                  .update({ visibility: nextVisibility })
+                                  .eq("id", exp.id);
+
+                                if (error) {
+                                  toast(getErrorMessage(error), 'error');
+                                  // Rollback
+                                  onTripUpdate((prev) => ({
+                                    ...prev,
+                                    expenses: prev.expenses.map((e) =>
+                                      e.id === exp.id ? { ...e, visibility: exp.visibility } : e
+                                    ),
+                                  }));
+                                }
                               }
-                            }
-                          })}
+                            });
+                          }}
                           className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
                             exp.visibility === 'public'
