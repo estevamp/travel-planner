@@ -52,9 +52,18 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     const link = `${window.location.origin}/invite/${inviteToken}`;
     setGeneratedLink(link);
     setInviteEmail("");
-    await copyToClipboard(link);
+    
+    // Small delay to ensure state update doesn't interfere with clipboard access in some browsers
+    setTimeout(async () => {
+      const success = await copyToClipboard(link);
+      if (success) {
+        toast("Link copiado!", 'success');
+      } else {
+        toast("Falha ao copiar link automaticamente", 'error');
+      }
+    }, 100);
+
     reloadTrip();
-    toast("Link copiado!", 'success');
   };
 
   const setGlobalSpouse = async (spouseUserId: string | null) => {
@@ -206,10 +215,21 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
           </div>
           {generatedLink && (
             <div className={cn(
-              "mt-3 p-3 rounded-xl border text-xs break-all",
+              "mt-3 p-3 rounded-xl border text-xs break-all flex items-center justify-between gap-2",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
             )}>
-              {generatedLink}
+              <span className="flex-1">{generatedLink}</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await copyToClipboard(generatedLink);
+                  toast("Link copiado!", 'success');
+                }}
+                className="text-zinc-400 hover:text-[var(--sidebar-active-bg)] shrink-0"
+                title="Copiar link"
+              >
+                <Copy size={14} />
+              </button>
             </div>
           )}
         </Card>
