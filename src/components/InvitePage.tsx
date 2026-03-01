@@ -42,6 +42,12 @@ export function InvitePage({ session }: { session: Session | null }) {
         // Refresh session to ensure RLS policies pick up the new membership
         await supabase.auth.refreshSession();
         setTripId(data as string);
+        if (tripId) {
+          // Aguarde um momento para a base de dados sincronizar
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // Recarregue a lista (se tiver um hook para isso)
+          window.location.href = `/trip/${tripId}`;
+        }
       })
       .finally(() => setLoading(false));
   }, [session, token, attempted, tripId]);
