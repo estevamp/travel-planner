@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { UserPlus, Trash2, Crown, Copy } from "lucide-react";
+import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
@@ -17,12 +17,15 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
   const {
     tripId, members, invites, currentMember, isAdmin,
     settings, onSettingsChange, spouseByUserId, reloadTrip,
+    reloadMembers,
   } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(currentMember?.display_name || "");
   
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   
@@ -92,6 +95,37 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     reloadTrip();
   };
 
+  const handleSaveName = async () => {
+    const trimmedName = nameValue.trim();
+    if (!trimmedName) {
+      toast("O apelido não pode ficar em branco", "error");
+      return;
+    }
+
+    if (trimmedName.length > 50) {
+      toast("O apelido deve ter no máximo 50 caracteres", "error");
+      return;
+    }
+
+    const { error } = await supabase.rpc("update_member_display_name", {
+      p_trip_id: tripId,
+      p_display_name: trimmedName,
+    });
+
+    if (error) {
+      toast(getErrorMessage(error), "error");
+      return;
+    }
+
+    setEditingName(false);
+    if (reloadMembers) {
+      await reloadMembers();
+    } else {
+      await reloadTrip();
+    }
+    toast("Apelido atualizado!", "success");
+  };
+
   return (
     <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
       <Card className="p-0 overflow-hidden">
@@ -110,12 +144,65 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
               return (
                 <tr key={member.id}>
                   <td className="px-4 py-3">
-                    <span className="flex items-center gap-1.5">
-                      {member.display_name || member.user_id}
-                      {member.role === "admin" && (
-                        <Crown size={14} className="text-amber-400 opacity-80" title="Administrador da viagem" />
-                      )}
-                    </span>
+                    {editingName && member.id === currentMember?.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          autoFocus
+                          value={nameValue}
+                          onChange={(e) => setNameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveName();
+                            if (e.key === "Escape") {
+                              setEditingName(false);
+                              setNameValue(currentMember.display_name || "");
+                            }
+                          }}
+                          className={cn(
+                            "px-2 py-1 rounded border text-xs w-full max-w-[150px]",
+                            settings.dark_mode
+                              ? "bg-zinc-800 border-zinc-700 text-white"
+                              : "bg-white border-zinc-200"
+                          )}
+                        />
+                        <button
+                          onClick={handleSaveName}
+                          className="text-emerald-500 hover:text-emerald-600"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingName(false);
+                            setNameValue(currentMember.display_name || "");
+                          }}
+                          className="text-zinc-400 hover:text-zinc-600"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        {member.display_name || member.user_id}
+                        {member.role === "admin" && (
+                          <Crown
+                            size={14}
+                            className="text-amber-400 opacity-80"
+                            title="Administrador da viagem"
+                          />
+                        )}
+                        {member.id === currentMember?.id && (
+                          <button
+                            onClick={() => {
+                              setNameValue(member.display_name || "");
+                              setEditingName(true);
+                            }}
+                            className="text-zinc-400 hover:text-zinc-600"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
                   {isAdmin && (
