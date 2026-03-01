@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Plane, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Lock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
