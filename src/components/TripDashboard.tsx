@@ -367,7 +367,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
         created_at: new Date().toISOString(),
       };
 
-      setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...prev.ideas] } : null);
+      setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...(prev.ideas || [])] } : null);
 
       const { error } = await supabase.from("ideas").insert({
         id: ideaId,
