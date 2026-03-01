@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { UserPlus, Trash2 } from "lucide-react";
+import { UserPlus, Trash2, Crown } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage } from "../../utils";
 import type { Trip } from "../../types";
@@ -102,10 +102,10 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                 <tr key={member.id}>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1.5">
-                      {member.role === "admin" && (
-                        <span title="Admin" style={{ color: "#F59E0B" }}>👑</span>
-                      )}
                       {member.display_name || member.user_id}
+                      {member.role === "admin" && (
+                        <Crown size={14} className="text-amber-400 opacity-80" title="Administrador da viagem" />
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
