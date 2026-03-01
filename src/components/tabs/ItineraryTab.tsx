@@ -19,7 +19,7 @@ interface ItineraryTabProps {
 }
 
 export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
-  const { trip, currentMember, settings, itineraryTypes } = useTripContext();
+  const { trip, currentMember, settings, itineraryTypes, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
@@ -51,7 +51,10 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
     currentVisibility: Visibility;
     onConfirm: (() => void) | null;
   }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
-
+  const getCreatorName = (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    return member?.display_name || "Desconhecido";
+  };
 
   const startEditItinerary = (item: ItineraryItem) => {
     setEditingItineraryId(item.id);
@@ -470,6 +473,16 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                     </span>
                   )}
                 </div>
+                {editingItineraryId !== item.id && item.created_by_member_id && (
+                  <span className={cn(
+                    "inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit",
+                    settings.dark_mode
+                      ? "bg-zinc-700 text-zinc-300"
+                      : "bg-zinc-100 text-zinc-500"
+                  )}>
+                    👤 {getCreatorName(item.created_by_member_id)}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
               {item.location && (

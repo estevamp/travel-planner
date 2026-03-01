@@ -19,7 +19,7 @@ interface IdeasTabProps {
 }
 
 export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
-  const { trip, currentMember, isAdmin, settings } = useTripContext();
+  const { trip, currentMember, isAdmin, settings, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
@@ -46,6 +46,10 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     currentVisibility: Visibility;
     onConfirm: (() => void) | null;
   }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
+  const getCreatorName = (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    return member?.display_name || "Desconhecido";
+  };
 
   const ideaLinksByIdeaId = useMemo(() => {
     const map = new Map<string, IdeaLink[]>();
@@ -614,6 +618,16 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                           )}
                         </button>
                       </div>
+                      {editingIdeaId !== idea.id && idea.created_by_member_id && (
+                        <span className={cn(
+                          "inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit",
+                          settings.dark_mode
+                            ? "bg-zinc-700 text-zinc-300"
+                            : "bg-zinc-100 text-zinc-500"
+                        )}>
+                          👤 {getCreatorName(idea.created_by_member_id)}
+                        </span>
+                      )}
                       {idea.notes && <p className="text-xs text-zinc-600 mt-0.5 whitespace-pre-wrap line-clamp-2">{idea.notes}</p>}
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 inline-flex items-center gap-1 mt-1 hover:underline">
