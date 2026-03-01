@@ -238,11 +238,13 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-bold truncate text-sm md:text-base">{doc.name}</h4>
+              <h4 className="font-bold truncate text-sm md:text-base">
+                {doc.description || doc.name}
+              </h4>
               <button
                 onClick={() => toggleVisibility(doc)}
                 className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors",
+                  "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
                   doc.visibility === 'public'
                     ? "bg-blue-100 text-blue-700"
                     : "bg-zinc-100 text-zinc-500"
@@ -256,7 +258,7 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
               </button>
             </div>
             {doc.description && (
-              <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{doc.description}</p>
+              <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{doc.name}</p>
             )}
             <div className="flex gap-3 mt-1">
               <button
