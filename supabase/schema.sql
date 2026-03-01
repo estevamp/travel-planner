@@ -1254,6 +1254,52 @@ grant execute on function public.set_trip_spouse(uuid, uuid, uuid) to authentica
 grant execute on function public.set_global_spouse(uuid) to authenticated;
 grant execute on function public.budget_owner_user_id(uuid, uuid) to authenticated;
 
+create or replace function public.update_member_display_name(
+  p_trip_id uuid,
+  p_display_name text,
+  p_target_user_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_name text;
+  v_target_uid uuid;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Authentication required';
+  end if;
+
+  v_target_uid := coalesce(p_target_user_id, v_uid);
+
+  -- Se o alvo não for o próprio usuário, verifica se o usuário é admin da viagem
+  if v_target_uid <> v_uid and not public.is_trip_admin(p_trip_id) then
+    raise exception 'Only admins can change other members names';
+  end if;
+
+  v_name := trim(p_display_name);
+  if v_name = '' then
+    raise exception 'Display name cannot be empty';
+  end if;
+
+  update public.trip_members
+  set display_name = v_name
+  where trip_id = p_trip_id
+    and user_id = v_target_uid;
+
+  if not found then
+    raise exception 'Member not found in this trip';
+  end if;
+end;
+$$;
+
+revoke all on function public.update_member_display_name(uuid, text, uuid) from public;
+grant execute on function public.update_member_display_name(uuid, text, uuid) to authenticated;
+
 do $$
 begin
   if not exists (
@@ -1333,5 +1379,6 @@ alter table public.documents add column if not exists visibility text not null d
 
 -- Atualizar RLS: documentos públicos visíveis a todos da viagem
 drop policy if exists documents_select_owner_or_spouse on public.documents;
+drop policy if exists documents_select_visibility on public.documents;
 create policy documents_select_visibility on public.documents
 for select using (public.can_view_scoped_data(trip_id, created_by_member_id, visibility));

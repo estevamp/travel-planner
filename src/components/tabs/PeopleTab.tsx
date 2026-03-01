@@ -24,8 +24,8 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(currentMember?.display_name || "");
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [nameValue, setNameValue] = useState("");
   
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
   
@@ -95,7 +95,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     reloadTrip();
   };
 
-  const handleSaveName = async () => {
+  const handleSaveName = async (member: any) => {
     const trimmedName = nameValue.trim();
     if (!trimmedName) {
       toast("O apelido não pode ficar em branco", "error");
@@ -110,6 +110,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     const { error } = await supabase.rpc("update_member_display_name", {
       p_trip_id: tripId,
       p_display_name: trimmedName,
+      p_target_user_id: member.user_id,
     });
 
     if (error) {
@@ -117,7 +118,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
       return;
     }
 
-    setEditingName(false);
+    setEditingMemberId(null);
     if (reloadMembers) {
       await reloadMembers();
     } else {
@@ -144,17 +145,17 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
               return (
                 <tr key={member.id}>
                   <td className="px-4 py-3">
-                    {editingName && member.id === currentMember?.id ? (
+                    {editingMemberId === member.id ? (
                       <div className="flex items-center gap-2">
                         <input
                           autoFocus
                           value={nameValue}
                           onChange={(e) => setNameValue(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveName();
+                            if (e.key === "Enter") handleSaveName(member);
                             if (e.key === "Escape") {
-                              setEditingName(false);
-                              setNameValue(currentMember.display_name || "");
+                              setEditingMemberId(null);
+                              setNameValue("");
                             }
                           }}
                           className={cn(
@@ -165,15 +166,15 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                           )}
                         />
                         <button
-                          onClick={handleSaveName}
+                          onClick={() => handleSaveName(member)}
                           className="text-emerald-500 hover:text-emerald-600"
                         >
                           <Check size={14} />
                         </button>
                         <button
                           onClick={() => {
-                            setEditingName(false);
-                            setNameValue(currentMember.display_name || "");
+                            setEditingMemberId(null);
+                            setNameValue("");
                           }}
                           className="text-zinc-400 hover:text-zinc-600"
                         >
@@ -190,11 +191,11 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                             title="Administrador da viagem"
                           />
                         )}
-                        {member.id === currentMember?.id && (
+                        {(member.id === currentMember?.id || isAdmin) && (
                           <button
                             onClick={() => {
                               setNameValue(member.display_name || "");
-                              setEditingName(true);
+                              setEditingMemberId(member.id);
                             }}
                             className="text-zinc-400 hover:text-zinc-600"
                           >
