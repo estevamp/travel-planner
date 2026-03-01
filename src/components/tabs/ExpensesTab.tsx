@@ -159,6 +159,28 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     });
   }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember]);
 
+  const payerTotals = useMemo(() => {
+    // Filtrar apenas despesas que têm splits configurados
+    const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
+
+    const totals: Record<string, number> = {};
+
+    splitExpenses.forEach(exp => {
+      if (!exp.paid_by_member_id) return;
+      const currency = exp.currency || settings.default_currency;
+      const converted = convert(Number(exp.amount) || 0, currency);
+      totals[exp.paid_by_member_id] = (totals[exp.paid_by_member_id] || 0) + converted;
+    });
+
+    return members
+      .map(m => ({
+        name: m.display_name || "Membro",
+        amount: totals[m.id] || 0,
+      }))
+      .filter(m => m.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+  }, [expensesWithSplits, members, convert, settings.default_currency]);
+
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<{
@@ -952,6 +974,48 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                 setShowSettlement(true);
               }}
             />
+        </Card>
+      )}
+
+      {payerTotals.length > 0 && (
+        <Card className="space-y-4">
+          <h3 className="text-sm font-bold">Quem pagou nas despesas rateadas</h3>
+          
+          <div className="space-y-3">
+            {payerTotals.map(({ name, amount }) => {
+              const maxAmount = payerTotals[0].amount; // já ordenado desc
+              const pct = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+              
+              return (
+                <div key={name} className="space-y-1">
+                  {/* Nome + valor */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className={cn("font-medium", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
+                      {name}
+                    </span>
+                    <span className={cn("text-xs tabular-nums font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                      {formatCurrency(amount, settings.default_currency)}
+                    </span>
+                  </div>
+                  
+                  {/* Barra */}
+                  <div className={cn("w-full rounded-full h-2.5", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
+                    <div
+                      className="h-2.5 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${pct}%`,
+                        background: 'var(--sidebar-active-bg)',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+            Somente despesas com rateio entre membros · valores em {settings.default_currency}
+          </p>
         </Card>
       )}
 
