@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajuda — Partiu!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0A2342;
+      --sky: #1D6FA4;
+      --gold: #F5A623;
+      --sand: #FFF8EE;
+      --white: #FFFFFF;
+      --ink: #1a1a2e;
+      --muted: #6b7794;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--sand);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--navy);
+      color: white;
+      padding: 60px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 0%, #1D6FA4 0%, transparent 60%),
+                  radial-gradient(ellipse at 10% 100%, #F5A62322 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .hero-logo {
+      width: 72px;
+      height: 72px;
+      background: var(--gold);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 30px #F5A62355;
+      position: relative;
+    }
+
+    .hero-logo svg {
+      width: 42px;
+      height: 42px;
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.4rem, 7vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.05;
+      position: relative;
+    }
+
+    .hero h1 span {
+      color: var(--gold);
+    }
+
+    .hero-sub {
+      margin-top: 14px;
+      font-size: 1.05rem;
+      color: #a8bfd4;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+
+    .wave {
+      display: block;
+      width: 100%;
+      margin-top: -2px;
+      background: var(--navy);
+    }
+
+    /* ── CONTENT ── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    .intro {
+      text-align: center;
+      padding: 48px 0 36px;
+    }
+
+    .intro p {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: var(--ink);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .intro strong { color: var(--sky); }
+
+    /* ── SECTION TITLE ── */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--sky);
+      margin-bottom: 24px;
+    }
+
+    .section-label::before, .section-label::after {
+      content: '';
+      height: 1px;
+      width: 32px;
+      background: var(--sky);
+      opacity: 0.4;
+    }
+
+    /* ── CARDS ── */
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 580px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 28px;
+      border: 1.5px solid #e8e8ef;
+      transition: transform 0.18s, box-shadow 0.18s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(10,35,66,0.10);
+    }
+
+    .card::after {
+      content: attr(data-emoji);
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      font-size: 2rem;
+      opacity: 0.15;
+      line-height: 1;
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 14px;
+    }
+
+    .card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--navy);
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .card p em {
+      color: var(--sky);
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    /* card color variants */
+    .c-blue  .card-icon { background: #EAF4FF; }
+    .c-gold  .card-icon { background: #FFF4DE; }
+    .c-green .card-icon { background: #EAFAF1; }
+    .c-pink  .card-icon { background: #FFF0F5; }
+    .c-purple .card-icon { background: #F3F0FF; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 48px 0 32px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e0e0ea;
+    }
+
+    /* ── TIPS ── */
+    .tips-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tips-list li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      border: 1.5px solid #e8e8ef;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .tips-list li .tip-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      background: var(--navy);
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+
+    .tips-list li strong { color: var(--navy); }
+
+    /* ── FOOTER ── */
+    .footer-banner {
+      margin-top: 56px;
+      background: var(--navy);
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .footer-banner::before {
+      content: '✈️';
+      position: absolute;
+      font-size: 8rem;
+      right: -24px;
+      bottom: -24px;
+      opacity: 0.07;
+      line-height: 1;
+    }
+
+    .footer-banner h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .footer-banner p {
+      font-size: 0.95rem;
+      color: #a8bfd4;
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 20px;
+      background: var(--gold);
+      color: var(--navy);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 100px;
+      letter-spacing: 0.05em;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-logo">
+      <img src="/apple-touch-icon.png" alt="Partiu!" style="width:52px;height:52px;border-radius:10px;object-fit:cover;" />
+    </div>
+    <h1>Como usar o <span>Partiu!</span> 🧳</h1>
+    <p class="hero-sub">O seu copiloto de viagem — porque planejar junto é metade da diversão.</p>
+  </div>
+
+  <svg class="wave" viewBox="0 0 1440 40" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <path d="M0,40 C360,0 1080,60 1440,20 L1440,0 L0,0 Z" fill="#0A2342"/>
+  </svg>
+
+  <div class="container">
+
+    <!-- INTRO -->
+    <div class="intro">
+      <p>
+        O <strong>Partiu!</strong> foi feito para quem ama viajar, mas odeia aquela bagunça de 47 grupos de WhatsApp,
+        planilhas sem fim e a pergunta eterna: <em>"Mas quem pagou o hotel mesmo?"</em><br><br>
+        Tudo o que você precisa fica num só lugar. Simples assim.
+      </p>
+    </div>
+
+    <!-- ABAS -->
+    <div style="text-align:center">
+      <span class="section-label">As 5 abas do app</span>
+    </div>
+
+    <div class="cards">
+
+      <div class="card c-blue" data-emoji="📅">
+        <div class="card-icon">📅</div>
+        <h3>Atividades</h3>
+        <p>Monte o roteiro da viagem dia a dia. Adicione passeios, restaurantes, voos — tudo com horário e localização.
+        <em>Pense nisso como o "cérebro" da viagem.</em></p>
+      </div>
+
+      <div class="card c-gold" data-emoji="💡">
+        <div class="card-icon">💡</div>
+        <h3>Ideias</h3>
+        <p>Aquele restaurante que você viu no Instagram às 2h da manhã? Salva aqui. Links, fotos, notas aleatórias —
+        <em>o cantinho do caos organizado.</em> Depois vira atividade com um clique!</p>
+      </div>
+
+      <div class="card c-green" data-emoji="💸">
+        <div class="card-icon">💸</div>
+        <h3>Despesas</h3>
+        <p>Registre quem pagou o quê e como dividir. Sem mais o famoso "a gente acerta depois" que nunca acerta.
+        <em>A conta fica clara para todo mundo.</em></p>
+      </div>
+
+      <div class="card c-pink" data-emoji="📄">
+        <div class="card-icon">📄</div>
+        <h3>Docs</h3>
+        <p>Passaportes, vouchers, seguro viagem, reservas de hotel — guarde os documentos importantes aqui e acesse offline.
+        <em>Porque o aeroporto não é hora de procurar PDF.</em></p>
+      </div>
+
+      <div class="card c-purple" data-emoji="👥" style="grid-column: 1 / -1">
+        <div class="card-icon">👥</div>
+        <h3>Amigos</h3>
+        <p>Convide seus companheiros de viagem por e-mail. Cada um vê o roteiro, adiciona ideias e controla seus próprios gastos.
+        <em>Colaboração sem confusão — como deve ser.</em></p>
+      </div>
+
+    </div>
+
+    <!-- DICAS -->
+    <div class="divider">Dicas rápidas</div>
+
+    <ul class="tips-list">
+      <li>
+        <span class="tip-num">1</span>
+        <span><strong>Crie uma viagem primeiro.</strong> Parece óbvio, mas vale lembrar: aperte o <em>+</em> na tela inicial, dê um nome bacana para a sua aventura e pronto — o planejamento começa.</span>
+      </li>
+      <li>
+        <span class="tip-num">2</span>
+        <span><strong>Convide antes de planejar.</strong> Chame os amigos logo no começo para todo mundo poder adicionar ideias. Depois fica mais difícil convencer alguém a usar o app.</span>
+      </li>
+      <li>
+        <span class="tip-num">3</span>
+        <span><strong>Ideia virou atividade.</strong> Na aba <em>Ideias</em>, toque no ícone de conversão para transformar uma ideia diretamente em uma atividade no roteiro. Mágico.</span>
+      </li>
+      <li>
+        <span class="tip-num">4</span>
+        <span><strong>Visibilidade privada.</strong> Quer guardar uma surpresa? Marque um item como <em>privado</em> — só você vê. Perfeito para planejar aquele jantar surpresa sem spoiler.</span>
+      </li>
+      <li>
+        <span class="tip-num">5</span>
+        <span><strong>Modo escuro.</strong> Nas configurações, ative o tema escuro para usar à noite sem iluminar o quarto do hotel como um farol.</span>
+      </li>
+    </ul>
+
+    <!-- FOOTER BANNER -->
+    <div class="footer-banner">
+      <h2>Pronto para decolar? ✈️</h2>
+      <p>Se surgir qualquer dúvida que este guia não respondeu, provavelmente é um bug. Mas pode ser só feature.</p>
+      <span class="badge">Boas viagens! 🌍</span>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Briefcase, Calendar } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Briefcase, Calendar, HelpCircle } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
@@ -777,7 +777,17 @@ export function SettingsTab() {
         </div>
       )}
 
-      <div className="pt-4">
+      <div className="pt-4 space-y-3">
+        <a
+          href="/help.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
+        >
+          <HelpCircle size={18} />
+          Ajuda e Instruções
+        </a>
+
         <button
           onClick={navigateToAbout}
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
