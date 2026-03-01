@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, Unlock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X } from "lucide-react";
+import { FilePenLine, Trash2, Lock, Unlock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X, Users } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -601,12 +601,17 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                             }
                           })}
                           className={cn(
-                            "p-1 rounded-lg transition-colors",
-                            idea.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
+                            "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
+                            idea.visibility === 'public'
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-zinc-100 text-zinc-500"
                           )}
-                          title={idea.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)"}
                         >
-                          {idea.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
+                          {idea.visibility === 'public' ? (
+                            <><Users size={10} /> Público</>
+                          ) : (
+                            <><Lock size={10} /> Privado</>
+                          )}
                         </button>
                       </div>
                       {idea.notes && <p className="text-xs text-zinc-600 mt-0.5 whitespace-pre-wrap line-clamp-2">{idea.notes}</p>}

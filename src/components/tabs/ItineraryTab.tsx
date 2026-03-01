@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
-import { Calendar, FilePenLine, Trash2, Plus, CheckCircle2, Circle, ChevronDown, ChevronRight, MapPin, Lock, Unlock } from "lucide-react";
+import { Calendar, FilePenLine, Trash2, Plus, CheckCircle2, Circle, ChevronDown, ChevronRight, MapPin, Lock, Unlock, Users } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
 import { useToast } from "../../hooks/useToast";
@@ -436,12 +436,17 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                       }
                     })}
                     className={cn(
-                      "p-1 rounded-lg transition-colors",
-                      item.visibility === 'private' ? "text-amber-500 bg-amber-50" : "text-zinc-300 hover:text-zinc-400"
+                      "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
+                      item.visibility === 'public'
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-zinc-100 text-zinc-500"
                     )}
-                    title={item.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)"}
                   >
-                    {item.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
+                    {item.visibility === 'public' ? (
+                      <><Users size={10} /> Público</>
+                    ) : (
+                      <><Lock size={10} /> Privado</>
+                    )}
                   </button>
                 </div>
                 <div className="flex flex-col items-start">
