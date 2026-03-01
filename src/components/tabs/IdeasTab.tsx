@@ -465,21 +465,21 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
           const canManage = currentMember?.id === idea.created_by_member_id || isAdmin;
           
           return (
-            <Card key={idea.id} className="space-y-3">
+            <Card key={idea.id} className="space-y-2 p-4">
               {editingIdeaId === idea.id ? (
-                <div className="space-y-3">
-                  <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="space-y-2">
                     <input
                       value={ideaDraft.title}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
                       placeholder="Titulo"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
+                      className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
                     />
                     <textarea
                       value={ideaDraft.notes}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, notes: e.target.value }))}
                       placeholder="Notas"
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all h-20"
+                      className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all h-16"
                     />
                     <input
                       value={ideaDraft.maps_url}
@@ -547,14 +547,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                     <button
                       type="button"
                       onClick={() => void saveIdeaEdit(idea.id)}
-                      className="flex-1 px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all"
+                      className="flex-1 px-4 py-1.5 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all"
                     >
                       Salvar
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingIdeaId(null)}
-                      className="flex-1 px-4 py-2 rounded-xl border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50 transition-all"
+                      className="flex-1 px-4 py-1.5 rounded-xl border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50 transition-all"
                     >
                       Cancelar
                     </button>
@@ -562,10 +562,10 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm flex items-center gap-2 flex-wrap">
                           <span className="break-words">{idea.title}</span>
                         </p>
                         <button
@@ -609,26 +609,26 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                           {idea.visibility === 'private' ? <Lock size={14} /> : <Unlock size={14} />}
                         </button>
                       </div>
-                      {idea.notes && <p className="text-sm text-zinc-600 mt-1 whitespace-pre-wrap line-clamp-3">{idea.notes}</p>}
+                      {idea.notes && <p className="text-xs text-zinc-600 mt-0.5 whitespace-pre-wrap line-clamp-2">{idea.notes}</p>}
                       {idea.maps_url && (
-                        <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 mt-2 hover:underline">
-                          <MapPin size={12} />Google Maps
+                        <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 inline-flex items-center gap-1 mt-1 hover:underline">
+                          <MapPin size={10} />Google Maps
                         </a>
                       )}
                     </div>
-                    <div className="flex flex-col gap-2 flex-shrink-0">
+                    <div className="flex flex-col gap-1 flex-shrink-0">
                       <button
                         type="button"
                         onClick={() => void convertIdeaToActivity(idea)}
                         disabled={copyingIdeaId === idea.id}
-                        className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
+                        className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
                         aria-label="Transformar em atividade"
                         title="Transformar em atividade"
                       >
                         {copyingIdeaId === idea.id ? (
-                          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <CalendarPlus size={20} />
+                          <CalendarPlus size={16} />
                         )}
                       </button>
                       {canManage && (
@@ -637,19 +637,19 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
                             <button
                               type="button"
                               onClick={() => startEditIdea(idea)}
-                              className="p-2 text-zinc-400 hover:text-zinc-700"
+                              className="p-1.5 text-zinc-400 hover:text-zinc-700"
                               aria-label="Editar ideia"
                             >
-                              <FilePenLine size={16} />
+                              <FilePenLine size={14} />
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => void deleteIdea(idea)}
-                            className="p-2 text-zinc-400 hover:text-red-500"
+                            className="p-1.5 text-zinc-400 hover:text-red-500"
                             aria-label="Excluir ideia"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </>
                       )}
