@@ -703,8 +703,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                             <button
                               onClick={() => {
                                 // Check if expense has splits and is trying to become private
-                                const hasSplits = (exp as any).splits && (exp as any).splits.length > 0;
-                                if (hasSplits && exp.visibility === 'public') {
+                                const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
+                                const hasSplits = expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0;
+                                if (hasSplits) {
                                   toast('Despesas com rateio devem ser públicas', 'error');
                                   return;
                                 }
@@ -747,8 +748,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                                   ? "bg-blue-100 text-blue-700"
                                   : "bg-zinc-100 text-zinc-500"
                               )}
-                              disabled={(exp as any).splits && (exp as any).splits.length > 0}
-                              title={(exp as any).splits && (exp as any).splits.length > 0
+                              disabled={Boolean(expensesWithSplits.find(e => e.id === exp.id)?.splits?.length)}
+                              title={expensesWithSplits.find(e => e.id === exp.id)?.splits?.length
                                 ? "Despesas com rateio devem ser públicas"
                                 : (exp.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)")}
                             >
@@ -913,8 +914,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                         <button
                           onClick={() => {
                             // Check if expense has splits and is trying to become private
-                            const hasSplits = (exp as any).splits && (exp as any).splits.length > 0;
-                            if (hasSplits && exp.visibility === 'public') {
+                            const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
+                            const hasSplits = expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0;
+                            if (hasSplits) {
                               toast('Despesas com rateio devem ser públicas', 'error');
                               return;
                             }
@@ -957,7 +959,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                               ? "bg-blue-100 text-blue-700"
                               : "bg-zinc-100 text-zinc-500"
                           )}
-                          disabled={(exp as any).splits && (exp as any).splits.length > 0}
+                          disabled={Boolean(expensesWithSplits.find(e => e.id === exp.id)?.splits?.length)}
                         >
                           {exp.visibility === 'public' ? (
                             <><Users size={10} /> Público</>
