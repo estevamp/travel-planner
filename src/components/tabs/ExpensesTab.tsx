@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -6,7 +6,8 @@ import { useTripContext } from "../../context/TripContext";
 import { FilePenLine, Trash2, Lock, Unlock, CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
-import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType } from "../../types";
+import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
+import type { ExpenseSplit } from '../../types/splitting';
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { Modal } from "../Modal";
@@ -15,6 +16,14 @@ import { PayerSelector } from "../PayerSelector";
 import { SplitSelector } from "../SplitSelector";
 import { useCurrencyConversion } from "../../hooks/useCurrencyConversion";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
+import { BalancesSummary } from "../BalancesSummary";
+import { TripSettlementModal } from "../TripSettlementModal";
+import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
+
+// Tipo da resposta bruta do Supabase para a query "*, expense_splits(*)"
+type ExpenseRowFromSupabase = Omit<ExpenseWithSplits, 'splits'> & {
+  expense_splits: ExpenseSplit[];
+};
 
 interface ExpensesTabProps {
   onOpenModal: () => void;
@@ -23,11 +32,89 @@ interface ExpensesTabProps {
 }
 
 export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
-  const { trip, currentMember, members, categories, settings, tripBudget } = useTripContext();
+  const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
-  const { convert } = useCurrencyConversion(settings.default_currency);
+  const { convert, rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
+
+  // Estados para rateio e saldos
+  const [expensesWithSplits, setExpensesWithSplits] = useState<ExpenseWithSplits[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [balances, setBalances] = useState<MemberBalance[]>([]);
+  const [showSettlement, setShowSettlement] = useState(false);
+  const [transfers, setTransfers] = useState<SimplifiedTransfer[]>([]);
+
+  // Buscar despesas com splits e settlements
+  const fetchBalanceData = useCallback(async () => {
+    const { data: expensesData, error: expError } = await supabase
+      .from("expenses")
+      .select("*, expense_splits(*)")
+      .eq("trip_id", tripId)
+      .eq("is_confirmed", true);
+    
+    const { data: settlementsData, error: settlementsError } = await supabase
+      .from("settlements")
+      .select("*")
+      .eq("trip_id", tripId);
+    
+    if (!expError) {
+      const expensesWithSplitsData: ExpenseWithSplits[] = (
+        (expensesData as ExpenseRowFromSupabase[]) || []
+      ).map((exp) => ({
+        ...exp,
+        splits: exp.expense_splits || [],
+      }));
+      setExpensesWithSplits(expensesWithSplitsData);
+    }
+    
+    if (!settlementsError) {
+      setSettlements(settlementsData || []);
+    }
+  }, [tripId]);
+
+  useEffect(() => {
+    fetchBalanceData();
+
+    const expensesChannel = supabase
+      .channel('expenses-balances-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${tripId}` }, () => {
+        fetchBalanceData();
+      })
+      .subscribe();
+
+    const expenseSplitsChannel = supabase
+      .channel('expense-splits-balances-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expense_splits' }, () => {
+        fetchBalanceData();
+      })
+      .subscribe();
+
+    const settlementsChannel = supabase
+      .channel('settlements-balances-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settlements', filter: `trip_id=eq.${tripId}` }, () => {
+        fetchBalanceData();
+      })
+      .subscribe();
+
+    return () => {
+      if (expensesChannel) void supabase.removeChannel(expensesChannel);
+      if (expenseSplitsChannel) void supabase.removeChannel(expenseSplitsChannel);
+      if (settlementsChannel) void supabase.removeChannel(settlementsChannel);
+    };
+  }, [fetchBalanceData, tripId]);
+
+  // Calcular saldos com conversão de moedas
+  useEffect(() => {
+    const calculatedBalances = calculateNetBalances(
+      expensesWithSplits,
+      settlements,
+      members,
+      settings.default_currency,
+      exchangeRates
+    );
+    setBalances(calculatedBalances);
+  }, [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
 
   const convertedExpenses = useMemo(() => {
     return trip.expenses.map(exp => {
@@ -760,8 +847,83 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
         ))}
       </div>
 
+      {/* Seção de Saldos */}
+      {currentMember && (
+        <Card>
+          <h3 className="font-bold mb-4">Saldos da Viagem</h3>
+            <BalancesSummary
+              balances={balances}
+              currentUserId={currentMember.user_id}
+              members={members}
+              currency={settings.default_currency}
+              isDark={Boolean(settings.dark_mode)}
+              onSettleClick={() => {
+                const simplified = simplifyDebts(balances, settings.default_currency);
+                setTransfers(simplified);
+                setShowSettlement(true);
+              }}
+            />
+        </Card>
+      )}
+
       <FloatingActionButton onClick={onOpenModal} />
       {ConfirmDialogNode}
+
+      {/* Modal de Quitação */}
+      {showSettlement && (
+        <TripSettlementModal
+          transfers={transfers}
+          currency={settings.default_currency}
+          onClose={() => setShowSettlement(false)}
+          isDark={settings.dark_mode}
+          onMarkComplete={async (fromId, toId) => {
+            const transfer = transfers.find(
+              t => t.from_member_id === fromId && t.to_member_id === toId
+            );
+            if (transfer) {
+              const { error } = await supabase.from("settlements").insert({
+                trip_id: tripId,
+                from_member_id: fromId,
+                to_member_id: toId,
+                amount: transfer.amount,
+                currency: settings.default_currency,
+                date: new Date().toISOString(),
+                is_confirmed: true,
+              });
+              
+              if (error) {
+                toast(getErrorMessage(error), 'error');
+              } else {
+                // Recarregar settlements
+                const { data: settlementsData } = await supabase
+                  .from("settlements")
+                  .select("*")
+                  .eq("trip_id", tripId);
+                if (settlementsData) {
+                  setSettlements(settlementsData);
+                }
+              }
+            }
+          }}
+          onFinalize={async () => {
+            const { error } = await supabase
+              .from("trip_settlement_status")
+              .upsert({
+                trip_id: tripId,
+                is_settled: true,
+                settled_at: new Date().toISOString(),
+              });
+            
+            if (error) {
+              toast(getErrorMessage(error), 'error');
+            } else {
+              setShowSettlement(false);
+              toast("Viagem quitada com sucesso! 🎉", 'success');
+              reloadTrip();
+            }
+          }}
+        />
+      )}
 
       {/* Modal de Edição Completo (com splits) */}
       <Modal
