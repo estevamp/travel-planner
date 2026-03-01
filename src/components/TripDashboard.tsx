@@ -867,8 +867,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)] disabled:opacity-50"
                 />
                 <div className={cn("flex items-center gap-1.5 text-zinc-600", expenseSplits.length > 0 && "opacity-50")}>
-                  <Lock size={14} />
-                  <span>Privado (apenas eu e cônjuge)</span>
+                  {expenseSplits.length > 0 ? <Unlock size={14} /> : <Lock size={14} />}
+                  <span>{expenseSplits.length > 0 ? "Público (obrigatório para rateio)" : "Privado (apenas eu e cônjuge)"}</span>
                 </div>
               </label>
             </div>

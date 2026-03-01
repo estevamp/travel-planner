@@ -1185,16 +1185,35 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
             </div>
           </div>
           
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="is_confirmed"
-              disabled={isSubmittingExpense}
-              defaultChecked={editingExpense?.is_confirmed}
-            />
-            Marcar como confirmada
-          </label>
-          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="is_confirmed"
+                disabled={isSubmittingExpense}
+                defaultChecked={editingExpense?.is_confirmed}
+              />
+              Marcar como confirmada
+            </label>
+
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="visibility"
+                  value="private"
+                  disabled={isSubmittingExpense || editExpenseSplits.length > 0}
+                  checked={editExpenseSplits.length > 0 ? false : (editingExpense?.visibility === "private")}
+                  className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)] disabled:opacity-50"
+                />
+                <div className={cn("flex items-center gap-1.5 text-zinc-600", editExpenseSplits.length > 0 && "opacity-50")}>
+                  {editExpenseSplits.length > 0 ? <Unlock size={14} /> : <Lock size={14} />}
+                  <span>{editExpenseSplits.length > 0 ? "Público (obrigatório para rateio)" : "Privado (apenas eu e cônjuge)"}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
             <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
