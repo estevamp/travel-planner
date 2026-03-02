@@ -46,15 +46,27 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true;
+    console.log("App: Iniciando verificação de sessão...");
     supabase.auth.getSession().then(async ({ data }) => {
+      console.log("App: Sessão recuperada:", data.session ? "Usuário logado" : "Sem sessão");
       if (!mounted) return;
       setSession(data.session || null);
       if (data.session) {
-        await supabase.rpc("sync_my_profile");
-        await loadUserSettings(data.session.user.id);
+        try {
+          console.log("App: Sincronizando perfil...");
+          await supabase.rpc("sync_my_profile");
+          console.log("App: Carregando configurações...");
+          await loadUserSettings(data.session.user.id);
+        } catch (err) {
+          console.error("App: Erro ao carregar dados do usuário:", err);
+        }
       } else {
         setUserSettings(DEFAULT_SETTINGS);
       }
+      console.log("App: Finalizando loadingAuth");
+      setLoadingAuth(false);
+    }).catch(err => {
+      console.error("App: Erro crítico no getSession:", err);
       setLoadingAuth(false);
     });
 
