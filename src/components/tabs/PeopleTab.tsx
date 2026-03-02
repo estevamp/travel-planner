@@ -142,24 +142,17 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
             {members.map((member) => {
               const spouseUserId = spouseByUserId.get(member.user_id) || null;
               const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
+
               return (
                 <tr key={member.id}>
                   <td className="px-4 py-3">
                     {editingMemberId === member.id ? (
                       <div className="flex items-center gap-2">
                         <input
-                          autoFocus
                           value={nameValue}
                           onChange={(e) => setNameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveName(member);
-                            if (e.key === "Escape") {
-                              setEditingMemberId(null);
-                              setNameValue("");
-                            }
-                          }}
                           className={cn(
-                            "px-2 py-1 rounded border text-xs w-full max-w-[150px]",
+                            "px-2 py-1 rounded-lg border text-xs w-32",
                             settings.dark_mode
                               ? "bg-zinc-800 border-zinc-700 text-white"
                               : "bg-white border-zinc-200"
@@ -255,7 +248,8 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
               onChange={(e) => setSelfSpouseUserId(e.target.value)}
               className={cn(
                 "md:col-span-2 px-4 py-2 rounded-xl border text-sm",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                settings.dark_mode ?
+                "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             >
               <option value="">Sem cônjuge</option>
@@ -331,10 +325,11 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
             {invites.map((invite) => (
               <div
                 key={invite.id}
-                className="p-3 rounded-xl border border-[var(--sidebar-border)] text-sm flex items-center justify-between gap-2"
+                className="p-3 rounded-xl border border-[var(--sidebar-border)] text-sm flex items-center gap-2"
               >
-                <span>{invite.email}</span>
-                <div className="flex items-center gap-3">
+                {/* FIX: min-w-0 + truncate prevent email from overflowing and hiding the Cancelar button */}
+                <span className="min-w-0 flex-1 truncate">{invite.email}</span>
+                <div className="flex items-center gap-3 shrink-0">
                   <span
                     className={cn(
                       "text-xs font-bold uppercase",
@@ -360,7 +355,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                       <button
                         type="button"
                         onClick={() => void cancelInvite(invite.id)}
-                        className="text-xs text-red-500"
+                        className="text-xs text-red-500 shrink-0"
                       >
                         Cancelar
                       </button>
