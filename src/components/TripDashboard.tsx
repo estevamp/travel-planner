@@ -521,6 +521,15 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 {activeTab === "people" && "Amigos"}
                 {activeTab === "settings" && "Configurações"}
               </h3>
+                {activeTab !== "settings" && (
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    {activeTab === "itinerary" && "Seu roteiro e as atividades planejadas para essa viagem"}
+                    {activeTab === "ideas" && "Guarde ideias soltas e transforme as melhores em atividades com um toque"}
+                    {activeTab === "expenses" && "Lance gastos, divida com amigos e não deixe o orçamento fugir do controle"}
+                    {activeTab === "documents" && "Guarde aqui seus documentos, vouchers e reservas"}
+                    {activeTab === "people" && "Convide amigos e planejem essa viagem juntos"}
+                  </p>
+                )}
             </div>
           </div>
           <div className="hidden md:flex items-center gap-2">
