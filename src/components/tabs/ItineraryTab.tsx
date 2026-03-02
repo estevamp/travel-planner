@@ -575,11 +575,39 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
     </Card>
   );
 
+  const groupedByDate = openActivities.reduce((acc, item) => {
+    const key = item.start_time ? item.start_time.slice(0, 10) : "sem-data";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<string, ItineraryItem[]>);
+
+  const sortedKeys = Object.keys(groupedByDate).sort((a, b) => {
+    if (a === "sem-data") return 1;
+    if (b === "sem-data") return -1;
+    return a.localeCompare(b);
+  });
+
   return (
     <motion.div key="itinerary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          {openActivities.map(renderItineraryItem)}
+          {sortedKeys.map((dateKey, index) => (
+            <div key={dateKey} className="space-y-4">
+              {index > 0 && <hr className={settings.dark_mode ? "border-zinc-700" : "border-zinc-200"} />}
+              <div className={`text-sm font-bold uppercase px-1 py-2 ${settings.dark_mode ? "text-zinc-400" : "text-zinc-500"}`}>
+                {dateKey === "sem-data"
+                  ? "Sem data definida"
+                  : new Date(dateKey + "T00:00:00").toLocaleDateString("pt-BR", {
+                      weekday: "long",
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+              </div>
+              {groupedByDate[dateKey].map(renderItineraryItem)}
+            </div>
+          ))}
 
           {completedActivities.length > 0 && (
             <div className="pt-4">
