@@ -225,7 +225,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
         trip_id: tripId,
         created_by_member_id: currentMember.id,
         type_id,
-        type: type_id ? itineraryTypes.find(t => t.id === type_id) : null,
+        type: type_id ? (itineraryTypes.find(t => t.id === type_id) ?? null) : null,
         title,
         description,
         location,
