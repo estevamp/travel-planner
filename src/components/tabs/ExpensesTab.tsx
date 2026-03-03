@@ -1061,6 +1061,18 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
           currency={settings.default_currency}
           onClose={() => setShowSettlement(false)}
           isDark={settings.dark_mode}
+
+          // ── NOVO: pré-popula os checkmarks com settlements já salvos ──────────
+          initialCompleted={new Set(
+            settlements
+              .filter(s =>
+                transfers.some(
+                  t => t.from_member_id === s.from_member_id && t.to_member_id === s.to_member_id
+                )
+              )
+              .map(s => `${s.from_member_id}-${s.to_member_id}`)
+          )}
+
           onMarkComplete={async (fromId, toId) => {
             const transfer = transfers.find(
               t => t.from_member_id === fromId && t.to_member_id === toId
@@ -1075,21 +1087,39 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                 date: new Date().toISOString(),
                 is_confirmed: true,
               });
-              
+
               if (error) {
                 toast(getErrorMessage(error), 'error');
               } else {
-                // Recarregar settlements
                 const { data: settlementsData } = await supabase
                   .from("settlements")
                   .select("*")
                   .eq("trip_id", tripId);
-                if (settlementsData) {
-                  setSettlements(settlementsData);
-                }
+                if (settlementsData) setSettlements(settlementsData);
               }
             }
           }}
+
+          // ── NOVO: deleta o settlement quando desmarca ─────────────────────────
+          onUnmarkComplete={async (fromId, toId) => {
+            const { error } = await supabase
+              .from("settlements")
+              .delete()
+              .eq("trip_id", tripId)
+              .eq("from_member_id", fromId)
+              .eq("to_member_id", toId);
+
+            if (error) {
+              toast(getErrorMessage(error), 'error');
+            } else {
+              const { data: settlementsData } = await supabase
+                .from("settlements")
+                .select("*")
+                .eq("trip_id", tripId);
+              if (settlementsData) setSettlements(settlementsData);
+            }
+          }}
+
           onFinalize={async () => {
             const { error } = await supabase
               .from("trip_settlement_status")
@@ -1098,17 +1128,17 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
                 is_settled: true,
                 settled_at: new Date().toISOString(),
               });
-            
+
             if (error) {
               toast(getErrorMessage(error), 'error');
             } else {
               setShowSettlement(false);
-              toast("Viagem quitada com sucesso! 🎉", 'success');
-              reloadTrip();
+              toast("Viagem quitada com sucesso!", 'success');
             }
           }}
         />
       )}
+
 
       {/* Modal de Edição Completo (com splits) */}
       <Modal

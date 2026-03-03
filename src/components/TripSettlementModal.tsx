@@ -8,8 +8,10 @@ interface TripSettlementModalProps {
   currency: string;
   onClose: () => void;
   onMarkComplete: (fromId: string, toId: string) => void;
+  onUnmarkComplete: (fromId: string, toId: string) => void; // ← NOVO
   onFinalize: () => void;
   isDark?: boolean;
+  initialCompleted?: Set<string>; // ← NOVO: transfers já marcados no banco
 }
 
 export function TripSettlementModal({
@@ -17,11 +19,13 @@ export function TripSettlementModal({
   currency,
   onClose,
   onMarkComplete,
+  onUnmarkComplete,
   onFinalize,
   isDark = false,
+  initialCompleted = new Set(), // ← NOVO
 }: TripSettlementModalProps) {
   const [completedTransfers, setCompletedTransfers] = useState<Set<string>>(
-    new Set()
+    new Set(initialCompleted) // ← Inicializa com os já salvos no banco
   );
 
   const allCompleted = transfers.every((t) =>
@@ -34,6 +38,7 @@ export function TripSettlementModal({
 
     if (newCompleted.has(key)) {
       newCompleted.delete(key);
+      onUnmarkComplete(transfer.from_member_id, transfer.to_member_id); // ← Deleta do banco
     } else {
       newCompleted.add(key);
       onMarkComplete(transfer.from_member_id, transfer.to_member_id);
