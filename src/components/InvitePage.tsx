@@ -168,21 +168,15 @@ export function InvitePage({ session }: { session: Session | null }) {
         {loading && <p className="text-sm text-zinc-500">Processando...</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
         {tripId && <p className="text-sm text-emerald-600">Convite aceito.</p>}
-        <div className="flex gap-2">
+        <div>
           {tripId && (
             <button
               onClick={() => navigate(`/trip/${tripId}`)}
-              className="flex-1 bg-black text-white py-2 rounded-xl font-semibold"
+              className="w-full bg-black text-white py-2 rounded-xl font-semibold"
             >
               Ir para viagem
             </button>
           )}
-          <button
-            onClick={() => navigate("/")}
-            className="flex-1 border border-zinc-200 py-2 rounded-xl font-semibold"
-          >
-            Inicio
-          </button>
         </div>
       </Card>
     </div>
