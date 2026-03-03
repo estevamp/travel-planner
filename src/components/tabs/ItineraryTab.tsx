@@ -170,7 +170,12 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
   const timedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
   const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
 
-  const totalHeight = HOURS.length * 60 * PX_PER_MIN;
+      const totalHeight = HOURS.length * 60 * PX_PER_MIN;
+
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowInRange = nowMin >= 6 * 60 && nowMin < 24 * 60;
+    const isToday = activeKey === now.toISOString().slice(0, 10);
 
   return (
     <div>
@@ -262,30 +267,32 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
               />
             ))}
 
-            {/* Current time indicator (demo: 10h15) */}
-            <div
-              style={{
-                position: "absolute",
-                top: (10 * 60 + 15 - 6 * 60) * PX_PER_MIN,
-                left: 0,
-                right: 0,
-                height: 2,
-                backgroundColor: "#ef4444",
-                zIndex: 10,
-              }}
-            >
+            {/* Current time indicator — only shown when viewing today */}
+            {isToday && nowInRange && (
               <div
                 style={{
                   position: "absolute",
-                  left: -4,
-                  top: -3,
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
+                  top: (nowMin - 6 * 60) * PX_PER_MIN,
+                  left: 0,
+                  right: 0,
+                  height: 2,
                   backgroundColor: "#ef4444",
+                  zIndex: 10,
                 }}
-              />
-            </div>
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: -4,
+                    top: -3,
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "#ef4444",
+                  }}
+                />
+              </div>
+            )}
 
             {/* Timed activity blocks */}
             {timedItems.map((item) => {
