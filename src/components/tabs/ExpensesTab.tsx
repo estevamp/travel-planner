@@ -233,7 +233,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     setExpenseDraft({
       description: expense.description,
       category_id: expense.category_id || "",
-      amount: maskCurrency(String((expense.amount || 0) * 100)),
+      amount: maskCurrency(String(Math.round((expense.amount || 0) * 100))),
       visibility: expense.visibility,
       is_confirmed: expense.is_confirmed,
     });
@@ -288,7 +288,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
 
   const openEditExpenseModal = async (expense: Expense) => {
     setEditingExpense(expense);
-    setEditExpenseAmount(maskCurrency(String((expense.amount || 0) * 100)));
+    setEditExpenseAmount(maskCurrency(String(Math.round((expense.amount || 0) * 100))));
     setEditExpenseCurrency(expense.currency || settings.default_currency);
     
     // Buscar dados extras da despesa (pagador e tipo de rateio)

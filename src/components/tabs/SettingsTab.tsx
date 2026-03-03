@@ -169,7 +169,7 @@ export function SettingsTab() {
           <label className="text-sm font-semibold block">Limite de Orçamento</label>
           <div className="flex gap-3">
             <input
-              value={maskCurrency(String((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100))}
+              value={maskCurrency(String(Math.round((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100)))}
               onChange={(e) => {
                 const masked = maskCurrency(e.target.value);
                 const nextLimit = parseCurrencyToNumber(masked);
