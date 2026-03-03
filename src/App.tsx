@@ -11,6 +11,7 @@ import TripDashboard from "./components/TripDashboard";
 import { AboutPage } from "./components/AboutPage";
 import { ToastProvider } from "./hooks/useToast";
 import { Toast } from "./components/Toast";
+import { InstallBanner } from "./components/InstallBanner";
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
@@ -108,6 +109,7 @@ export default function App() {
         </Routes>
       </BrowserRouter>
       <Toast />
+      <InstallBanner /> 
     </ToastProvider>
   );
 }
