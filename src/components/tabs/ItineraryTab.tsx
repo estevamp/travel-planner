@@ -1,7 +1,11 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
-import { Calendar, FilePenLine, Trash2, Plus, CheckCircle2, Circle, ChevronDown, ChevronRight, MapPin, Lock, Unlock, Users } from "lucide-react";
+import {
+  Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
+  ChevronDown, ChevronRight, MapPin, Lock, Unlock, Users,
+  AlignLeft, Clock,
+} from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
 import { useToast } from "../../hooks/useToast";
@@ -10,18 +14,356 @@ import { useTripContext } from "../../context/TripContext";
 import type { Trip, ItineraryItem, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
-import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
+import { ACTIVITY_ICON_COMPONENTS } from "../../constants/icons";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ViewMode = "agenda" | "timeline";
 
 interface ItineraryTabProps {
   onOpenModal: () => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeToMin(t: string): number {
+  const clean = t.replace("+1", "").slice(0, 5);
+  const [h, m] = clean.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+function groupByDate(items: ItineraryItem[]): Record<string, ItineraryItem[]> {
+  return items.reduce<Record<string, ItineraryItem[]>>((acc, item) => {
+    const key = item.start_time ? item.start_time.slice(0, 10) : "sem-data";
+    (acc[key] ??= []).push(item);
+    return acc;
+  }, {});
+}
+
+function sortedDateKeys(grouped: Record<string, ItineraryItem[]>): string[] {
+  return Object.keys(grouped).sort((a, b) => {
+    if (a === "sem-data") return 1;
+    if (b === "sem-data") return -1;
+    return a.localeCompare(b);
+  });
+}
+
+function formatDateKey(dateKey: string): string {
+  if (dateKey === "sem-data") return "Sem data definida";
+  return new Date(dateKey + "T00:00:00").toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+// ─── AgendaView ───────────────────────────────────────────────────────────────
+
+interface AgendaViewProps {
+  items: ItineraryItem[];
+  isDark: boolean;
+  onToggleCompleted: (item: ItineraryItem) => void;
+  onStartEdit: (item: ItineraryItem) => void;
+  onDelete: (item: ItineraryItem) => void;
+  renderItem: (item: ItineraryItem) => React.ReactNode;
+}
+
+function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
+  const grouped = groupByDate(items);
+  const keys = sortedDateKeys(grouped);
+
+  if (keys.length === 0) {
+    return (
+      <div className={cn("text-center py-16 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
+        Nenhuma atividade planejada ainda.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {keys.map((dateKey) => {
+        const dayItems = [...(grouped[dateKey] ?? [])].sort((a, b) =>
+          (a.start_time ?? "").localeCompare(b.start_time ?? "")
+        );
+        const label = formatDateKey(dateKey);
+        const dayNum = dateKey !== "sem-data" ? dateKey.slice(8, 10) : "?";
+
+        return (
+          <div key={dateKey}>
+            {/* Day header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                style={{ backgroundColor: "var(--accent-color)" }}
+              >
+                {dayNum}
+              </div>
+              <div>
+                <p className={cn("text-sm font-bold capitalize", isDark ? "text-zinc-200" : "text-zinc-700")}>
+                  {label}
+                </p>
+                <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                  {dayItems.length} atividade{dayItems.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Items with left timeline bar */}
+            <div
+              className={cn("pl-4 space-y-3 border-l-2", isDark ? "border-zinc-700" : "border-zinc-200")}
+            >
+              {dayItems.map((item) => (
+                <div key={item.id} className="relative">
+                  {/* Dot on the timeline */}
+                  <div
+                    className="absolute -left-[21px] top-5 w-3 h-3 rounded-full border-2 flex-shrink-0"
+                    style={{
+                      backgroundColor: item.is_completed
+                        ? "#10b981"
+                        : "var(--accent-color)",
+                      borderColor: isDark ? "#27272a" : "#f9fafb",
+                    }}
+                  />
+                  {renderItem(item)}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── TimelineView ─────────────────────────────────────────────────────────────
+
+interface TimelineViewProps {
+  items: ItineraryItem[];
+  isDark: boolean;
+  renderItem: (item: ItineraryItem) => React.ReactNode;
+}
+
+const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06h–23h
+const PX_PER_MIN = 1.2; // pixels per minute
+
+function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
+  const grouped = groupByDate(items);
+  const keys = sortedDateKeys(grouped);
+  const [activeKey, setActiveKey] = useState<string>(keys[0] ?? "sem-data");
+
+  if (keys.length === 0) {
+    return (
+      <div className={cn("text-center py-16 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
+        Nenhuma atividade planejada ainda.
+      </div>
+    );
+  }
+
+  const dayItems = [...(grouped[activeKey] ?? [])].sort((a, b) =>
+    (a.start_time ?? "").localeCompare(b.start_time ?? "")
+  );
+
+  const timedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
+  const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
+
+  const totalHeight = HOURS.length * 60 * PX_PER_MIN;
+
+  return (
+    <div>
+      {/* Day tabs */}
+      <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+        {keys.map((key) => {
+          const isActive = key === activeKey;
+          const label =
+            key === "sem-data"
+              ? "Sem data"
+              : new Date(key + "T00:00:00").toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                });
+          return (
+            <button
+              key={key}
+              onClick={() => setActiveKey(key)}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0",
+                isActive
+                  ? "text-white shadow-sm"
+                  : isDark
+                  ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+              )}
+              style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
+            >
+              {label}
+              <span
+                className={cn(
+                  "ml-1.5 px-1.5 py-0.5 rounded-full text-[10px]",
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : isDark
+                    ? "bg-zinc-700 text-zinc-400"
+                    : "bg-zinc-200 text-zinc-500"
+                )}
+              >
+                {(grouped[key] ?? []).length}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* All-day items */}
+      {allDayItems.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <p className={cn("text-xs font-bold uppercase tracking-wide", isDark ? "text-zinc-500" : "text-zinc-400")}>
+            Dia todo
+          </p>
+          {allDayItems.map((item) => renderItem(item))}
+        </div>
+      )}
+
+      {/* Hourly grid */}
+      {timedItems.length === 0 && allDayItems.length === 0 ? (
+        <div className={cn("text-center py-12 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
+          Nenhuma atividade neste dia.
+        </div>
+      ) : (
+        <div className="flex gap-0 relative" style={{ height: totalHeight }}>
+          {/* Hour axis */}
+          <div className="w-10 flex-shrink-0 relative">
+            {HOURS.map((h) => (
+              <div
+                key={h}
+                style={{ position: "absolute", top: (h - 6) * 60 * PX_PER_MIN - 8 }}
+                className={cn("text-[10px] font-semibold w-full text-right pr-2", isDark ? "text-zinc-600" : "text-zinc-400")}
+              >
+                {String(h).padStart(2, "0")}h
+              </div>
+            ))}
+          </div>
+
+          {/* Grid column */}
+          <div className="flex-1 relative ml-2">
+            {/* Hour lines */}
+            {HOURS.map((h) => (
+              <div
+                key={h}
+                style={{ position: "absolute", top: (h - 6) * 60 * PX_PER_MIN, left: 0, right: 0, height: 1 }}
+                className={cn(isDark ? "bg-zinc-800" : "bg-zinc-100")}
+              />
+            ))}
+
+            {/* Current time indicator (demo: 10h15) */}
+            <div
+              style={{
+                position: "absolute",
+                top: (10 * 60 + 15 - 6 * 60) * PX_PER_MIN,
+                left: 0,
+                right: 0,
+                height: 2,
+                backgroundColor: "#ef4444",
+                zIndex: 10,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: -4,
+                  top: -3,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: "#ef4444",
+                }}
+              />
+            </div>
+
+            {/* Timed activity blocks */}
+            {timedItems.map((item) => {
+              const startMin = timeToMin(item.start_time!.slice(11));
+              const endMin = item.end_time
+                ? timeToMin(item.end_time.slice(11))
+                : startMin + 60;
+              const durationMin = Math.max(endMin - startMin, 30);
+              const top = (startMin - 6 * 60) * PX_PER_MIN;
+              const height = durationMin * PX_PER_MIN;
+              const Icon =
+                (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) ||
+                Calendar;
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    position: "absolute",
+                    top,
+                    left: 0,
+                    right: 0,
+                    height: Math.max(height, 36),
+                    backgroundColor: "var(--card-bg)",
+                    borderLeft: "3px solid var(--accent-color)",
+                    borderRadius: "0 10px 10px 0",
+                    overflow: "hidden",
+                    padding: "4px 8px",
+                    boxShadow: isDark
+                      ? "0 1px 4px rgba(0,0,0,0.4)"
+                      : "0 1px 4px rgba(0,0,0,0.08)",
+                    opacity: item.is_completed ? 0.6 : 1,
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 h-full overflow-hidden">
+                    <Icon
+                      size={12}
+                      className={cn("flex-shrink-0", isDark ? "text-zinc-400" : "text-zinc-500")}
+                    />
+                    <div className="min-w-0">
+                      <p
+                        className={cn(
+                          "text-xs font-bold truncate leading-tight",
+                          isDark ? "text-zinc-200" : "text-zinc-800"
+                        )}
+                      >
+                        {item.title}
+                      </p>
+                      {height >= 50 && item.location && (
+                        <p className={cn("text-[10px] truncate", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                          {item.location}
+                        </p>
+                      )}
+                      {height >= 68 && (
+                        <p className={cn("text-[10px]", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                          {item.start_time?.slice(11, 16)}
+                          {item.end_time ? ` – ${item.end_time.slice(11, 16)}` : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+
 export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
   const { trip, currentMember, settings, itineraryTypes, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
+
+  // View mode
+  const [viewMode, setViewMode] = useState<ViewMode>("agenda");
+
+  // Edit state
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -44,15 +386,19 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
     end_time: "",
     is_all_day: false,
   });
+
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [visibilitySheet, setVisibilitySheet] = useState<{
     open: boolean;
     itemId: string | null;
     currentVisibility: Visibility;
     onConfirm: (() => void) | null;
-  }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
+  }>({ open: false, itemId: null, currentVisibility: "public", onConfirm: null });
+
+  const isDark = settings.dark_mode;
+
   const getCreatorName = (memberId: string) => {
-    const member = members.find(m => m.id === memberId);
+    const member = members.find((m) => m.id === memberId);
     return member?.display_name || "Desconhecido";
   };
 
@@ -65,13 +411,13 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
       description: item.description || "",
       location: item.location || "",
       visibility: item.visibility,
-      start_time: item.start_time 
-        ? isAllDay 
+      start_time: item.start_time
+        ? isAllDay
           ? item.start_time.split("T")[0]
           : item.start_time.slice(0, 16)
         : "",
-      end_time: item.end_time 
-        ? isAllDay 
+      end_time: item.end_time
+        ? isAllDay
           ? item.end_time.split("T")[0]
           : item.end_time.slice(0, 16)
         : "",
@@ -88,21 +434,17 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
 
     setSavingItinerary(true);
 
-    // Prepare start/end times based on all_day flag
     let start_time: string | null = null;
     let end_time: string | null = null;
 
     if (itineraryDraft.is_all_day) {
-      // For all-day events, convert dates to full timestamps
       start_time = itineraryDraft.start_time ? `${itineraryDraft.start_time}T00:00:00` : null;
       end_time = itineraryDraft.end_time ? `${itineraryDraft.end_time}T00:00:00` : null;
     } else {
-      // For regular events, use datetime-local values
       start_time = itineraryDraft.start_time || null;
       end_time = itineraryDraft.end_time || null;
     }
 
-    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: prev.itinerary.map((item) =>
@@ -110,7 +452,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
           ? {
               ...item,
               type_id: itineraryDraft.type_id || null,
-              type: itineraryTypes.find(t => t.id === itineraryDraft.type_id) || null,
+              type: itineraryTypes.find((t) => t.id === itineraryDraft.type_id) || null,
               title,
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
@@ -139,8 +481,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
 
     if (error) {
       setSavingItinerary(false);
-      toast(getErrorMessage(error), 'error');
-      // Rollback to the original sourceItem
+      toast(getErrorMessage(error), "error");
       onTripUpdate((prev) => ({
         ...prev,
         itinerary: prev.itinerary.map((i) => (i.id === itemId ? sourceItem : i)),
@@ -153,43 +494,34 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
   };
 
   const deleteItineraryItem = async (item: ItineraryItem) => {
-    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: prev.itinerary.filter((i) => i.id !== item.id),
     }));
-
     const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
     if (error) {
-      toast(getErrorMessage(error), 'error');
-      // Rollback
+      toast(getErrorMessage(error), "error");
       onTripUpdate((prev) => ({
         ...prev,
         itinerary: [...prev.itinerary, item],
       }));
-      return;
     }
   };
 
   const toggleCompleted = async (item: ItineraryItem) => {
     const nextStatus = !item.is_completed;
-
-    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: prev.itinerary.map((i) =>
         i.id === item.id ? { ...i, is_completed: nextStatus } : i
       ),
     }));
-
     const { error } = await supabase
       .from("itinerary")
       .update({ is_completed: nextStatus })
       .eq("id", item.id);
-
     if (error) {
-      toast(getErrorMessage(error), 'error');
-      // Rollback
+      toast(getErrorMessage(error), "error");
       onTripUpdate((prev) => ({
         ...prev,
         itinerary: prev.itinerary.map((i) =>
@@ -199,12 +531,15 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
     }
   };
 
-  const openActivities = trip.itinerary.filter(item => !item.is_completed);
-  const completedActivities = trip.itinerary.filter(item => item.is_completed);
+  const openActivities = trip.itinerary.filter((item) => !item.is_completed);
+  const completedActivities = trip.itinerary.filter((item) => item.is_completed);
 
+  // ─── renderItineraryItem (unchanged from original) ─────────────────────────
   const renderItineraryItem = (item: ItineraryItem) => (
     <Card key={item.id} className={cn("group p-0 overflow-hidden transition-opacity", item.is_completed && "opacity-75")}>
-      {item.photo_url && <img src={item.photo_url} alt={item.title} className="w-full h-40 object-cover" />}
+      {item.photo_url && (
+        <img src={item.photo_url} alt={item.title} className="w-full h-40 object-cover" />
+      )}
       <div className="p-5 flex items-start gap-3">
         <button
           onClick={() => void toggleCompleted(item)}
@@ -227,24 +562,28 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
               <div className="flex items-center gap-2">
                 <select
                   value={itineraryDraft.type_id || ""}
-                  onChange={(e) => setItineraryDraft((current) => ({ ...current, type_id: e.target.value || null }))}
+                  onChange={(e) =>
+                    setItineraryDraft((cur) => ({ ...cur, type_id: e.target.value || null }))
+                  }
                   className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
                 >
                   <option value="">Sem tipo</option>
                   {itineraryTypes.map((type) => (
-                    <option key={type.id} value={type.id}>{type.name}</option>
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
                   ))}
                 </select>
               </div>
               <input
                 value={itineraryDraft.title}
-                onChange={(e) => setItineraryDraft((current) => ({ ...current, title: e.target.value }))}
+                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, title: e.target.value }))}
                 placeholder="Titulo"
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
               />
               <input
                 value={itineraryDraft.location}
-                onChange={(e) => setItineraryDraft((current) => ({ ...current, location: e.target.value }))}
+                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, location: e.target.value }))}
                 placeholder="Local"
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
               />
@@ -254,299 +593,197 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                   checked={itineraryDraft.is_all_day}
                   onChange={(e) => {
                     const isChecked = e.target.checked;
-                    setItineraryDraft((current) => {
-                      let newStartTime = current.start_time;
-                      let newEndTime = current.end_time;
-
+                    setItineraryDraft((cur) => {
+                      let newStartTime = cur.start_time;
+                      let newEndTime = cur.end_time;
                       if (isChecked) {
-                        // When checking "All day", if there's a date, keep it and set time to 00:00
-                        // datetime-local format is YYYY-MM-DDTHH:mm
-                        if (newStartTime && newStartTime.includes("T")) {
+                        if (newStartTime && newStartTime.includes("T"))
                           newStartTime = newStartTime.split("T")[0];
-                        }
-                        if (newEndTime && newEndTime.includes("T")) {
+                        if (newEndTime && newEndTime.includes("T"))
                           newEndTime = newEndTime.split("T")[0];
-                        }
                       } else {
-                        // When unchecking "All day", convert date-only to datetime-local format
-                        if (newStartTime && !newStartTime.includes("T")) {
+                        if (newStartTime && !newStartTime.includes("T"))
                           newStartTime = `${newStartTime}T00:00`;
-                        }
-                        if (newEndTime && !newEndTime.includes("T")) {
+                        if (newEndTime && !newEndTime.includes("T"))
                           newEndTime = `${newEndTime}T00:00`;
-                        }
                       }
-
-                      return {
-                        ...current,
-                        is_all_day: isChecked,
-                        start_time: newStartTime,
-                        end_time: newEndTime,
-                      };
+                      return { ...cur, is_all_day: isChecked, start_time: newStartTime, end_time: newEndTime };
                     });
                   }}
                 />
                 Dia todo
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
-                    Início
-                  </label>
-                  {itineraryDraft.is_all_day ? (
-                    <input
-                      type="date"
-                      value={itineraryDraft.start_time}
-                      onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
-                    />
-                  ) : (
-                    <input
-                      type="datetime-local"
-                      value={itineraryDraft.start_time}
-                      onChange={(e) => setItineraryDraft((current) => ({ ...current, start_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
-                    />
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">
-                    Fim
-                  </label>
-                  {itineraryDraft.is_all_day ? (
-                    <input
-                      type="date"
-                      value={itineraryDraft.end_time}
-                      onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
-                    />
-                  ) : (
-                    <input
-                      type="datetime-local"
-                      value={itineraryDraft.end_time}
-                      onChange={(e) => setItineraryDraft((current) => ({ ...current, end_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm appearance-none"
-                    />
-                  )}
-                </div>
-              </div>
+              <input
+                type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
+                value={itineraryDraft.start_time}
+                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, start_time: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              />
+              <input
+                type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
+                value={itineraryDraft.end_time}
+                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, end_time: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              />
               <textarea
                 value={itineraryDraft.description}
-                onChange={(e) => setItineraryDraft((current) => ({ ...current, description: e.target.value }))}
+                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, description: e.target.value }))}
                 placeholder="Notas"
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm h-20"
+                rows={2}
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm resize-none"
               />
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex gap-2 pt-1">
                 <button
-                  type="button"
-                  onClick={() => photoInputRefs.current[item.id]?.click()}
-                  className="text-[10px] font-bold uppercase text-zinc-400 text-left"
-                >
-                  {item.photo_url ? "Trocar foto" : "Adicionar foto"}
-                </button>
-                {item.photo_url && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const confirmed = await confirm({
-                        title: 'Remover foto?',
-                        message: 'Deseja realmente remover a foto desta atividade?',
-                        variant: 'danger',
-                        isDark: settings.dark_mode
-                      });
-                      if (!confirmed) return;
-                      
-                      // Optimistic update
-                      onTripUpdate((prev) => ({
-                        ...prev,
-                        itinerary: prev.itinerary.map((i) =>
-                          i.id === item.id ? { ...i, photo_url: null } : i
-                        ),
-                      }));
-
-                      const { error } = await supabase.from("itinerary").update({ photo_url: null }).eq("id", item.id);
-                      if (error) {
-                        toast(getErrorMessage(error), 'error');
-                        // Rollback if needed (optional, but good practice)
-                        onTripUpdate((prev) => ({
-                          ...prev,
-                          itinerary: prev.itinerary.map((i) =>
-                            i.id === item.id ? { ...i, photo_url: item.photo_url } : i
-                          ),
-                        }));
-                      }
-                    }}
-                    className="text-[10px] font-bold uppercase text-red-400 text-left"
-                  >
-                    Remover foto
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={savingItinerary}
                   onClick={() => void saveItineraryEdit(item.id)}
-                  className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold"
+                  disabled={savingItinerary}
+                  className="flex-1 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                  style={{ backgroundColor: "var(--accent-color)" }}
                 >
-                  {savingItinerary ? "Salvando..." : "Salvar"}
+                  {savingItinerary ? "Salvando…" : "Salvar"}
                 </button>
                 <button
-                  type="button"
-                  disabled={savingItinerary}
                   onClick={() => setEditingItineraryId(null)}
-                  className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold"
+                  className={cn(
+                    "flex-1 py-2 rounded-xl text-sm font-bold",
+                    isDark ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
+                  )}
                 >
                   Cancelar
                 </button>
               </div>
             </div>
           ) : (
-            <>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className={cn("font-bold truncate", item.is_completed && "line-through text-zinc-400")}>{item.title}</h4>
-                  <button
-                    onClick={() => setVisibilitySheet({
+            <div>
+              <p className={cn("font-semibold text-sm", item.is_completed && "line-through")}>
+                {item.title}
+              </p>
+              {item.description && (
+                <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                  {item.description}
+                </p>
+              )}
+              {item.location && (
+                <p className={cn("text-xs mt-1 flex items-center gap-1", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                  <MapPin size={10} /> {item.location}
+                </p>
+              )}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {item.type && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                      isDark ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
+                    )}
+                  >
+                    {item.type.name}
+                  </span>
+                )}
+                <button
+                  onClick={() =>
+                    setVisibilitySheet({
                       open: true,
                       itemId: item.id,
                       currentVisibility: item.visibility,
                       onConfirm: async () => {
-                        const nextVisibility = item.visibility === 'public' ? 'private' : 'public';
-                        // Optimistic update
+                        const next: Visibility =
+                          item.visibility === "public" ? "private" : "public";
                         onTripUpdate((prev) => ({
                           ...prev,
                           itinerary: prev.itinerary.map((i) =>
-                            i.id === item.id ? { ...i, visibility: nextVisibility } : i
+                            i.id === item.id ? { ...i, visibility: next } : i
                           ),
                         }));
-
-                        const { error } = await supabase
+                        await supabase
                           .from("itinerary")
-                          .update({ visibility: nextVisibility })
+                          .update({ visibility: next })
                           .eq("id", item.id);
-
-                        if (error) {
-                          toast(getErrorMessage(error), 'error');
-                          // Rollback
-                          onTripUpdate((prev) => ({
-                            ...prev,
-                            itinerary: prev.itinerary.map((i) =>
-                              i.id === item.id ? { ...i, visibility: item.visibility } : i
-                            ),
-                          }));
-                        }
-                      }
-                    })}
-                    className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
-                      item.visibility === 'public'
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-zinc-100 text-zinc-500"
-                    )}
-                  >
-                    {item.visibility === 'public' ? (
-                      <><Users size={10} /> Público</>
-                    ) : (
-                      <><Lock size={10} /> Privado</>
-                    )}
-                  </button>
-                </div>
+                      },
+                    })
+                  }
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                    item.visibility === "public"
+                      ? isDark
+                        ? "bg-emerald-900/40 text-emerald-400"
+                        : "bg-emerald-50 text-emerald-600"
+                      : isDark
+                      ? "bg-zinc-700 text-zinc-400"
+                      : "bg-zinc-100 text-zinc-500"
+                  )}
+                >
+                  {item.visibility === "public" ? (
+                    <><Users size={10} /> Público</>
+                  ) : (
+                    <><Lock size={10} /> Privado</>
+                  )}
+                </button>
                 <div className="flex flex-col items-start">
                   {item.start_time && (
-                    <span className="text-xs text-zinc-400 whitespace-nowrap">
-                      {item.is_all_day 
-                        ? format(new Date(item.start_time), "dd/MM") 
+                    <span className={cn("text-xs whitespace-nowrap", isDark ? "text-zinc-400" : "text-zinc-400")}>
+                      {item.is_all_day
+                        ? format(new Date(item.start_time), "dd/MM")
                         : format(new Date(item.start_time), "dd/MM HH:mm")}
-                      {item.end_time && !item.is_all_day && ` - ${format(new Date(item.end_time), "HH:mm")}`}
-                      {item.is_all_day && item.end_time && ` - ${format(new Date(item.end_time), "dd/MM")}`}
+                      {item.end_time && !item.is_all_day
+                        ? ` - ${format(new Date(item.end_time), "HH:mm")}`
+                        : ""}
+                      {item.is_all_day && item.end_time
+                        ? ` - ${format(new Date(item.end_time), "dd/MM")}`
+                        : ""}
                     </span>
                   )}
                   {item.is_all_day && (
-                    <span className="text-[10px] text-zinc-400 whitespace-nowrap">
+                    <span className={cn("text-[10px]", isDark ? "text-zinc-500" : "text-zinc-400")}>
                       Dia todo
                     </span>
                   )}
-                  {item.end_time && item.start_time && !item.is_all_day && format(new Date(item.start_time), "dd/MM") !== format(new Date(item.end_time), "dd/MM") && (
-                    <span className="text-[10px] text-zinc-400 whitespace-nowrap">
-                      até {format(new Date(item.end_time), "dd/MM")}
-                    </span>
-                  )}
                 </div>
-                {editingItineraryId !== item.id && item.created_by_member_id && (
-                  <span className={cn(
-                    "inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit",
-                    settings.dark_mode
-                      ? "bg-zinc-700 text-zinc-300"
-                      : "bg-zinc-100 text-zinc-500"
-                  )}>
-                    👤 {getCreatorName(item.created_by_member_id)}
+                {item.created_by_member_id && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit",
+                      isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-50 text-zinc-400"
+                    )}
+                  >
+                    {getCreatorName(item.created_by_member_id)}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-zinc-500 line-clamp-2">{item.description}</p>
-              {item.location && (
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs text-zinc-500">
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 hover:text-blue-600 transition-colors"
-                    title="Ver no Google Maps"
-                  >
-                    <MapPin size={12} />
-                    <span className="truncate max-w-[150px]">{item.location}</span>
-                  </a>
-                </div>
-              )}
-              {!item.location && (
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500">
-                  <span className="truncate max-w-[150px]">Sem local</span>
-                </div>
-              )}
-            </>
+            </div>
           )}
-          <input
-            ref={(el) => {
-              photoInputRefs.current[item.id] = el;
-            }}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              try {
-                const photo = await resizeImage(file);
-                
-                // Optimistic update
-                onTripUpdate((prev) => ({
-                  ...prev,
-                  itinerary: prev.itinerary.map((i) =>
-                    i.id === item.id ? { ...i, photo_url: photo } : i
-                  ),
-                }));
-
-                const { error } = await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
-                if (error) {
-                  // Rollback on error
+        </div>
+        {editingItineraryId !== item.id && (
+          <div className="flex flex-col items-center gap-1">
+            {/* Photo upload */}
+            <input
+              ref={(el) => { photoInputRefs.current[item.id] = el; }}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const dataUrl = await fileToDataUrl(file);
+                  const resized = await resizeImage(dataUrl, 1200);
+                  const ext = file.name.split(".").pop() || "jpg";
+                  const path = `${trip.id}/itinerary/${item.id}.${ext}`;
+                  const blob = await (await fetch(resized)).blob();
+                  await supabase.storage.from("travel-documents").upload(path, blob, { upsert: true });
+                  const { data: urlData } = supabase.storage.from("travel-documents").getPublicUrl(path);
+                  const photo = urlData.publicUrl;
                   onTripUpdate((prev) => ({
                     ...prev,
                     itinerary: prev.itinerary.map((i) =>
-                      i.id === item.id ? { ...i, photo_url: item.photo_url } : i
+                      i.id === item.id ? { ...i, photo_url: photo } : i
                     ),
                   }));
-                  throw error;
+                  await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
+                } catch (err) {
+                  toast(getErrorMessage(err), "error");
                 }
-              } catch (error) {
-                toast(getErrorMessage(error), 'error');
-              }
-              e.target.value = "";
-            }}
-          />
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          {!editingItineraryId && (
+                e.target.value = "";
+              }}
+            />
             <button
               type="button"
               onClick={() => startEditItinerary(item)}
@@ -554,88 +791,136 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
             >
               <FilePenLine size={16} />
             </button>
-          )}
-          <button
-            onClick={async () => {
-              const confirmed = await confirm({
-                title: 'Remover do itinerário?',
-                message: `Deseja realmente remover "${item.title}" do itinerário?`,
-                variant: 'danger',
-                isDark: settings.dark_mode
-              });
-              if (!confirmed) return;
-              await deleteItineraryItem(item);
-            }}
-            className="p-2 text-zinc-400 hover:text-red-500"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
+            <button
+              onClick={async () => {
+                const confirmed = await confirm({
+                  title: "Remover do itinerário?",
+                  message: `Deseja realmente remover "${item.title}" do itinerário?`,
+                  variant: "danger",
+                  isDark,
+                });
+                if (!confirmed) return;
+                await deleteItineraryItem(item);
+              }}
+              className="p-2 text-zinc-400 hover:text-red-500"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        )}
       </div>
     </Card>
   );
 
-  const groupedByDate = openActivities.reduce((acc, item) => {
-    const key = item.start_time ? item.start_time.slice(0, 10) : "sem-data";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, ItineraryItem[]>);
-
-  const sortedKeys = Object.keys(groupedByDate).sort((a, b) => {
-    if (a === "sem-data") return 1;
-    if (b === "sem-data") return -1;
-    return a.localeCompare(b);
-  });
+  const VIEW_OPTIONS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
+    { id: "agenda", label: "Agenda", icon: <AlignLeft size={14} /> },
+    { id: "timeline", label: "Timeline", icon: <Clock size={14} /> },
+  ];
 
   return (
-    <motion.div key="itinerary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          {sortedKeys.map((dateKey, index) => (
-            <div key={dateKey} className="space-y-4">
-              {index > 0 && <hr className={settings.dark_mode ? "border-zinc-700" : "border-zinc-200"} />}
-              <div className={`text-sm font-bold uppercase px-1 py-2 ${settings.dark_mode ? "text-zinc-400" : "text-zinc-500"}`}>
-                {dateKey === "sem-data"
-                  ? "Sem data definida"
-                  : new Date(dateKey + "T00:00:00").toLocaleDateString("pt-BR", {
-                      weekday: "long",
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-              </div>
-              {groupedByDate[dateKey].map(renderItineraryItem)}
-            </div>
-          ))}
-
-          {completedActivities.length > 0 && (
-            <div className="pt-4">
-              <button
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-zinc-600 transition-colors mb-4"
-              >
-                {showCompleted ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                Concluídas ({completedActivities.length})
-              </button>
-              
-              <AnimatePresence>
-                {showCompleted && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-4 overflow-hidden"
-                  >
-                    {completedActivities.map(renderItineraryItem)}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
+    <motion.div
+      key="itinerary"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="space-y-6"
+    >
+      {/* ── View switcher ── */}
+      <div
+        className={cn(
+          "flex gap-1 p-1 rounded-xl w-fit",
+          isDark ? "bg-zinc-800" : "bg-zinc-100"
+        )}
+      >
+        {VIEW_OPTIONS.map((opt) => {
+          const isActive = viewMode === opt.id;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => setViewMode(opt.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                isActive
+                  ? "text-white shadow-sm"
+                  : isDark
+                  ? "text-zinc-500 hover:text-zinc-300"
+                  : "text-zinc-500 hover:text-zinc-700"
+              )}
+              style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
+            >
+              {opt.icon}
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
-      
+
+      {/* ── Content area ── */}
+      <div className="space-y-4">
+        <AnimatePresence mode="wait">
+          {viewMode === "agenda" && (
+            <motion.div
+              key="agenda"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <AgendaView
+                items={openActivities}
+                isDark={isDark}
+                onToggleCompleted={toggleCompleted}
+                onStartEdit={startEditItinerary}
+                onDelete={deleteItineraryItem}
+                renderItem={renderItineraryItem}
+              />
+            </motion.div>
+          )}
+
+          {viewMode === "timeline" && (
+            <motion.div
+              key="timeline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <TimelineView
+                items={openActivities}
+                isDark={isDark}
+                renderItem={renderItineraryItem}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Completed section */}
+        {completedActivities.length > 0 && (
+          <div className="pt-4">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className={cn(
+                "flex items-center gap-2 text-sm font-bold transition-colors mb-4",
+                isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-400 hover:text-zinc-600"
+              )}
+            >
+              {showCompleted ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              Concluídas ({completedActivities.length})
+            </button>
+            <AnimatePresence>
+              {showCompleted && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-4 overflow-hidden"
+                >
+                  {completedActivities.map(renderItineraryItem)}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
       <FloatingActionButton onClick={onOpenModal} />
       {ConfirmDialogNode}
 
@@ -643,8 +928,8 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
         isOpen={visibilitySheet.open}
         currentVisibility={visibilitySheet.currentVisibility}
         onConfirm={() => visibilitySheet.onConfirm?.()}
-        onClose={() => setVisibilitySheet(prev => ({ ...prev, open: false }))}
-        isDark={settings.dark_mode}
+        onClose={() => setVisibilitySheet((prev) => ({ ...prev, open: false }))}
+        isDark={isDark}
       />
     </motion.div>
   );
