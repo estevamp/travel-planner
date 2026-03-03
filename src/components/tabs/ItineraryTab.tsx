@@ -174,8 +174,12 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
 
   return (
     <div>
-      {/* Day tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+      {/* Day tabs — stopPropagation prevents the parent swipe-tabs hook from firing */}
+      <div
+        className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-hide"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      >
         {keys.map((key) => {
           const isActive = key === activeKey;
           const label =
