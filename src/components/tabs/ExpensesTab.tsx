@@ -103,6 +103,20 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     };
   }, [fetchBalanceData, tripId]);
 
+  // Saldos BRUTOS (sem settlements) — usados para gerar a lista completa do modal
+  const [rawBalances, setRawBalances] = useState<MemberBalance[]>([]);
+
+  useEffect(() => {
+    const calculated = calculateNetBalances(
+      expensesWithSplits,
+      [],           // <── sem settlements
+      members,
+      settings.default_currency,
+      exchangeRates
+    );
+    setRawBalances(calculated);
+  }, [expensesWithSplits, members, settings.default_currency, exchangeRates]);
+
   // Calcular saldos com conversão de moedas
   useEffect(() => {
     const calculatedBalances = calculateNetBalances(
@@ -1000,11 +1014,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
               members={members}
               currency={settings.default_currency}
               isDark={Boolean(settings.dark_mode)}
-              onSettleClick={() => {
-                const simplified = simplifyDebts(balances, settings.default_currency);
-                setTransfers(simplified);
-                setShowSettlement(true);
-              }}
+            onSettleClick={() => {
+              const simplified = simplifyDebts(rawBalances, settings.default_currency); 
+              setTransfers(simplified);
+              setShowSettlement(true);
+            }}
+
             />
         </Card>
       )}
@@ -1062,7 +1077,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
           onClose={() => setShowSettlement(false)}
           isDark={settings.dark_mode}
 
-          // ── NOVO: pré-popula os checkmarks com settlements já salvos ──────────
+          // Pré-marca os que já estão no banco
           initialCompleted={new Set(
             settlements
               .filter(s =>
@@ -1100,7 +1115,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
             }
           }}
 
-          // ── NOVO: deleta o settlement quando desmarca ─────────────────────────
           onUnmarkComplete={async (fromId, toId) => {
             const { error } = await supabase
               .from("settlements")
