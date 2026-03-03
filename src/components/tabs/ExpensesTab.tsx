@@ -1077,7 +1077,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
           onClose={() => setShowSettlement(false)}
           isDark={settings.dark_mode}
 
-          // Pré-marca os que já estão no banco
           initialCompleted={new Set(
             settlements
               .filter(s =>
@@ -1106,11 +1105,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
               if (error) {
                 toast(getErrorMessage(error), 'error');
               } else {
-                const { data: settlementsData } = await supabase
-                  .from("settlements")
-                  .select("*")
-                  .eq("trip_id", tripId);
-                if (settlementsData) setSettlements(settlementsData);
+                await fetchBalanceData(); // ← substitui o fetch manual
               }
             }
           }}
@@ -1126,11 +1121,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
             if (error) {
               toast(getErrorMessage(error), 'error');
             } else {
-              const { data: settlementsData } = await supabase
-                .from("settlements")
-                .select("*")
-                .eq("trip_id", tripId);
-              if (settlementsData) setSettlements(settlementsData);
+              await fetchBalanceData(); // ← substitui o fetch manual
             }
           }}
 
