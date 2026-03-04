@@ -30,10 +30,10 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <Info className="w-6 h-6" />
-            <h2 className="text-lg font-semibold">O Aplicativo</h2>
+            <h2 className="text-lg font-semibold">O Partiu!</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            O Partiu! é o seu planejador de viagens colaborativo. Organize roteiros, despesas, voos e documentos em um só lugar, facilitando a coordenação com seus amigos e familiares.
+            Partiu! é o seu planejador de viagens colaborativo. Organize roteiros, despesas, voos e documentos em um só lugar, facilitando a coordenação com seus amigos e familiares.
           </p>
         </section>
 
