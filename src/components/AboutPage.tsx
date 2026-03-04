@@ -27,7 +27,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
-        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]"> // LAYOUT FIX: sombra temática
+        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <Info className="w-6 h-6" />
             <h2 className="text-lg font-semibold">O Aplicativo</h2>
@@ -37,7 +37,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
           </p>
         </section>
 
-        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]"> // LAYOUT FIX: sombra temática
+        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <Mail className="w-6 h-6" />
             <h2 className="text-lg font-semibold">Suporte Técnico</h2>
@@ -53,7 +53,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
           </a>
         </section>
 
-        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]"> // LAYOUT FIX: sombra temática
+        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-amber-600 dark:text-amber-400">
             <Coffee className="w-6 h-6" />
             <h2 className="text-lg font-semibold">Contribua</h2>
@@ -63,7 +63,7 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
           </p>
         </section>
 
-        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]"> // LAYOUT FIX: sombra temática
+        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <ShieldCheck className="w-6 h-6" />
             <h2 className="text-lg font-semibold">Informações do Sistema</h2>
