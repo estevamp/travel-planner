@@ -2,13 +2,13 @@ import { useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 
 interface RealtimeTripCallbacks {
-  onItineraryChange: () => void;     // tabela: itinerary
-  onExpensesChange: () => void;      // tabelas: expenses, expense_splits, settlements
-  onDocumentsChange: () => void;     // tabela: documents
-  onIdeasChange: () => void;         // tabelas: ideas, idea_links, idea_assets
-  onMembersChange: () => void;       // tabelas: trip_members, trip_invites
-  onBudgetChange: () => void;        // tabela: trip_budgets
-  onGlobalCatalogChange: () => void; // tabelas: expense_categories, itinerary_types (full reload)
+  onItineraryChange: () => void;
+  onExpensesChange: () => void;
+  onDocumentsChange: () => void;
+  onIdeasChange: () => void;
+  onMembersChange: () => void;
+  onBudgetChange: () => void;
+  onGlobalCatalogChange: () => void;
 }
 
 export function useRealtimeTrip(
@@ -24,26 +24,14 @@ export function useRealtimeTrip(
   }, [callbacks]);
 
   const debounced = (key: string, fn: () => void, delay = 300) => {
-    if (timers.current[key]) {
-      clearTimeout(timers.current[key]);
-    }
+    if (timers.current[key]) clearTimeout(timers.current[key]);
     timers.current[key] = setTimeout(fn, delay);
   };
 
-useEffect(() => {
-  if (!tripId) return;
-  if (!navigator.onLine) return; // não cria canal se offline
-
-useEffect(() => {
-  const onOnline = () => {
-    // força re-mount do hook recriando o canal
-    // isso acontece automaticamente porque o useEffect acima
-    // vai rodar de novo se tripId mudar — mas podemos forçar
-    // limpando e recriando o canal manualmente se necessário
-  };
-  window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-  }, []);
+  useEffect(() => {
+    if (!tripId) return;
+    // Não cria canal WebSocket se offline — evita loop de reconexão
+    if (!navigator.onLine) return;
 
     const channel = supabase
       .channel(`trip-realtime-${tripId}`)
@@ -90,7 +78,6 @@ useEffect(() => {
 
     return () => {
       void supabase.removeChannel(channel);
-      // Limpar timers pendentes
       Object.values(timers.current).forEach(clearTimeout);
       timers.current = {};
     };
