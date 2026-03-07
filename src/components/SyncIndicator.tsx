@@ -1,8 +1,7 @@
 /**
  * SyncIndicator
  * -------------
- * Chip discreto que aparece quando há operações offline pendentes ou
- * quando a sincronização está em andamento.
+ * Chip discreto que mostra o estado de sincronização offline.
  *
  * Estados:
  *  - Offline + pendentes  → âmbar  "N alteração(ões) pendente(s)"
@@ -10,7 +9,7 @@
  *  - Tudo sincronizado    → verde  "Sincronizado" (desaparece após 3s)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SyncIndicatorProps {
   pendingCount: number;
@@ -29,29 +28,38 @@ export function SyncIndicator({
 }: SyncIndicatorProps) {
   const [state, setState] = useState<IndicatorState>("idle");
   const [visible, setVisible] = useState(false);
-  const prevSyncingRef = useState(false);
+  const prevSyncingRef = useRef(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Limpa timer anterior
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
     if (isSyncing) {
       setState("syncing");
       setVisible(true);
+      prevSyncingRef.current = true;
       return;
     }
 
-    // Acabou de sincronizar (era syncing, agora não é)
-    if (prevSyncingRef[0] && !isSyncing && pendingCount === 0 && isOnline) {
+    // Acabou de sincronizar com sucesso
+    if (prevSyncingRef.current && !isSyncing && pendingCount === 0 && isOnline) {
+      prevSyncingRef.current = false;
       setState("synced");
       setVisible(true);
-      const t = setTimeout(() => setVisible(false), 3000);
-      prevSyncingRef[0] = false;
-      return () => clearTimeout(t);
+      hideTimerRef.current = setTimeout(() => setVisible(false), 3000);
+      return;
     }
+
+    prevSyncingRef.current = false;
 
     if (!isOnline && pendingCount > 0) {
       setState("offline_pending");
       setVisible(true);
     } else if (isOnline && pendingCount > 0) {
-      // Online mas ainda tem pendentes (flush em andamento logo)
       setState("syncing");
       setVisible(true);
     } else {
@@ -59,15 +67,21 @@ export function SyncIndicator({
       setVisible(false);
     }
 
-    if (isSyncing) prevSyncingRef[0] = true;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
   }, [pendingCount, isSyncing, isOnline]);
 
   if (!visible || state === "idle") return null;
 
-  const configs: Record<IndicatorState, { bg: string; text: string; icon: string; label: string }> = {
+  const configs: Record<
+    Exclude<IndicatorState, "idle">,
+    { bg: string; text: string; icon: string; label: string }
+  > = {
     offline_pending: {
-      bg: darkMode ? "bg-amber-900/60 border-amber-700" : "bg-amber-50 border-amber-300",
+      bg: darkMode
+        ? "bg-amber-900/60 border-amber-700"
+        : "bg-amber-50 border-amber-300",
       text: darkMode ? "text-amber-300" : "text-amber-700",
       icon: "📶",
       label:
@@ -76,26 +90,25 @@ export function SyncIndicator({
           : `${pendingCount} alterações pendentes`,
     },
     syncing: {
-      bg: darkMode ? "bg-blue-900/60 border-blue-700" : "bg-blue-50 border-blue-300",
+      bg: darkMode
+        ? "bg-blue-900/60 border-blue-700"
+        : "bg-blue-50 border-blue-300",
       text: darkMode ? "text-blue-300" : "text-blue-700",
       icon: "🔄",
       label: "Sincronizando…",
     },
     synced: {
-      bg: darkMode ? "bg-green-900/60 border-green-700" : "bg-green-50 border-green-300",
+      bg: darkMode
+        ? "bg-green-900/60 border-green-700"
+        : "bg-green-50 border-green-300",
       text: darkMode ? "text-green-300" : "text-green-700",
       icon: "✅",
       label: "Sincronizado",
     },
-    idle: {
-      bg: "",
-      text: "",
-      icon: "",
-      label: "",
-    },
   };
 
-  const { bg, text, icon, label } = configs[state];
+  const { bg, text, icon, label } =
+    configs[state as Exclude<IndicatorState, "idle">];
 
   return (
     <div
@@ -111,8 +124,11 @@ export function SyncIndicator({
       aria-live="polite"
     >
       <span
-        className={state === "syncing" ? "animate-spin inline-block" : ""}
-        style={state === "syncing" ? { display: "inline-block" } : {}}
+        style={
+          state === "syncing"
+            ? { display: "inline-block", animation: "spin 1s linear infinite" }
+            : {}
+        }
       >
         {icon}
       </span>
