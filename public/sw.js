@@ -1,36 +1,36 @@
 /**
- * Partiu! — Service Worker v2
- * ────────────────────────────
- * Fase 1: cache-first para assets, network-first para Supabase
- * Fase 2: Background Sync — garante flush mesmo após o app fechar e reabrir
+ * Partiu! — Service Worker v2.1
+ * ──────────────────────────────
+ * Fix: auth/v1/token agora tem cache próprio para não derrubar operações offline.
  *
- * Compatibilidade:
- *   - Android Chrome: Background Sync nativo via SyncManager
- *   - iOS Safari / outros: fallback via evento "online" no cliente
+ * Estratégia por tipo de URL:
+ *   /auth/v1/token   → tenta rede, cacheia sucesso, devolve cache se offline
+ *   /rest/v1/**      → network-first com fallback de cache 24h
+ *   assets do app    → cache-first
  */
 
-const CACHE_NAME = "partiu-v2";
-const SUPABASE_CACHE = "partiu-supabase-v2";
-const SUPABASE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+const CACHE_APP      = "partiu-app-v2";
+const CACHE_SUPABASE = "partiu-supabase-v2";
+const CACHE_AUTH     = "partiu-auth-v2";
+const SUPABASE_TTL   = 24 * 60 * 60 * 1000;
 
-// Assets do app que devem ser cacheados imediatamente
 const PRECACHE_URLS = ["/", "/index.html", "/manifest.json"];
 
-// ─── Install ──────────────────────────────────────────────────────────────────
+// ─── Install ─────────────────────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_APP).then((cache) => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// ─── Activate ─────────────────────────────────────────────────────────────────
+// ─── Activate ────────────────────────────────────────────────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k !== CACHE_NAME && k !== SUPABASE_CACHE)
+          .filter((k) => ![CACHE_APP, CACHE_SUPABASE, CACHE_AUTH].includes(k))
           .map((k) => caches.delete(k))
       )
     )
@@ -38,57 +38,100 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// ─── Fetch ────────────────────────────────────────────────────────────────────
+// ─── Fetch ───────────────────────────────────────────────────────────────────
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignora: não-GET, chrome-extension, links de convite
+  // POST para /auth/v1/token (refresh de sessão) — precisa de tratamento especial
+  const isAuthRefresh =
+    request.method === "POST" &&
+    url.hostname.includes("supabase.co") &&
+    url.pathname.includes("/auth/v1/token");
+
+  // Ignora tudo que não é GET, exceto o auth refresh
   if (
-    request.method !== "GET" ||
+    (request.method !== "GET" && !isAuthRefresh) ||
     url.protocol === "chrome-extension:" ||
     url.pathname.startsWith("/invite/")
   ) {
     return;
   }
 
-  // Supabase → Network-first com fallback de cache (TTL 24h)
+  if (isAuthRefresh) {
+    event.respondWith(handleAuthRefresh(request));
+    return;
+  }
+
   if (url.hostname.includes("supabase.co")) {
     event.respondWith(networkFirstSupabase(request));
     return;
   }
 
-  // Assets do app → Cache-first
   event.respondWith(cacheFirstApp(request));
 });
 
+// ─── Auth refresh ─────────────────────────────────────────────────────────────
+// Cacheia a última resposta bem-sucedida de refresh.
+// Offline: devolve o cache para que o Supabase client não lance exceção
+// e o app continue funcionando com a sessão já existente em memória.
+async function handleAuthRefresh(request) {
+  const cache = await caches.open(CACHE_AUTH);
+  // Chave estável — não inclui body que muda a cada request
+  const cacheKey = new Request("__auth_session__");
+
+  try {
+    const bodyText = await request.clone().text();
+    const response = await fetch(new Request(request.url, {
+      method: "POST",
+      headers: request.headers,
+      body: bodyText,
+    }));
+
+    if (response.ok) {
+      cache.put(cacheKey, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      console.log("[SW] Offline: devolvendo sessão de auth cacheada");
+      return cached.clone();
+    }
+    // Sem cache — retorna 200 com body vazio para o client não quebrar
+    return new Response(
+      JSON.stringify({ access_token: null, error: "offline" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// ─── Supabase REST: network-first ─────────────────────────────────────────────
 async function networkFirstSupabase(request) {
-  const cache = await caches.open(SUPABASE_CACHE);
+  const cache = await caches.open(CACHE_SUPABASE);
   try {
     const response = await fetch(request.clone());
     if (response.ok) {
-      const cloned = response.clone();
-      // Guarda com timestamp para controle de TTL
-      const headers = new Headers(cloned.headers);
+      const headers = new Headers(response.headers);
       headers.set("sw-cached-at", Date.now().toString());
-      const body = await cloned.arrayBuffer();
-      cache.put(request, new Response(body, { status: cloned.status, headers }));
+      const body = await response.clone().arrayBuffer();
+      cache.put(request, new Response(body, { status: response.status, headers }));
     }
     return response;
   } catch {
     const cached = await cache.match(request);
     if (cached) {
       const cachedAt = parseInt(cached.headers.get("sw-cached-at") || "0");
-      if (Date.now() - cachedAt < SUPABASE_CACHE_TTL) return cached;
+      if (Date.now() - cachedAt < SUPABASE_TTL) return cached;
     }
-    // Sem cache válido — retorna 503 para o cliente tratar
-    return new Response(JSON.stringify({ error: "offline" }), {
-      status: 503,
+    return new Response(JSON.stringify({ data: null, error: "offline" }), {
+      status: 200,
       headers: { "Content-Type": "application/json" },
     });
   }
 }
 
+// ─── App assets: cache-first ──────────────────────────────────────────────────
 async function cacheFirstApp(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -96,19 +139,17 @@ async function cacheFirstApp(request) {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await caches.open(CACHE_APP);
       cache.put(request, response.clone());
     }
     return response;
   } catch {
-    // SPA fallback: retorna index.html para qualquer rota não encontrada
     const fallback = await caches.match("/index.html");
     return fallback || new Response("Offline", { status: 503 });
   }
 }
 
 // ─── Background Sync ──────────────────────────────────────────────────────────
-// Registrado pelo cliente com: navigator.serviceWorker.ready.then(r => r.sync.register("flush-queue"))
 self.addEventListener("sync", (event) => {
   if (event.tag === "flush-queue") {
     event.waitUntil(notifyClientsToFlush());
@@ -117,15 +158,11 @@ self.addEventListener("sync", (event) => {
 
 async function notifyClientsToFlush() {
   const clients = await self.clients.matchAll({ type: "window" });
-  clients.forEach((client) => {
-    client.postMessage({ type: "SW_FLUSH_QUEUE" });
-  });
+  clients.forEach((client) => client.postMessage({ type: "SW_FLUSH_QUEUE" }));
 }
 
-// ─── Mensagens do cliente ─────────────────────────────────────────────────────
 self.addEventListener("message", (event) => {
   if (event.data?.type === "FLUSH_DONE") {
-    // Flush completou — nada a fazer no SW por enquanto
-    // (hook para métricas futuras)
+    // hook para métricas futuras
   }
 });

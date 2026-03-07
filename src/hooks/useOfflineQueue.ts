@@ -1,11 +1,8 @@
 /**
- * useOfflineQueue
- * ---------------
- * Fila persistida no localStorage para operações feitas offline.
- * Quando a conexão volta (evento "online" ou Background Sync via SW),
- * executa todas as operações pendentes contra o Supabase na ordem certa.
- *
- * Tabelas suportadas: expenses, itinerary, ideas, documents
+ * useOfflineQueue v1.1
+ * ─────────────────────
+ * Fix: o flush agora verifica sessão válida antes de executar operações,
+ * evitando que o Supabase client tente renovar o token offline e quebre.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -17,13 +14,13 @@ export type OfflineTable = "expenses" | "itinerary" | "ideas" | "documents";
 export type OfflineOpType = "insert" | "update" | "delete";
 
 export interface QueuedOperation {
-  id: string;               // uuid gerado no cliente (também é o id do registro)
+  id: string;
   timestamp: number;
   tripId: string;
   type: OfflineOpType;
   table: OfflineTable;
   payload: Record<string, unknown>;
-  optimisticId?: string;    // id temporário usado na UI para delete/update
+  optimisticId?: string;
 }
 
 interface UseOfflineQueueReturn {
@@ -39,7 +36,7 @@ interface UseOfflineQueueReturn {
 const STORAGE_KEY = "partiu_offline_queue";
 const MAX_QUEUE_SIZE = 100;
 
-// ─── Helpers de storage ───────────────────────────────────────────────────────
+// ─── Storage helpers ──────────────────────────────────────────────────────────
 
 function readQueue(): QueuedOperation[] {
   try {
@@ -54,7 +51,21 @@ function writeQueue(ops: QueuedOperation[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ops));
   } catch {
-    console.warn("[OfflineQueue] Falha ao persistir fila no localStorage");
+    console.warn("[OfflineQueue] Falha ao persistir fila");
+  }
+}
+
+// ─── Verifica se a sessão atual é válida sem fazer request de rede ────────────
+// Usa getSession() que lê do storage local — não tenta refresh automático.
+async function hasValidSession(): Promise<boolean> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return false;
+    // Verifica se o token ainda não expirou (com margem de 60s)
+    const expiresAt = data.session.expires_at ?? 0;
+    return expiresAt * 1000 > Date.now() + 60_000;
+  } catch {
+    return false;
   }
 }
 
@@ -66,7 +77,6 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const flushingRef = useRef(false);
 
-  // Sincroniza estado de online/offline
   useEffect(() => {
     const onOnline = () => {
       setIsOnline(true);
@@ -77,7 +87,6 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 
-    // Ouve mensagem do Service Worker (Background Sync)
     const onSwMessage = (event: MessageEvent) => {
       if (event.data?.type === "SW_FLUSH_QUEUE") {
         void flushQueue();
@@ -93,7 +102,7 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Executa uma operação contra o Supabase ────────────────────────────────
+  // ─── Executa uma operação ──────────────────────────────────────────────────
 
   async function executeOp(op: QueuedOperation): Promise<{ error: unknown }> {
     switch (op.type) {
@@ -103,7 +112,10 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
       }
       case "update": {
         const { id, ...rest } = op.payload;
-        const { error } = await supabase.from(op.table).update(rest).eq("id", id as string);
+        const { error } = await supabase
+          .from(op.table)
+          .update(rest)
+          .eq("id", id as string);
         return { error };
       }
       case "delete": {
@@ -116,12 +128,23 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
     }
   }
 
-  // ─── Flush ─────────────────────────────────────────────────────────────────
+  // ─── Flush ────────────────────────────────────────────────────────────────
 
   const flushQueue = useCallback(async () => {
     if (flushingRef.current) return;
+
     const queue = readQueue();
     if (queue.length === 0) return;
+
+    // Não tenta flush se offline
+    if (!navigator.onLine) return;
+
+    // Não tenta flush se o token está expirado (evita o refresh automático offline)
+    const sessionOk = await hasValidSession();
+    if (!sessionOk) {
+      console.warn("[OfflineQueue] Sessão inválida ou expirada, flush adiado");
+      return;
+    }
 
     flushingRef.current = true;
     setIsSyncing(true);
@@ -131,21 +154,17 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
     for (const op of queue) {
       try {
         const { error } = await executeOp(op);
-        if (!error) {
-          // Remove somente a operação que terminou com sucesso
-          remaining = remaining.filter((o) => o.id !== op.id);
-          writeQueue(remaining);
-          setPendingCount(remaining.length);
-        } else {
-          // Se falhou (ex: conflito RLS), descarta mesmo assim para não bloquear
-          console.warn("[OfflineQueue] Erro ao executar op, descartando:", op, error);
-          remaining = remaining.filter((o) => o.id !== op.id);
-          writeQueue(remaining);
-          setPendingCount(remaining.length);
+        // Remove da fila independente de erro (evita loop infinito em erro de RLS)
+        remaining = remaining.filter((o) => o.id !== op.id);
+        writeQueue(remaining);
+        setPendingCount(remaining.length);
+
+        if (error) {
+          console.warn("[OfflineQueue] Erro ao executar op (descartada):", op.table, op.type, error);
         }
       } catch (err) {
-        // Erro de rede: para o flush, tenta novamente no próximo "online"
-        console.warn("[OfflineQueue] Falha de rede ao executar op, abortando flush:", err);
+        // Erro de rede no meio do flush: para e tenta novamente no próximo "online"
+        console.warn("[OfflineQueue] Rede caiu durante flush, parando:", err);
         break;
       }
     }
@@ -153,43 +172,39 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
     setIsSyncing(false);
     flushingRef.current = false;
 
-    // Notifica o SW que o flush terminou (para Background Sync)
     navigator.serviceWorker?.controller?.postMessage({ type: "FLUSH_DONE" });
   }, []);
 
-  // ─── Enqueue ────────────────────────────────────────────────────────────────
+  // ─── Enqueue ──────────────────────────────────────────────────────────────
 
   const enqueue = useCallback(
     (op: Omit<QueuedOperation, "timestamp">) => {
       const queue = readQueue();
 
       if (queue.length >= MAX_QUEUE_SIZE) {
-        console.warn("[OfflineQueue] Fila cheia (100 ops). Operação descartada.");
+        console.warn("[OfflineQueue] Fila cheia, operação descartada.");
         return;
       }
 
-      // Otimização: se já existe um insert com mesmo id e agora veio um update,
-      // mescla o payload para não criar duplicata
-      const existingInsertIdx = queue.findIndex(
-        (o) => o.id === op.id && o.type === "insert" && o.table === op.table
-      );
-      if (op.type === "update" && existingInsertIdx !== -1) {
-        queue[existingInsertIdx].payload = {
-          ...queue[existingInsertIdx].payload,
-          ...op.payload,
-        };
-        writeQueue(queue);
-        setPendingCount(queue.length);
-        return;
+      // Se já existe um insert do mesmo id, mescla com o update
+      if (op.type === "update") {
+        const existingIdx = queue.findIndex(
+          (o) => o.id === op.id && o.type === "insert" && o.table === op.table
+        );
+        if (existingIdx !== -1) {
+          queue[existingIdx].payload = { ...queue[existingIdx].payload, ...op.payload };
+          writeQueue(queue);
+          setPendingCount(queue.length);
+          return;
+        }
       }
 
-      // Otimização: se existe insert/update do mesmo id e veio um delete, cancela ambos
+      // Se veio delete de algo que ainda não foi ao servidor, cancela ambos
       if (op.type === "delete") {
         const withoutPrior = queue.filter(
           (o) => !(o.id === op.id && o.table === op.table)
         );
         if (withoutPrior.length < queue.length) {
-          // havia algo para esse id — só remove, sem enfileirar o delete
           writeQueue(withoutPrior);
           setPendingCount(withoutPrior.length);
           return;
@@ -201,7 +216,7 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
       writeQueue(next);
       setPendingCount(next.length);
 
-      // Tenta flush imediato se online
+      // Flush imediato se online e sessão válida
       if (navigator.onLine) {
         void flushQueue();
       }
