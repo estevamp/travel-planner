@@ -16,6 +16,7 @@ import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { ACTIVITY_ICON_COMPONENTS } from "../../constants/icons";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
+import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,8 @@ interface AgendaViewProps {
   onStartEdit: (item: ItineraryItem) => void;
   onDelete: (item: ItineraryItem) => void;
   renderItem: (item: ItineraryItem) => React.ReactNode;
+  isOnline: boolean;
+enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
 function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
@@ -509,6 +512,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
       ...prev,
       itinerary: prev.itinerary.filter((i) => i.id !== item.id),
     }));
+
+    if (!isOnline) {
+      enqueue({ id: item.id, tripId, type: "delete", table: "itinerary", payload: { id: item.id } });
+      return;
+    }
+
     const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
     if (error) {
       toast(getErrorMessage(error), "error");

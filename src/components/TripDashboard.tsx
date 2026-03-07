@@ -7,6 +7,8 @@ import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
 import { getThemeStyles } from "../utils/theme";
 import { useSwipeTabs } from "../hooks/useSwipeTabs";
+import { useOfflineQueue } from "../hooks/useOfflineQueue";
+import { SyncIndicator } from "./SyncIndicator";
 import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType } from "../types";
 
 // Context
@@ -86,6 +88,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   
   // Estado local apenas para UI
   const [activeTab, setActiveTab] = useState<ActiveTab>("itinerary");
+
+  const { enqueue, pendingCount, isSyncing, isOnline } = useOfflineQueue();
 
     // Restaurar aba salva quando a viagem carrega (uma vez por id)
   useEffect(() => {
@@ -240,6 +244,32 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
 
       setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")) } : null);
 
+      // ── OFFLINE GUARD ──
+      const itineraryPayload = {
+        id: itineraryId,
+        trip_id: tripId,
+        created_by_member_id: currentMember.id,
+        type_id,
+        title,
+        description,
+        location,
+        start_time,
+        end_time,
+        is_all_day: itineraryAllDay,
+        amount: 0,
+        currency: settings.default_currency,
+        visibility,
+        photo_url,
+      };
+
+      if (!isOnline) {
+        enqueue({ id: itineraryId, tripId, type: "insert", table: "itinerary", payload: itineraryPayload });
+        toast("Atividade salva offline — será sincronizada ao reconectar.", "info");
+        closeModal();
+        return;
+      }
+      // ── FIM OFFLINE GUARD ──
+      
       const { error } = await supabase.from("itinerary").insert({
         id: itineraryId,
       trip_id: tripId,
@@ -296,6 +326,30 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       };
 
       setTrip(prev => prev ? { ...prev, expenses: [...prev.expenses, newExpense].sort((a, b) => a.date.localeCompare(b.date)) } : null);
+    // ── OFFLINE GUARD 
+      const expensePayload = {
+        id: expenseId,
+        trip_id: tripId,
+        created_by_member_id: currentMember.id,
+        description,
+        amount,
+        currency: expenseCurrency,
+        category_id,
+        visibility,
+        date: new Date().toISOString().split("T")[0],
+        is_confirmed,
+        paid_by_member_id: expensePayerId || currentMember.id,
+        split_type: expenseSplitType,
+      };
+
+      if (!isOnline) {
+        enqueue({ id: expenseId, tripId, type: "insert", table: "expenses", payload: expensePayload });
+        toast("Despesa salva offline — será sincronizada ao reconectar.", "info");
+        closeModal();
+        setExpenseCurrency(settings.default_currency);
+        return;
+      }
+      // ── FIM OFFLINE GUARD ──
 
       const { error } = await supabase.from("expenses").insert({
         id: expenseId,
@@ -369,6 +423,28 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       };
 
       setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...(prev.ideas || [])] } : null);
+
+      // ── OFFLINE GUARD ──
+      const ideaPayload = {
+        id: ideaId,
+        trip_id: tripId,
+        created_by_member_id: currentMember.id,
+        title,
+        notes,
+        maps_url: mapsUrl,
+        estimated_amount: 0,
+        currency: ideaCurrency,
+        visibility,
+        is_converted: false,
+      };
+
+      if (!isOnline) {
+        enqueue({ id: ideaId, tripId, type: "insert", table: "ideas", payload: ideaPayload });
+        toast("Ideia salva offline — será sincronizada ao reconectar.", "info");
+        closeModal();
+        return;
+      }
+      // ── FIM OFFLINE GUARD ──
 
       const { error } = await supabase.from("ideas").insert({
         id: ideaId,
@@ -613,9 +689,9 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} />}
-            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} />}
-            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip} />}
+            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline}enqueue={enqueue}/>}
+            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} isOnline={isOnline}enqueue={enqueue}/>}
+            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip}  isOnline={isOnline}enqueue={enqueue}/>}
             {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} />}
             {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} />}
             {activeTab === "settings"  && <SettingsTab />}
@@ -1050,6 +1126,12 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             toast(getErrorMessage(error), 'error');
           }
         }}
+      />
+      <SyncIndicator
+        pendingCount={pendingCount}
+        isSyncing={isSyncing}
+        isOnline={isOnline}
+        darkMode={settings.dark_mode}
       />
     </div>
   );

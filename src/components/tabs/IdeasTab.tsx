@@ -11,11 +11,14 @@ import type { Trip, Idea, IdeaLink, IdeaAsset, Visibility } from "../../types";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
+import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 
 interface IdeasTabProps {
   onOpenModal: () => void;
   onSetActiveTab: (tab: string) => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
+  isOnline: boolean;
+  enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
 export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
@@ -207,6 +210,15 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
     }
 
     // Phase 2: delete the idea (cascade in DB removes links and assets automatically)
+    if (!isOnline) {
+      enqueue({ id: idea.id, tripId: trip.id, type: "delete", table: "ideas", payload: { id: idea.id } });
+      onTripUpdate((prev) => ({
+        ...prev,
+        ideas: prev.ideas.filter((i) => i.id !== idea.id),
+      }));
+      return;
+    } 
+
     const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
     if (error) {
       toast(getErrorMessage(error), 'error');

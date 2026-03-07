@@ -11,6 +11,7 @@ import type { Trip, Visibility, DocumentItem } from "../../types";
 import { Card } from "../Card";
 import { DocumentViewer } from "../DocumentViewer";
 import { Modal } from "../Modal";
+import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 
 interface DocumentsTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -392,12 +393,16 @@ export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
                 : "Público = todos da viagem."}
             </p>
           </div>
-
           <button
             onClick={isUploadModalOpen ? handleUploadConfirm : handleUpdateDoc}
             disabled={isSaving}
             className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
+            {!isOnline && (
+            <p className="text-xs text-amber-600 mt-1">
+              📶 Upload de documentos indisponível offline.
+            </p>
+            )}
             {isSaving ? (
               <Loader2 className="animate-spin" size={20} />
             ) : (

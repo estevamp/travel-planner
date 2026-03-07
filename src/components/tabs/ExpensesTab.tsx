@@ -19,6 +19,7 @@ import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
 import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
+import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 
 // Tipo da resposta bruta do Supabase para a query "*, expense_splits(*)"
 type ExpenseRowFromSupabase = Omit<ExpenseWithSplits, 'splits'> & {
@@ -29,6 +30,8 @@ interface ExpensesTabProps {
   onOpenModal: () => void;
   onSetActiveTab: (tab: string) => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
+  isOnline: boolean;
+  enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
 export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
@@ -453,6 +456,11 @@ const undoPayment = async (settlementId: string) => {
       ...prev,
       expenses: prev.expenses.filter((exp) => exp.id !== expense.id),
     }));
+
+    if (!isOnline) {
+      enqueue({ id: expense.id, tripId, type: "delete", table: "expenses", payload: { id: expense.id } });
+      return; // optimistic update já removeu da UI
+    }
 
     const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
     if (error) {
