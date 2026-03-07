@@ -235,6 +235,36 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
   toast("Pagamento registrado!", "success");
 };
 
+const registerPayment = async (
+  fromMemberId: string,
+  toMemberId: string,
+  amount: number
+) => {
+  const { error } = await supabase.from("settlements").insert({
+    trip_id: tripId,
+    from_member_id: fromMemberId,
+    to_member_id: toMemberId,
+    amount,
+    currency: settings.default_currency,
+    date: new Date().toISOString(),
+    is_confirmed: true,
+  });
+  if (error) { toast(getErrorMessage(error), "error"); return; }
+  await fetchBalanceData();
+  toast("Pagamento registrado!", "success");
+};
+
+const undoPayment = async (settlementId: string) => {
+  const { error } = await supabase
+    .from("settlements")
+    .delete()
+    .eq("id", settlementId);
+  if (error) { toast(getErrorMessage(error), "error"); return; }
+  await fetchBalanceData();
+  toast("Pagamento desfeito.", "success");
+};
+
+
   // Estados para modal de edição completo (com splits)
   const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -1038,12 +1068,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
               members={members}
               currency={settings.default_currency}
               isDark={Boolean(settings.dark_mode)}
+              settlements={settlements}
               onSettleClick={() => {
                 const simplified = simplifyDebts(rawBalances, settings.default_currency);
                 setTransfers(simplified);
                 setShowSettlement(true);
               }}
               onRegisterPayment={registerPayment}
+              onUndoPayment={undoPayment}
             />
         </Card>
       )}
