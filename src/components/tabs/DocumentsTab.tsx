@@ -15,9 +15,10 @@ import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 
 interface DocumentsTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
+  isOnline: boolean;
 }
 
-export function DocumentsTab({ onTripUpdate }: DocumentsTabProps) {
+export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
   const { trip, currentMember, tripId, settings } = useTripContext();
   const isDark = settings.dark_mode;
   const { toast } = useToast();

@@ -11,9 +11,10 @@ import { Card } from "../Card";
 
 interface PeopleTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
+  isOnline: boolean;
 }
 
-export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
+export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const {
     tripId, members, invites, currentMember, isAdmin,
     settings, onSettingsChange, spouseByUserId, reloadTrip,
@@ -211,6 +212,13 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
 
   return (
     <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+      {!isOnline && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+          <span>📶</span>
+          <p>Você está offline. O gerenciamento de amigos requer conexão com a internet.</p>
+        </div>
+      )}
+
       <Card className="p-0 overflow-hidden">
         <table className="w-full text-left border-collapse text-xs">
           <thead>

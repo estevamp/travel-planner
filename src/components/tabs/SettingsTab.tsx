@@ -10,12 +10,14 @@ import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
 import type { Trip, UserSettings } from "../../types";
 import { Card } from "../Card";
 import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
+import { useOfflineQueue } from "../../hooks/useOfflineQueue";
 
 interface SettingsTabProps {
   // Nenhuma prop necessária — tudo vem do contexto
 }
 
 export function SettingsTab() {
+  const { isOnline } = useOfflineQueue();
   const {
     trip, tripId, currentMember, isAdmin, settings, onSettingsChange,
     members, categories, setCategories, itineraryTypes, setItineraryTypes,
@@ -121,6 +123,13 @@ export function SettingsTab() {
 
   return (
     <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+
+      {!isOnline && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+          <span>📶</span>
+          <p>Você está offline. As alterações nas configurações não serão salvas.</p>
+        </div>
+      )}
 
       {/* ── 1. FINANCEIRO & ORÇAMENTO (unified card) ── */}
       <Card className="space-y-6">

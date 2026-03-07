@@ -689,11 +689,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline}enqueue={enqueue}/>}
-            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} isOnline={isOnline}enqueue={enqueue}/>}
-            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip}  isOnline={isOnline}enqueue={enqueue}/>}
-            {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} />}
-            {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} />}
+            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} isOnline={isOnline}/>}
+            {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} isOnline={isOnline}/>}
             {activeTab === "settings"  && <SettingsTab />}
           </motion.div>
         </AnimatePresence>   
