@@ -138,10 +138,10 @@ export function BalancesSummary({
             const fromInitial = isCurrentUserDebtor   ? "V"    : transfer.from_member_name.charAt(0).toUpperCase();
 
             const chipColor = isCurrentUserDebtor
-              ? "bg-red-600 text-white"
-              : isCurrentUserCreditor
-              ? "bg-green-600 text-white"
-              : "bg-slate-400 text-white";
+            ? "bg-red-600 text-white"
+            : isCurrentUserCreditor
+            ? "bg-green-600 text-white"
+            : "bg-yellow-500 text-white";
 
             const key             = `${transfer.from_member_id}-${transfer.to_member_id}`;
             const isPaymentOpen   = openPaymentKey === key;
@@ -312,7 +312,7 @@ export function BalancesSummary({
                 <div key={s.id} className={`rounded-lg border ${surfaceNeutral} px-4 py-3 flex items-center gap-3`}>
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
-                    isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-slate-400 text-white"
+                    isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-yellow-500 text-white"
                   )}>
                     {isFromMe ? "V" : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
                   </div>
