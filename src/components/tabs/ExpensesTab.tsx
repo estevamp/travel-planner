@@ -211,29 +211,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: Expen
     is_confirmed: false,
   });
 
-  const registerPayment = async (
-  fromMemberId: string,
-  toMemberId: string,
-  amount: number
-) => {
-  const { error } = await supabase.from("settlements").insert({
-    trip_id: tripId,
-    from_member_id: fromMemberId,
-    to_member_id: toMemberId,
-    amount,
-    currency: settings.default_currency,
-    date: new Date().toISOString(),
-    is_confirmed: true,
-  });
-
-  if (error) {
-    toast(getErrorMessage(error), "error");
-    return;
-  }
-
-  await fetchBalanceData();
-  toast("Pagamento registrado!", "success");
-};
 
 const registerPayment = async (
   fromMemberId: string,
