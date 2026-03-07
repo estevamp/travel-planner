@@ -678,7 +678,8 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                   <MapPin size={10} /> {item.location}
                 </p>
               )}
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
+
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 {item.type && (
                   <span
                     className={cn(
@@ -712,7 +713,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                     })
                   }
                   className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
                     item.visibility === "public"
                       ? isDark
                         ? "bg-emerald-900/40 text-emerald-400"
@@ -728,33 +729,26 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
                     <><Lock size={10} /> Privado</>
                   )}
                 </button>
-                <div className="flex flex-col items-start">
-                  {item.start_time && (
-                    <span className={cn("text-xs whitespace-nowrap", isDark ? "text-zinc-400" : "text-zinc-400")}>
-                      {item.is_all_day
-                        ? format(new Date(item.start_time), "dd/MM")
-                        : format(new Date(item.start_time), "dd/MM HH:mm")}
-                      {item.end_time && !item.is_all_day
-                        ? ` - ${format(new Date(item.end_time), "HH:mm")}`
-                        : ""}
-                      {item.is_all_day && item.end_time
-                        ? ` - ${format(new Date(item.end_time), "dd/MM")}`
-                        : ""}
-                    </span>
-                  )}
-                  {item.is_all_day && (
-                    <span className={cn("text-[10px]", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                      Dia todo
-                    </span>
-                  )}
-                </div>
+              </div>
+
+              <div className="flex items-center justify-between mt-1.5 gap-2">
+                {item.start_time && (
+                  <span className={cn("text-xs whitespace-nowrap font-medium", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                    {item.is_all_day
+                      ? format(new Date(item.start_time), "dd/MM")
+                      : format(new Date(item.start_time), "dd/MM HH:mm")}
+                    {item.end_time && !item.is_all_day
+                      ? ` – ${format(new Date(item.end_time), "HH:mm")}`
+                      : ""}
+                    {item.is_all_day && item.end_time &&
+                    item.end_time.slice(0, 10) !== item.start_time.slice(0, 10)
+                      ? ` – ${format(new Date(item.end_time), "dd/MM")}`
+                      : ""}
+                    {item.is_all_day && !item.end_time ? " · Dia todo" : ""}
+                  </span>
+                )}
                 {item.created_by_member_id && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit",
-                      isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-50 text-zinc-400"
-                    )}
-                  >
+                  <span className={cn("text-[10px] ml-auto", isDark ? "text-zinc-500" : "text-zinc-400")}>
                     {getCreatorName(item.created_by_member_id)}
                   </span>
                 )}
