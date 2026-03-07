@@ -3,6 +3,7 @@ import { TripMember } from "../types";
 import { MemberBalance, Settlement } from "../types/splitting";
 import { formatCurrency, simplifyDebts } from "../utils/splitting";
 import { maskCurrency, parseCurrencyToNumber, cn } from "../utils";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface BalancesSummaryProps {
   balances: MemberBalance[];
@@ -39,6 +40,7 @@ export function BalancesSummary({
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [undoingId, setUndoingId] = useState<string | null>(null);
   const [expandedHistoryKey, setExpandedHistoryKey] = useState<string | null>(null);
+  const [isPaymentsHistoryOpen, setIsPaymentsHistoryOpen] = useState(false);
 
   const openPayment = (fromId: string, toId: string, suggestedAmount: number) => {
     const key = `${fromId}-${toId}`;
@@ -108,6 +110,8 @@ export function BalancesSummary({
   const overallKind: "pos" | "neg" | "neu" =
     netBalance > 0 ? "pos" : netBalance < 0 ? "neg" : "neu";
 
+  const confirmedSettlements = settlements.filter(s => s.is_confirmed);
+
   return (
     <div className="space-y-4">
       {/* Saldo geral */}
@@ -138,10 +142,10 @@ export function BalancesSummary({
             const fromInitial = isCurrentUserDebtor   ? "V"    : transfer.from_member_name.charAt(0).toUpperCase();
 
             const chipColor = isCurrentUserDebtor
-            ? "bg-red-600 text-white"
-            : isCurrentUserCreditor
-            ? "bg-green-600 text-white"
-            : "bg-yellow-500 text-white";
+              ? "bg-red-600 text-white"
+              : isCurrentUserCreditor
+              ? "bg-green-600 text-white"
+              : "bg-slate-400 text-white";
 
             const key             = `${transfer.from_member_id}-${transfer.to_member_id}`;
             const isPaymentOpen   = openPaymentKey === key;
@@ -154,61 +158,58 @@ export function BalancesSummary({
               <div key={key} className={`rounded-lg border ${surfaceNeutral} overflow-hidden`}>
 
                 {/* Linha principal */}
-                <div className="flex items-start p-4 gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 ${chipColor}`}>
+                <div className="flex items-center p-4 gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${chipColor}`}>
                     {fromInitial}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    {/* Linha 1: nome + badge de pagamentos */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
-                      {hasPastPayments && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setExpandedHistoryKey(isHistoryOpen ? null : key);
-                            setOpenPaymentKey(null);
-                            setPaymentAmount("");
-                          }}
-                          title="Ver pagamentos registrados"
-                          className={cn(
-                            "text-xs px-2 py-0.5 rounded-full font-semibold transition-colors",
-                            isHistoryOpen
-                              ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"
-                              : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
-                          )}
-                        >
-                          {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Linha 2: valor que deve */}
-                    <p className={`text-sm mt-0.5 ${lineText(isCurrentUserCreditor)}`}>
+                    <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
+                    <p className={`text-sm ${lineText(isCurrentUserCreditor)}`}>
                       deve {formatCurrency(transfer.amount, currency)} para <strong>{toName}</strong>
                     </p>
+                  </div>
 
-                    {/* Linha 3: botão registrar pagamento */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Badge de pagamentos já registrados */}
+                    {hasPastPayments && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedHistoryKey(isHistoryOpen ? null : key);
+                          setOpenPaymentKey(null);
+                          setPaymentAmount("");
+                        }}
+                        title="Ver pagamentos registrados"
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-semibold transition-colors",
+                          isHistoryOpen
+                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                            : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                        )}
+                      >
+                        {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
+                      </button>
+                    )}
+
+                    {/* Botão registrar pagamento */}
                     {isInvolved && (
-                      <div className="mt-2">
-                        <button
-                          type="button"
-                          onClick={() => openPayment(transfer.from_member_id, transfer.to_member_id, transfer.amount)}
-                          className={cn(
-                            "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
-                            isPaymentOpen
-                              ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
-                              : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-                          )}
-                        >
-                          {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openPayment(transfer.from_member_id, transfer.to_member_id, transfer.amount)}
+                        className={cn(
+                          "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
+                          isPaymentOpen
+                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                            : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                        )}
+                      >
+                        {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
+                      </button>
                     )}
                   </div>
                 </div>
-                
+
                 {/* Histórico de pagamentos com desfazer */}
                 {isHistoryOpen && (
                   <div className={cn(
@@ -284,67 +285,87 @@ export function BalancesSummary({
         </div>
       )}
 
-      {/* Botão quitar viagem */}
-      {hasBalances && (
-        <button
-          onClick={onSettleClick}
-          className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
-            isDark ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-          }`}
-        >
-          Quitar viagem
-        </button>
-      )}
+      {/* Histórico global de pagamentos registrados — colapsável */}
+      {confirmedSettlements.length > 0 && (
+        <div className={cn("rounded-lg border overflow-hidden", surfaceNeutral)}>
+          {/* Cabeçalho colapsável */}
+          <button
+            type="button"
+            onClick={() => setIsPaymentsHistoryOpen((v) => !v)}
+            className={cn(
+              "w-full flex items-center justify-between px-4 py-3 transition-colors",
+              isDark ? "hover:bg-slate-800" : "hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <span className={cn("font-semibold text-sm", textNeutralMain)}>
+                Pagamentos registrados
+              </span>
+              <span className={cn(
+                "text-xs font-semibold px-2 py-0.5 rounded-full",
+                isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-500"
+              )}>
+                {confirmedSettlements.length}
+              </span>
+            </div>
+            {isPaymentsHistoryOpen
+              ? <ChevronUp size={16} className={isDark ? "text-slate-400" : "text-slate-500"} />
+              : <ChevronDown size={16} className={isDark ? "text-slate-400" : "text-slate-500"} />
+            }
+          </button>
 
-      {/* Histórico de pagamentos registrados - sempre visível quando houver */}
-      {settlements.filter(s => s.is_confirmed).length > 0 && (
-        <div className="space-y-3">
-          <h3 className={`font-bold ${textNeutralMain}`}>Pagamentos registrados</h3>
-          {settlements
-            .filter(s => s.is_confirmed)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .map((s) => {
-              const fromMember = members.find(m => m.id === s.from_member_id);
-              const toMember   = members.find(m => m.id === s.to_member_id);
-              const isFromMe   = s.from_member_id === currentMember?.id;
-              const isToMe     = s.to_member_id   === currentMember?.id;
-              const fromName   = isFromMe ? "Você" : (fromMember?.display_name ?? "?");
-              const toName     = isToMe   ? "você" : (toMember?.display_name   ?? "?");
+          {/* Lista de pagamentos */}
+          {isPaymentsHistoryOpen && (
+            <div className={cn(
+              "border-t divide-y",
+              isDark ? "border-slate-700 divide-slate-700" : "border-slate-100 divide-slate-100"
+            )}>
+              {confirmedSettlements
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((s) => {
+                  const fromMember = members.find(m => m.id === s.from_member_id);
+                  const toMember   = members.find(m => m.id === s.to_member_id);
+                  const isFromMe   = s.from_member_id === currentMember?.id;
+                  const isToMe     = s.to_member_id   === currentMember?.id;
+                  const fromName   = isFromMe ? "Você" : (fromMember?.display_name ?? "?");
+                  const toName     = isToMe   ? "você" : (toMember?.display_name   ?? "?");
 
-              return (
-                <div key={s.id} className={`rounded-lg border ${surfaceNeutral} px-4 py-3 flex items-center gap-3`}>
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
-                    isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-yellow-500 text-white"
-                  )}>
-                    {isFromMe ? "V" : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-medium", textNeutralMain)}>
-                      {fromName} pagou {formatCurrency(s.amount, s.currency)} para <strong>{toName}</strong>
-                    </p>
-                    <p className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
-                      {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleUndoPayment(s.id)}
-                    disabled={undoingId === s.id}
-                    className={cn(
-                      "text-xs px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-40 shrink-0",
-                      isDark ? "text-red-400 hover:bg-red-900/40" : "text-red-500 hover:bg-red-50"
-                    )}
-                  >
-                    {undoingId === s.id ? "..." : "Desfazer"}
-                  </button>
-                </div>
-              );
-            })}
+                  return (
+                    <div key={s.id} className="px-4 py-3 flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
+                        isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-slate-400 text-white"
+                      )}>
+                        {isFromMe ? "V" : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm font-medium", textNeutralMain)}>
+                          {fromName} pagou {formatCurrency(s.amount, s.currency)} para <strong>{toName}</strong>
+                        </p>
+                        <p className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
+                          {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleUndoPayment(s.id)}
+                        disabled={undoingId === s.id}
+                        className={cn(
+                          "text-xs px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-40 shrink-0",
+                          isDark ? "text-red-400 hover:bg-red-900/40" : "text-red-500 hover:bg-red-50"
+                        )}
+                      >
+                        {undoingId === s.id ? "..." : "Desfazer"}
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
 
-      {!hasBalances && settlements.filter(s => s.is_confirmed).length === 0 && (
+      {!hasBalances && confirmedSettlements.length === 0 && (
         <div className="text-center py-8">
           <p className={textNeutralSub}>Nenhuma despesa compartilhada ainda</p>
         </div>
