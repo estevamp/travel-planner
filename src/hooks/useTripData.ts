@@ -66,8 +66,9 @@ export function useTripData(tripId: string | undefined, userId: string) {
 
     const nextMembers = (membersRes.data || []) as TripMember[];
     setMembers(nextMembers);
-    
-    const userIds = nextMembers.map((member) => member.user_id);
+
+    // Filtrar nulls para evitar erro 400 no Supabase (membros convidados ainda sem user_id)
+    const userIds = nextMembers.map((member) => member.user_id).filter((id): id is string => id != null);
     if (userIds.length > 0) {
       const { data: profileRows, error: profileError } = await supabase.from("profiles").select("user_id,spouse_user_id").in("user_id", userIds);
       if (profileError) {
@@ -264,8 +265,8 @@ export function useTripData(tripId: string | undefined, userId: string) {
     const nextMembers = membersData as TripMember[];
     setMembers(nextMembers);
 
-    // Atualizar dados de cônjuge
-    const userIds = nextMembers.map(m => m.user_id);
+    // Filtrar nulls para evitar erro 400 no Supabase
+    const userIds = nextMembers.map(m => m.user_id).filter((id): id is string => id != null);
     if (userIds.length > 0) {
       const { data: profileRows } = await supabase
         .from("profiles")

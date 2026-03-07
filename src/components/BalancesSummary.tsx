@@ -158,19 +158,19 @@ export function BalancesSummary({
               <div key={key} className={`rounded-lg border ${surfaceNeutral} overflow-hidden`}>
 
                 {/* Linha principal */}
-                <div className="flex items-center p-4 gap-3">
+                <div className="flex flex-wrap items-center p-4 gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${chipColor}`}>
                     {fromInitial}
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0" style={{ minWidth: "120px" }}>
                     <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
                     <p className={`text-sm ${lineText(isCurrentUserCreditor)}`}>
                       deve {formatCurrency(transfer.amount, currency)} para <strong>{toName}</strong>
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 ml-auto">
                     {/* Badge de pagamentos já registrados */}
                     {hasPastPayments && (
                       <button
