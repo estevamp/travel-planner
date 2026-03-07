@@ -45,8 +45,6 @@ useEffect(() => {
     return () => window.removeEventListener("online", onOnline);
   }, []);
 
-  const channel = supabase
-    .channel(`trip-realtime-${tripId}`)
     const channel = supabase
       .channel(`trip-realtime-${tripId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${tripId}` }, () =>
