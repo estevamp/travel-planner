@@ -293,8 +293,8 @@ export function BalancesSummary({
         </button>
       )}
 
-      {/* Histórico de pagamentos quando não há saldos pendentes */}
-      {!hasBalances && settlements.filter(s => s.is_confirmed).length > 0 && (
+      {/* Histórico de pagamentos registrados - sempre visível quando houver */}
+      {settlements.filter(s => s.is_confirmed).length > 0 && (
         <div className="space-y-3">
           <h3 className={`font-bold ${textNeutralMain}`}>Pagamentos registrados</h3>
           {settlements
