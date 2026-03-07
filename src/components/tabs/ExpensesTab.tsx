@@ -299,6 +299,26 @@ const undoPayment = async (settlementId: string) => {
       ),
     }));
 
+    if (!isOnline) {
+      enqueue({
+        id: expenseId,
+        tripId: tripId!,
+        type: "update",
+        table: "expenses",
+        payload: {
+          id: expenseId,
+          description,
+          category_id: expenseDraft.category_id || null,
+          amount: nextAmount,
+          visibility: expenseDraft.visibility,
+          is_confirmed: expenseDraft.is_confirmed,
+        },
+      });
+      setSavingExpense(false);
+      setEditingExpenseId(null);
+      return;
+    }
+
     const { error } = await supabase
       .from("expenses")
       .update({

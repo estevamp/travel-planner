@@ -110,6 +110,24 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTab
       ),
     }));
 
+    if (!isOnline) {
+      enqueue({
+        id: ideaId,
+        tripId: trip.id,
+        type: "update",
+        table: "ideas",
+        payload: {
+          id: ideaId,
+          title,
+          notes,
+          maps_url: mapsUrl,
+          visibility: ideaDraft.visibility,
+        },
+      });
+      setEditingIdeaId(null);
+      return;
+    }
+
     const { error } = await supabase
       .from("ideas")
       .update({

@@ -25,6 +25,8 @@ type ViewMode = "agenda" | "timeline";
 interface ItineraryTabProps {
   onOpenModal: () => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
+  isOnline: boolean;
+enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,8 +72,6 @@ interface AgendaViewProps {
   onStartEdit: (item: ItineraryItem) => void;
   onDelete: (item: ItineraryItem) => void;
   renderItem: (item: ItineraryItem) => React.ReactNode;
-  isOnline: boolean;
-enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
 function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
@@ -479,6 +479,29 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
       ),
     }));
 
+    if (!isOnline) {
+      enqueue({
+        id: itemId,
+        tripId: trip.id,
+        type: "update",
+        table: "itinerary",
+        payload: {
+          id: itemId,
+          type_id: itineraryDraft.type_id || null,
+          title,
+          description: itineraryDraft.description.trim(),
+          location: itineraryDraft.location.trim(),
+          visibility: itineraryDraft.visibility,
+          start_time,
+          end_time,
+          is_all_day: itineraryDraft.is_all_day,
+        },
+      });
+      setSavingItinerary(false);
+      setEditingItineraryId(null);
+      return;
+    }
+
     const { error } = await supabase
       .from("itinerary")
       .update({
@@ -536,6 +559,17 @@ export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
         i.id === item.id ? { ...i, is_completed: nextStatus } : i
       ),
     }));
+
+    if (!isOnline) {
+      enqueue({
+        id: item.id,
+        tripId: trip.id,
+        type: "update",
+        table: "itinerary",
+        payload: { id: item.id, is_completed: nextStatus },
+      });
+      return; // optimistic update já aplicou na UI
+    }    
     const { error } = await supabase
       .from("itinerary")
       .update({ is_completed: nextStatus })

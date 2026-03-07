@@ -30,9 +30,23 @@ export function useRealtimeTrip(
     timers.current[key] = setTimeout(fn, delay);
   };
 
-  useEffect(() => {
-    if (!tripId) return;
+useEffect(() => {
+  if (!tripId) return;
+  if (!navigator.onLine) return; // não cria canal se offline
 
+useEffect(() => {
+  const onOnline = () => {
+    // força re-mount do hook recriando o canal
+    // isso acontece automaticamente porque o useEffect acima
+    // vai rodar de novo se tripId mudar — mas podemos forçar
+    // limpando e recriando o canal manualmente se necessário
+  };
+  window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
+
+  const channel = supabase
+    .channel(`trip-realtime-${tripId}`)
     const channel = supabase
       .channel(`trip-realtime-${tripId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "itinerary", filter: `trip_id=eq.${tripId}` }, () =>
