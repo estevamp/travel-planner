@@ -1,22 +1,22 @@
+// public/sw.js
+
 const CACHE_NAME = 'partiu-v1';
 
-const STATIC_ASSETS = [
+// Assets estáticos para pré-cachear no install
+const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/favicon.svg',
-  '/apple-touch-icon.png',
-  '/manifest.json',
+  '/help.html',
 ];
 
-// Instala e cacheia o shell do app
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Remove caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -28,47 +28,33 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
 
-  // Supabase API — Network first (tenta online, cai no cache)
-  if (url.hostname.includes('supabase.co')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
+  // ✅ CRÍTICO: ignorar tudo que não é GET — Cache API não suporta POST/PUT/DELETE
+  if (request.method !== 'GET') return;
 
-  // Links de convite — sempre rede
-  if (url.pathname.startsWith('/invite/')) {
-    return;
-  }
+  // Ignorar requests do Supabase (sempre precisam ir à rede)
+  if (request.url.includes('supabase.co')) return;
 
-  // Assets e navegação — Cache first, fallback para index.html
+  // Ignorar extensões de browser
+  if (request.url.startsWith('chrome-extension://')) return;
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
 
-      return fetch(request)
-        .then((response) => {
-          // Cacheia JS, CSS, imagens
-          if (['script', 'style', 'image', 'font'].includes(request.destination)) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
+      return fetch(request).then((response) => {
+        // Só cachear respostas válidas
+        if (!response || response.status !== 200 || response.type === 'opaque') {
           return response;
-        })
-        .catch(() => {
-          // Offline + navegação → retorna o app shell
-          if (request.destination === 'document') {
-            return caches.match('/index.html');
-          }
+        }
+
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(request, responseClone);
         });
+
+        return response;
+      });
     })
   );
 });
