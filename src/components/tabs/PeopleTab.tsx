@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X } from "lucide-react";
+import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
@@ -26,9 +26,15 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
   const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [nameValue, setNameValue] = useState("");
-  
+
+  // Guest member states
+  const [guestName, setGuestName] = useState("");
+  const [addingGuest, setAddingGuest] = useState(false);
+  const [invitingGuestId, setInvitingGuestId] = useState<string | null>(null);
+  const [guestInviteEmail, setGuestInviteEmail] = useState("");
+
   const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
-  
+
   const createInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
     if (!email) return;
@@ -55,8 +61,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     const link = `${window.location.origin}/invite/${inviteToken}`;
     setGeneratedLink(link);
     setInviteEmail("");
-    
-    // Small delay to ensure state update doesn't interfere with clipboard access in some browsers
+
     setTimeout(async () => {
       const success = await copyToClipboard(link);
       if (success) {
@@ -127,6 +132,83 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
     toast("Apelido atualizado!", "success");
   };
 
+  const addGuest = async () => {
+    const name = guestName.trim();
+    if (!name) return;
+
+    setAddingGuest(true);
+    const { error } = await supabase.rpc("add_guest_member", {
+      p_trip_id: tripId,
+      p_name: name,
+    });
+    setAddingGuest(false);
+
+    if (error) {
+      toast(getErrorMessage(error), "error");
+      return;
+    }
+
+    setGuestName("");
+    if (reloadMembers) {
+      await reloadMembers();
+    } else {
+      await reloadTrip();
+    }
+    toast(`${name} adicionado como guest!`, "success");
+  };
+
+  const removeGuest = async (memberId: string, memberName: string) => {
+    const confirmed = await confirm({
+      title: "Remover guest?",
+      message: `"${memberName}" será removido. Isso só é possível se ele não tiver despesas vinculadas.`,
+      variant: "danger",
+      isDark: settings.dark_mode,
+    });
+    if (!confirmed) return;
+
+    const { error } = await supabase.rpc("remove_guest_member", {
+      p_trip_id: tripId,
+      p_member_id: memberId,
+    });
+
+    if (error) {
+      toast(getErrorMessage(error), "error");
+      return;
+    }
+
+    if (reloadMembers) {
+      await reloadMembers();
+    } else {
+      await reloadTrip();
+    }
+    toast("Guest removido.", "success");
+  };
+
+  const sendGuestInvite = async (memberId: string) => {
+    const email = guestInviteEmail.trim().toLowerCase();
+    if (!email) return;
+
+    const { data: token, error } = await supabase.rpc("invite_guest_member", {
+      p_trip_id: tripId,
+      p_member_id: memberId,
+      p_email: email,
+    });
+
+    if (error || !token) {
+      toast(getErrorMessage(error), "error");
+      return;
+    }
+
+    const link = `${window.location.origin}/invite/${token}`;
+    await copyToClipboard(link);
+    toast("Link de convite copiado!", "success");
+    setInvitingGuestId(null);
+    setGuestInviteEmail("");
+    await reloadTrip();
+  };
+
+  const guestMembers = members.filter((m) => m.status === "guest");
+
   return (
     <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
       <Card className="p-0 overflow-hidden">
@@ -140,8 +222,9 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
           </thead>
           <tbody className="divide-y divide-[var(--sidebar-border)]">
             {members.map((member) => {
-              const spouseUserId = spouseByUserId.get(member.user_id) || null;
+              const spouseUserId = member.user_id ? (spouseByUserId.get(member.user_id) || null) : null;
               const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
+              const isGuest = member.status === "guest";
 
               return (
                 <tr key={member.id}>
@@ -177,6 +260,19 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                     ) : (
                       <span className="flex items-center gap-1.5">
                         {member.display_name || member.user_id}
+                        {isGuest && (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase"
+                            style={{
+                              backgroundColor: "rgba(161,161,170,0.15)",
+                              color: "var(--text-muted, #71717a)",
+                            }}
+                            title="Sem conta no app"
+                          >
+                            <UserX size={9} />
+                            guest
+                          </span>
+                        )}
                         {member.role === "admin" && (
                           <Crown
                             size={14}
@@ -201,34 +297,44 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                   <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
-                      {member.user_id !== currentMember?.user_id && (
+                      {isGuest ? (
                         <button
-                          onClick={async () => {
-                            const confirmed = await confirm({
-                              title: 'Remover amigo?',
-                              message: `Remover ${member.display_name || member.user_id} da viagem?`,
-                              variant: 'danger',
-                              isDark: settings.dark_mode
-                            });
-                            if (!confirmed) return;
-                            const { error: memberError } = await supabase.from("trip_members").delete().eq("id", member.id);
-                            
-                            if (memberError) {
-                              toast(getErrorMessage(memberError), 'error');
-                            } else {
-                              await supabase
-                                .from("trip_invites")
-                                .delete()
-                                .eq("trip_id", tripId)
-                                .eq("accepted_by_user_id", member.user_id);
-                                
-                              reloadTrip();
-                            }
-                          }}
+                          onClick={() => removeGuest(member.id, member.display_name || "Guest")}
                           className="text-zinc-400 hover:text-red-500"
+                          title="Remover guest"
                         >
                           <Trash2 size={16} />
                         </button>
+                      ) : (
+                        member.user_id !== currentMember?.user_id && (
+                          <button
+                            onClick={async () => {
+                              const confirmed = await confirm({
+                                title: 'Remover amigo?',
+                                message: `Remover ${member.display_name || member.user_id} da viagem?`,
+                                variant: 'danger',
+                                isDark: settings.dark_mode
+                              });
+                              if (!confirmed) return;
+                              const { error: memberError } = await supabase.from("trip_members").delete().eq("id", member.id);
+
+                              if (memberError) {
+                                toast(getErrorMessage(memberError), 'error');
+                              } else {
+                                await supabase
+                                  .from("trip_invites")
+                                  .delete()
+                                  .eq("trip_id", tripId)
+                                  .eq("accepted_by_user_id", member.user_id);
+
+                                reloadTrip();
+                              }
+                            }}
+                            className="text-zinc-400 hover:text-red-500"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )
                       )}
                     </td>
                   )}
@@ -256,7 +362,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
               {members
                 .filter((m) => m.user_id !== currentMember.user_id)
                 .map((m) => (
-                  <option key={m.id} value={m.user_id}>
+                  <option key={m.id} value={m.user_id ?? ""}>
                     {m.display_name || m.user_id}
                   </option>
                 ))}
@@ -268,6 +374,107 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
               className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold"
             >
               Salvar
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Card: Adicionar sem conta */}
+      {isAdmin && (
+        <Card>
+          <h3 className="font-bold mb-1">Adicionar sem conta</h3>
+          <p className="text-xs text-zinc-500 mb-4">
+            Adicione amigos que não usam o app — eles já aparecem no rateio de despesas.
+            Quando quiserem entrar, envie um convite para assumirem o slot.
+          </p>
+
+          {/* Lista de guests existentes */}
+          {guestMembers.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {guestMembers.map((guest) => (
+                <div
+                  key={guest.id}
+                  className="p-3 rounded-xl border border-[var(--sidebar-border)] text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserX size={14} className="text-zinc-400 shrink-0" />
+                    <span className="flex-1 font-medium">{guest.display_name}</span>
+                    {guest.guest_email && (
+                      <span className="text-xs text-zinc-400 truncate max-w-[140px]">
+                        {guest.guest_email}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInvitingGuestId(invitingGuestId === guest.id ? null : guest.id);
+                        setGuestInviteEmail(guest.guest_email || "");
+                      }}
+                      className="text-zinc-400 hover:text-[var(--sidebar-active-bg)]"
+                      title="Enviar convite para assumir conta"
+                    >
+                      <Mail size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeGuest(guest.id, guest.display_name || "Guest")}
+                      className="text-zinc-400 hover:text-red-500"
+                      title="Remover guest"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {/* Inline: enviar convite */}
+                  {invitingGuestId === guest.id && (
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        type="email"
+                        value={guestInviteEmail}
+                        onChange={(e) => setGuestInviteEmail(e.target.value)}
+                        placeholder="email@exemplo.com"
+                        className={cn(
+                          "flex-1 px-3 py-1.5 rounded-lg border text-xs",
+                          settings.dark_mode
+                            ? "bg-zinc-800 border-zinc-700 text-white"
+                            : "bg-white border-zinc-200"
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void sendGuestInvite(guest.id)}
+                        className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-3 py-1.5 rounded-lg text-xs font-bold"
+                      >
+                        Enviar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Formulário novo guest */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void addGuest(); }}
+              type="text"
+              placeholder="Nome do amigo"
+              className={cn(
+                "flex-1 px-4 py-2 rounded-xl border text-sm",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
+            <button
+              type="button"
+              onClick={() => void addGuest()}
+              disabled={addingGuest || !guestName.trim()}
+              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 justify-center disabled:opacity-50"
+            >
+              <UserX size={16} />
+              {addingGuest ? "Adicionando..." : "Adicionar"}
             </button>
           </div>
         </Card>
@@ -327,7 +534,6 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
                 key={invite.id}
                 className="p-3 rounded-xl border border-[var(--sidebar-border)] text-sm flex items-center gap-2"
               >
-                {/* FIX: min-w-0 + truncate prevent email from overflowing and hiding the Cancelar button */}
                 <span className="min-w-0 flex-1 truncate">{invite.email}</span>
                 <div className="flex items-center gap-3 shrink-0">
                   <span
@@ -367,7 +573,7 @@ export function PeopleTab({ onTripUpdate }: PeopleTabProps) {
           </div>
         </Card>
       )}
-      
+
       {ConfirmDialogNode}
     </motion.div>
   );
