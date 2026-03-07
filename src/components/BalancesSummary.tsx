@@ -293,7 +293,55 @@ export function BalancesSummary({
         </button>
       )}
 
-      {!hasBalances && (
+      {/* Histórico de pagamentos quando não há saldos pendentes */}
+      {!hasBalances && settlements.filter(s => s.is_confirmed).length > 0 && (
+        <div className="space-y-3">
+          <h3 className={`font-bold ${textNeutralMain}`}>Pagamentos registrados</h3>
+          {settlements
+            .filter(s => s.is_confirmed)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .map((s) => {
+              const fromMember = members.find(m => m.id === s.from_member_id);
+              const toMember   = members.find(m => m.id === s.to_member_id);
+              const isFromMe   = s.from_member_id === currentMember?.id;
+              const isToMe     = s.to_member_id   === currentMember?.id;
+              const fromName   = isFromMe ? "Você" : (fromMember?.display_name ?? "?");
+              const toName     = isToMe   ? "você" : (toMember?.display_name   ?? "?");
+
+              return (
+                <div key={s.id} className={`rounded-lg border ${surfaceNeutral} px-4 py-3 flex items-center gap-3`}>
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
+                    isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-slate-400 text-white"
+                  )}>
+                    {isFromMe ? "V" : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-sm font-medium", textNeutralMain)}>
+                      {fromName} pagou {formatCurrency(s.amount, s.currency)} para <strong>{toName}</strong>
+                    </p>
+                    <p className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
+                      {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleUndoPayment(s.id)}
+                    disabled={undoingId === s.id}
+                    className={cn(
+                      "text-xs px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-40 shrink-0",
+                      isDark ? "text-red-400 hover:bg-red-900/40" : "text-red-500 hover:bg-red-50"
+                    )}
+                  >
+                    {undoingId === s.id ? "..." : "Desfazer"}
+                  </button>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {!hasBalances && settlements.filter(s => s.is_confirmed).length === 0 && (
         <div className="text-center py-8">
           <p className={textNeutralSub}>Nenhuma despesa compartilhada ainda</p>
         </div>
