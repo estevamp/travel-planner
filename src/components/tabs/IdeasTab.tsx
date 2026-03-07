@@ -21,7 +21,7 @@ interface IdeasTabProps {
   enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
-export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate }: IdeasTabProps) {
+export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: IdeasTabProps) {
   const { trip, currentMember, isAdmin, settings, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();

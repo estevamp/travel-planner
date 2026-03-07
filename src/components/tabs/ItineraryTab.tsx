@@ -368,10 +368,9 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-
-export function ItineraryTab({ onOpenModal, onTripUpdate }: ItineraryTabProps) {
+export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: ItineraryTabProps) {
   const { trip, currentMember, settings, itineraryTypes, members } = useTripContext();
-  const { toast } = useToast();
+  const { toast } = useToast();za\
   const { confirm, ConfirmDialogNode } = useConfirm();
 
   // View mode

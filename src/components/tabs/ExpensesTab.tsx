@@ -33,8 +33,7 @@ interface ExpensesTabProps {
   isOnline: boolean;
   enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
-
-export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate }: ExpensesTabProps) {
+export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: ExpensesTabProps) {
   const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
