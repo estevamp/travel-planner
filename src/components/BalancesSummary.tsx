@@ -154,58 +154,61 @@ export function BalancesSummary({
               <div key={key} className={`rounded-lg border ${surfaceNeutral} overflow-hidden`}>
 
                 {/* Linha principal */}
-                <div className="flex items-center p-4 gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${chipColor}`}>
+                <div className="flex items-start p-4 gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 ${chipColor}`}>
                     {fromInitial}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
-                    <p className={`text-sm ${lineText(isCurrentUserCreditor)}`}>
+                    {/* Linha 1: nome + badge de pagamentos */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
+                      {hasPastPayments && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedHistoryKey(isHistoryOpen ? null : key);
+                            setOpenPaymentKey(null);
+                            setPaymentAmount("");
+                          }}
+                          title="Ver pagamentos registrados"
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-semibold transition-colors",
+                            isHistoryOpen
+                              ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"
+                              : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                          )}
+                        >
+                          {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Linha 2: valor que deve */}
+                    <p className={`text-sm mt-0.5 ${lineText(isCurrentUserCreditor)}`}>
                       deve {formatCurrency(transfer.amount, currency)} para <strong>{toName}</strong>
                     </p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Badge de pagamentos já registrados */}
-                    {hasPastPayments && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExpandedHistoryKey(isHistoryOpen ? null : key);
-                          setOpenPaymentKey(null);
-                          setPaymentAmount("");
-                        }}
-                        title="Ver pagamentos registrados"
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-semibold transition-colors",
-                          isHistoryOpen
-                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
-                            : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
-                        )}
-                      >
-                        {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
-                      </button>
-                    )}
-
-                    {/* Botão registrar pagamento */}
+                    {/* Linha 3: botão registrar pagamento */}
                     {isInvolved && (
-                      <button
-                        type="button"
-                        onClick={() => openPayment(transfer.from_member_id, transfer.to_member_id, transfer.amount)}
-                        className={cn(
-                          "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
-                          isPaymentOpen
-                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
-                            : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-                        )}
-                      >
-                        {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
-                      </button>
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => openPayment(transfer.from_member_id, transfer.to_member_id, transfer.amount)}
+                          className={cn(
+                            "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
+                            isPaymentOpen
+                              ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                              : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                          )}
+                        >
+                          {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
-
+                
                 {/* Histórico de pagamentos com desfazer */}
                 {isHistoryOpen && (
                   <div className={cn(
