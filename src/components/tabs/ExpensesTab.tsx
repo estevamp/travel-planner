@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, Unlock, CheckCircle2, Circle, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Lock, Unlock, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
@@ -20,6 +20,8 @@ import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
 import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
+import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
+import { ExpenseListItem } from "../ExpenseListItem";
 
 // Tipo da resposta bruta do Supabase para a query "*, expense_splits(*)"
 type ExpenseRowFromSupabase = Omit<ExpenseWithSplits, 'splits'> & {
@@ -37,6 +39,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const { toggleVisibility: toggleExpenseVisibility } = useOptimisticVisibility<Expense>(
+    "expenses",
+    "expenses",
+    onTripUpdate
+  );
   const { convert, rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
 
@@ -260,6 +267,22 @@ const undoPayment = async (settlementId: string) => {
     currentVisibility: Visibility;
     onConfirm: (() => void) | null;
   }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
+
+  const handleToggleExpenseVisibility = (exp: Expense) => {
+    const expWithSplits = expensesWithSplits.find((entry) => entry.id === exp.id);
+    const hasSplits = Boolean(expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0);
+    if (hasSplits) {
+      toast("Despesas com rateio devem ser públicas", "error");
+      return;
+    }
+
+    setVisibilitySheet({
+      open: true,
+      itemId: exp.id,
+      currentVisibility: exp.visibility,
+      onConfirm: () => void toggleExpenseVisibility(exp),
+    });
+  };
 
   const startEditExpense = (expense: Expense) => {
     setEditingExpenseId(expense.id);
@@ -639,218 +662,26 @@ const undoPayment = async (settlementId: string) => {
           <thead><tr className={settings.dark_mode ? "bg-zinc-800/50" : "bg-zinc-50"}><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
           <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
             {trip.expenses.map((exp) => (
-              <tr key={exp.id}>
-                {editingExpenseId === exp.id ? (
-                  <>
-                    <td className="px-4 py-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={expenseDraft.description}
-                          onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
-                          placeholder="Descricao"
-                          className={cn("flex-1 px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
-                        />
-                        <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Confirmada">
-                          <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={expenseDraft.is_confirmed}
-                            onChange={(e) => setExpenseDraft((current) => ({ ...current, is_confirmed: e.target.checked }))}
-                          />
-                          {expenseDraft.is_confirmed ? (
-                            <CheckCircle2 size={16} className="text-emerald-600" />
-                          ) : (
-                            <Circle size={16} className="text-zinc-300" />
-                          )}
-                        </label>
-                      </div>
-                      <p className="text-xs text-zinc-400">{exp.date}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={expenseDraft.category_id}
-                        onChange={(e) => setExpenseDraft((current) => ({ ...current, category_id: e.target.value }))}
-                        className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
-                      >
-                        <option value="">Sem categoria</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        value={expenseDraft.amount}
-                        onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
-                        placeholder="Valor"
-                        className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          disabled={savingExpense}
-                          onClick={() => void saveExpenseEdit(exp.id)}
-                          className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold"
-                        >
-                          {savingExpense ? "Salvando..." : "Salvar"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={savingExpense}
-                          onClick={() => setEditingExpenseId(null)}
-                          className={cn("px-3 py-2 rounded-xl border text-xs font-bold", settings.dark_mode ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50")}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{exp.description}</p>
-                        {exp.is_confirmed ? (
-                          <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
-                        ) : (
-                          <Circle size={14} className="text-zinc-400 flex-shrink-0" title="Prevista" />
-                        )}
-                      </div>
-                      <p className="text-xs text-zinc-400">{exp.date}</p>
-                    </td>
-                    <td className="px-4 py-3 text-xs uppercase">
-                      {exp.category ? (
-                        <span className="flex items-center gap-1" style={{ color: exp.category.color || 'inherit' }}>
-                          {exp.category.name}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400">Geral</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-bold">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
-                        {exp.currency && exp.currency !== settings.default_currency && (
-                          <span className="text-[10px] text-zinc-500">
-                            ≈ {formatCurrency(convertedExpenses.find(e => e.id === exp.id)?.convertedAmount || 0, settings.default_currency)}
-                          </span>
-                        )}
-                        
-                        {/* Split Summary */}
-                        {(() => {
-                          const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
-                          if (!expWithSplits || !expWithSplits.splits || expWithSplits.splits.length === 0) return null;
-                          
-                          const payer = members.find(m => m.id === expWithSplits.paid_by_member_id);
-                          const currency = exp.currency || settings.default_currency;
-
-                          return (
-                            <div className="mt-1 space-y-0.5">
-                              <p className="text-[10px] text-zinc-400 leading-tight">
-                                Pago por <span className="font-medium text-zinc-500">{payer?.display_name || 'Desconhecido'}</span>
-                              </p>
-                              <p className="text-[10px] text-zinc-400 leading-tight">
-                                {expWithSplits.splits.map((s, i) => (
-                                  <span key={s.member_id}>
-                                    {i > 0 && ' · '}
-                                    <span className="font-medium text-zinc-500">
-                                      {members.find(m => m.id === s.member_id)?.display_name || '?'}
-                                    </span>
-                                    {': '}
-                                    {formatCurrency(s.amount, currency)}
-                                  </span>
-                                ))}
-                              </p>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {!editingExpenseId && (
-                          <>
-                            <button
-                              onClick={() => {
-                                // Check if expense has splits and is trying to become private
-                                const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
-                                const hasSplits = expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0;
-                                if (hasSplits) {
-                                  toast('Despesas com rateio devem ser públicas', 'error');
-                                  return;
-                                }
-                                
-                                setVisibilitySheet({
-                                  open: true,
-                                  itemId: exp.id,
-                                  currentVisibility: exp.visibility,
-                                  onConfirm: async () => {
-                                    const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
-                                    // Optimistic update
-                                    onTripUpdate((prev) => ({
-                                      ...prev,
-                                      expenses: prev.expenses.map((e) =>
-                                        e.id === exp.id ? { ...e, visibility: nextVisibility } : e
-                                      ),
-                                    }));
-
-                                    const { error } = await supabase
-                                      .from("expenses")
-                                      .update({ visibility: nextVisibility })
-                                      .eq("id", exp.id);
-
-                                    if (error) {
-                                      toast(getErrorMessage(error), 'error');
-                                      // Rollback
-                                      onTripUpdate((prev) => ({
-                                        ...prev,
-                                        expenses: prev.expenses.map((e) =>
-                                          e.id === exp.id ? { ...e, visibility: exp.visibility } : e
-                                        ),
-                                      }));
-                                    }
-                                  }
-                                });
-                              }}
-                              className={cn(
-                                "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
-                                exp.visibility === 'public'
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-zinc-100 text-zinc-500"
-                              )}
-                              disabled={Boolean(expensesWithSplits.find(e => e.id === exp.id)?.splits?.length)}
-                              title={expensesWithSplits.find(e => e.id === exp.id)?.splits?.length
-                                ? "Despesas com rateio devem ser públicas"
-                                : (exp.visibility === 'private' ? "Privado (você e cônjuge)" : "Público (todos os membros)")}
-                            >
-                              {exp.visibility === 'public' ? (
-                                <><Users size={10} /> Público</>
-                              ) : (
-                                <><Lock size={10} /> Privado</>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openEditExpenseModal(exp)}
-                              className="text-zinc-400 hover:text-zinc-700"
-                            >
-                              <FilePenLine size={16} />
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => void deleteExpense(exp)}
-                          className="text-zinc-400 hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                )}
-              </tr>
+              <ExpenseListItem
+                key={exp.id}
+                exp={exp}
+                layout="table"
+                editingExpenseId={editingExpenseId}
+                expenseDraft={expenseDraft}
+                expensesWithSplits={expensesWithSplits}
+                savingExpense={savingExpense}
+                categories={categories}
+                members={members}
+                settings={settings}
+                currency={settings.default_currency}
+                convertedAmount={convertedExpenses.find((entry) => entry.id === exp.id)?.convertedAmount || 0}
+                onToggleVisibility={handleToggleExpenseVisibility}
+                onEdit={openEditExpenseModal}
+                onSave={(expenseId) => void saveExpenseEdit(expenseId)}
+                onCancel={() => setEditingExpenseId(null)}
+                onDelete={(expense) => void deleteExpense(expense)}
+                onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
+              />
             ))}
           </tbody>
         </table>
@@ -864,201 +695,26 @@ const undoPayment = async (settlementId: string) => {
           </Card>
         )}
         {trip.expenses.map((exp) => (
-          <Card key={exp.id} className="space-y-3">
-            {editingExpenseId === exp.id ? (
-              <>
-                <div className="space-y-3">
-                  <input
-                    value={expenseDraft.description}
-                    onChange={(e) => setExpenseDraft((current) => ({ ...current, description: e.target.value }))}
-                    placeholder="Descricao"
-                    className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
-                  />
-                  <select
-                    value={expenseDraft.category_id}
-                    onChange={(e) => setExpenseDraft((current) => ({ ...current, category_id: e.target.value }))}
-                    className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
-                  >
-                    <option value="">Sem categoria</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    value={expenseDraft.amount}
-                    onChange={(e) => setExpenseDraft((current) => ({ ...current, amount: maskCurrency(e.target.value) }))}
-                    placeholder="Valor"
-                    className={cn("w-full px-3 py-2 rounded-xl border text-sm", settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200")}
-                  />
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={expenseDraft.is_confirmed}
-                        onChange={(e) => setExpenseDraft((current) => ({ ...current, is_confirmed: e.target.checked }))}
-                      />
-                      Marcar como confirmada
-                    </label>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={savingExpense}
-                    onClick={() => void saveExpenseEdit(exp.id)}
-                    className="flex-1 px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold"
-                  >
-                    {savingExpense ? "Salvando..." : "Salvar"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={savingExpense}
-                    onClick={() => setEditingExpenseId(null)}
-                    className={cn("flex-1 px-3 py-2 rounded-xl border text-sm font-bold", settings.dark_mode ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50")}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-bold truncate">{exp.description}</h4>
-                      {exp.is_confirmed ? (
-                        <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
-                      ) : (
-                        <Circle size={14} className="text-zinc-400 flex-shrink-0" title="Prevista" />
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-400 mb-2">{exp.date}</p>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                      {exp.category ? (
-                        <span className="inline-flex items-center gap-1 text-xs uppercase" style={{ color: exp.category.color || 'inherit' }}>
-                          {exp.category.name}
-                        </span>
-                      ) : (
-                        <span className="text-xs uppercase text-zinc-400">Geral</span>
-                      )}
-                      <div className="flex flex-col">
-                        <span className="font-bold text-base">{formatCurrency(exp.amount, exp.currency || settings.default_currency)}</span>
-                        {exp.currency && exp.currency !== settings.default_currency && (
-                          <span className="text-[10px] text-zinc-500">
-                            ≈ {formatCurrency(convertedExpenses.find(e => e.id === exp.id)?.convertedAmount || 0, settings.default_currency)}
-                          </span>
-                        )}
-
-                        {/* Split Summary */}
-                        {(() => {
-                          const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
-                          if (!expWithSplits || !expWithSplits.splits || expWithSplits.splits.length === 0) return null;
-                          
-                          const payer = members.find(m => m.id === expWithSplits.paid_by_member_id);
-                          const currency = exp.currency || settings.default_currency;
-
-                          return (
-                            <div className="mt-1 space-y-0.5">
-                              <p className="text-[10px] text-zinc-400 leading-tight">
-                                Pago por <span className="font-medium text-zinc-500">{payer?.display_name || 'Desconhecido'}</span>
-                              </p>
-                              <p className="text-[10px] text-zinc-400 leading-tight">
-                                {expWithSplits.splits.map((s, i) => (
-                                  <span key={s.member_id}>
-                                    {i > 0 && ' · '}
-                                    <span className="font-medium text-zinc-500">
-                                      {members.find(m => m.id === s.member_id)?.display_name || '?'}
-                                    </span>
-                                    {': '}
-                                    {formatCurrency(s.amount, currency)}
-                                  </span>
-                                ))}
-                              </p>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    {!editingExpenseId && (
-                      <>
-                        <button
-                          onClick={() => {
-                            // Check if expense has splits and is trying to become private
-                            const expWithSplits = expensesWithSplits.find(e => e.id === exp.id);
-                            const hasSplits = expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0;
-                            if (hasSplits) {
-                              toast('Despesas com rateio devem ser públicas', 'error');
-                              return;
-                            }
-                            
-                            setVisibilitySheet({
-                              open: true,
-                              itemId: exp.id,
-                              currentVisibility: exp.visibility,
-                              onConfirm: async () => {
-                                const nextVisibility = exp.visibility === 'public' ? 'private' : 'public';
-                                // Optimistic update
-                                onTripUpdate((prev) => ({
-                                  ...prev,
-                                  expenses: prev.expenses.map((e) =>
-                                    e.id === exp.id ? { ...e, visibility: nextVisibility } : e
-                                  ),
-                                }));
-
-                                const { error } = await supabase
-                                  .from("expenses")
-                                  .update({ visibility: nextVisibility })
-                                  .eq("id", exp.id);
-
-                                if (error) {
-                                  toast(getErrorMessage(error), 'error');
-                                  // Rollback
-                                  onTripUpdate((prev) => ({
-                                    ...prev,
-                                    expenses: prev.expenses.map((e) =>
-                                      e.id === exp.id ? { ...e, visibility: exp.visibility } : e
-                                    ),
-                                  }));
-                                }
-                              }
-                            });
-                          }}
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
-                            exp.visibility === 'public'
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-zinc-100 text-zinc-500"
-                          )}
-                          disabled={Boolean(expensesWithSplits.find(e => e.id === exp.id)?.splits?.length)}
-                        >
-                          {exp.visibility === 'public' ? (
-                            <><Users size={10} /> Público</>
-                          ) : (
-                            <><Lock size={10} /> Privado</>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEditExpenseModal(exp)}
-                          className="p-2 text-zinc-400 hover:text-zinc-700"
-                        >
-                          <FilePenLine size={16} />
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => void deleteExpense(exp)}
-                      className="p-2 text-zinc-400 hover:text-red-500"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </Card>
+          <ExpenseListItem
+            key={exp.id}
+            exp={exp}
+            layout="card"
+            editingExpenseId={editingExpenseId}
+            expenseDraft={expenseDraft}
+            expensesWithSplits={expensesWithSplits}
+            savingExpense={savingExpense}
+            categories={categories}
+            members={members}
+            settings={settings}
+            currency={settings.default_currency}
+            convertedAmount={convertedExpenses.find((entry) => entry.id === exp.id)?.convertedAmount || 0}
+            onToggleVisibility={handleToggleExpenseVisibility}
+            onEdit={openEditExpenseModal}
+            onSave={(expenseId) => void saveExpenseEdit(expenseId)}
+            onCancel={() => setEditingExpenseId(null)}
+            onDelete={(expense) => void deleteExpense(expense)}
+            onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
+          />
         ))}
       </div>
 

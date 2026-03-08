@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
-  ChevronDown, ChevronRight, MapPin, Lock, Unlock, Users,
+  ChevronDown, ChevronRight, MapPin, Lock, Users,
   AlignLeft, Clock,
 } from "lucide-react";
 import { supabase } from "../../supabase";
@@ -17,6 +17,7 @@ import { FloatingActionButton } from "../FloatingActionButton";
 import { ACTIVITY_ICON_COMPONENTS } from "../../constants/icons";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
+import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -372,6 +373,11 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   const { trip, currentMember, settings, itineraryTypes, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const { toggleVisibility } = useOptimisticVisibility<ItineraryItem>(
+    "itinerary",
+    "itinerary",
+    onTripUpdate
+  );
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
@@ -738,20 +744,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                       open: true,
                       itemId: item.id,
                       currentVisibility: item.visibility,
-                      onConfirm: async () => {
-                        const next: Visibility =
-                          item.visibility === "public" ? "private" : "public";
-                        onTripUpdate((prev) => ({
-                          ...prev,
-                          itinerary: prev.itinerary.map((i) =>
-                            i.id === item.id ? { ...i, visibility: next } : i
-                          ),
-                        }));
-                        await supabase
-                          .from("itinerary")
-                          .update({ visibility: next })
-                          .eq("id", item.id);
-                      },
+                      onConfirm: () => void toggleVisibility(item),
                     })
                   }
                   className={cn(

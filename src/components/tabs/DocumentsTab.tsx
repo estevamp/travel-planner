@@ -12,6 +12,8 @@ import { Card } from "../Card";
 import { DocumentViewer } from "../DocumentViewer";
 import { Modal } from "../Modal";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
+import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
+import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 
 interface DocumentsTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -24,7 +26,12 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
-  const signedUrlCache = useRef<Map<string, string>>(new Map());
+  const { getSignedUrl } = useSignedUrlCache(DOCS_BUCKET);
+  const { toggleVisibility } = useOptimisticVisibility<DocumentItem>(
+    "documents",
+    "documents",
+    onTripUpdate
+  );
   const [selectedDoc, setSelectedDoc] = useState<{ name: string; url: string } | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -33,20 +40,6 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [isSaving, setIsSaving] = useState(false);
-
-  const getSignedUrl = async (path: string) => {
-    if (signedUrlCache.current.has(path)) {
-      return signedUrlCache.current.get(path);
-    }
-
-    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
-    if (error || !data) {
-      throw error || new Error("Failed to generate signed URL");
-    }
-
-    signedUrlCache.current.set(path, data.signedUrl);
-    return data.signedUrl;
-  };
 
   const deleteDocument = async (docId: string, docUrl: string, docName: string) => {
     const docToDelete = trip.documents.find((d) => d.id === docId);
@@ -162,34 +155,6 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
     }
   };
 
-  const toggleVisibility = async (doc: DocumentItem) => {
-    const newVisibility = doc.visibility === "public" ? "private" : "public";
-    
-    // Optimistic update
-    onTripUpdate((prev) => ({
-      ...prev,
-      documents: prev.documents.map((d) =>
-        d.id === doc.id ? { ...d, visibility: newVisibility } : d
-      ),
-    }));
-
-    const { error } = await supabase
-      .from("documents")
-      .update({ visibility: newVisibility })
-      .eq("id", doc.id);
-
-    if (error) {
-      toast(getErrorMessage(error), "error");
-      // Rollback
-      onTripUpdate((prev) => ({
-        ...prev,
-        documents: prev.documents.map((d) =>
-          d.id === doc.id ? { ...d, visibility: doc.visibility } : d
-        ),
-      }));
-    }
-  };
-
   return (
     <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <Card className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-200 bg-transparent cursor-pointer" onClick={() => documentInputRef.current?.click()}>
@@ -244,7 +209,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 {doc.description || doc.name}
               </h4>
               <button
-                onClick={() => toggleVisibility(doc)}
+                onClick={() => void toggleVisibility(doc)}
                 className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
                   doc.visibility === 'public'

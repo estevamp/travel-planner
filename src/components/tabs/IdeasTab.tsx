@@ -1,9 +1,9 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, Unlock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X, Users } from "lucide-react";
+import { FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X, Users } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -12,6 +12,8 @@ import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
+import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
+import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 
 interface IdeasTabProps {
   onOpenModal: () => void;
@@ -30,8 +32,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
   const [newLink, setNewLink] = useState({ label: "", url: "" });
   const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
-  const signedUrlCache = useRef<Map<string, string>>(new Map());
-  const [cachedUrls, setCachedUrls] = useState<Record<string, string>>({});
+  const { getSignedUrl, cachedUrls, setCachedUrl } = useSignedUrlCache(DOCS_BUCKET);
+  const { toggleVisibility } = useOptimisticVisibility<Idea>("ideas", "ideas", onTripUpdate);
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
     notes: string;
@@ -151,21 +153,6 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     }
 
     setEditingIdeaId(null);
-  };
-
-  const getSignedUrl = async (path: string) => {
-    if (signedUrlCache.current.has(path)) {
-      return signedUrlCache.current.get(path);
-    }
-
-    const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
-    if (error || !data) {
-      throw error || new Error("Failed to generate signed URL");
-    }
-
-    signedUrlCache.current.set(path, data.signedUrl);
-    setCachedUrls(prev => ({ ...prev, [path]: data.signedUrl }));
-    return data.signedUrl;
   };
 
   const openIdeaAsset = async (asset: IdeaAsset) => {
@@ -607,32 +594,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                             open: true,
                             itemId: idea.id,
                             currentVisibility: idea.visibility,
-                            onConfirm: async () => {
-                              const nextVisibility = idea.visibility === 'public' ? 'private' : 'public';
-                              // Optimistic update
-                              onTripUpdate((prev) => ({
-                                ...prev,
-                                ideas: prev.ideas.map((i) =>
-                                  i.id === idea.id ? { ...i, visibility: nextVisibility } : i
-                                ),
-                              }));
-
-                              const { error } = await supabase
-                                .from("ideas")
-                                .update({ visibility: nextVisibility })
-                                .eq("id", idea.id);
-
-                              if (error) {
-                                toast(getErrorMessage(error), 'error');
-                                // Rollback
-                                onTripUpdate((prev) => ({
-                                  ...prev,
-                                  ideas: prev.ideas.map((i) =>
-                                    i.id === idea.id ? { ...i, visibility: idea.visibility } : i
-                                  ),
-                                }));
-                              }
-                            }
+                            onConfirm: () => void toggleVisibility(idea),
                           })}
                           className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
@@ -717,10 +679,13 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                               onClick={() => void openIdeaAsset(asset)}
                               className="w-full h-full rounded-lg border border-zinc-200 overflow-hidden bg-zinc-100 hover:opacity-90 transition-opacity"
                             >
-                              <PhotoThumbnail asset={asset} signedUrl={cachedUrls[asset.url] || null} onUrlLoad={(url) => {
-                                signedUrlCache.current.set(asset.url, url);
-                                setCachedUrls(prev => ({ ...prev, [asset.url]: url }));
-                              }} />
+                              <PhotoThumbnail
+                                asset={asset}
+                                signedUrl={cachedUrls[asset.url] || null}
+                                onUrlLoad={(url) => {
+                                  setCachedUrl(asset.url, url);
+                                }}
+                              />
                             </button>
                             {canManage && (
                               <button
