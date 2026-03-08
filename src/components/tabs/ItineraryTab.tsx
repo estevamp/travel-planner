@@ -370,7 +370,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: ItineraryTabProps) {
-  const { trip, currentMember, settings, itineraryTypes, members } = useTripContext();
+  const { trip, tripId, currentMember, settings, itineraryTypes, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const { toggleVisibility } = useOptimisticVisibility<ItineraryItem>(
