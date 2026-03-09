@@ -17,14 +17,13 @@ interface PeopleTabProps {
 export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const {
     tripId, members, invites, currentMember, isAdmin,
-    settings, onSettingsChange, spouseByUserId, reloadTrip,
+    settings, spouseByUserId, reloadTrip,
     reloadMembers,
   } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
-  const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [nameValue, setNameValue] = useState("");
 
@@ -79,21 +78,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     reloadTrip();
   };
 
-  const setGlobalSpouse = async (spouseUserId: string | null) => {
-    const { error } = await supabase.rpc("set_global_spouse", {
-      p_spouse_user_id: spouseUserId,
-    });
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-      return;
-    }
-    onSettingsChange({ ...settings, spouse_user_id: spouseUserId });
-    setSelfSpouseUserId(spouseUserId || "");
-    await reloadTrip();
-    toast("Cônjuge salvo!", 'success');
-  };
-
-  // Função para admin editar cônjuge de outro membro via set_global_spouse impersonando
+  // Função para admin editar cônjuge
   // Usamos set_global_spouse que atualiza profiles — mas essa RPC age no auth.uid().
   // Para admin alterar outro usuário, precisamos usar uma abordagem diferente:
   // atualizamos diretamente via update na tabela profiles com RLS permissiva para admin,
@@ -481,45 +466,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
         )}
       </Card>
 
-      {/* Card: Meu cônjuge (apenas membros com conta) */}
-      {currentMember && currentMember.user_id && (
-        <Card>
-          <h3 className="font-bold mb-1">Meu cônjuge nesta viagem</h3>
-          <p className="text-xs text-zinc-500 mb-4">
-            Casais compartilham o mesmo orçamento nas despesas. Selecione quem é
-            seu cônjuge para que os gastos sejam agrupados automaticamente.
-          </p>
-          <div className="flex gap-2 items-center">
-            <select
-              value={selfSpouseUserId}
-              onChange={(e) => setSelfSpouseUserId(e.target.value)}
-              className={cn(
-                "flex-1 px-3 py-2 rounded-xl border text-sm",
-                settings.dark_mode
-                  ? "bg-zinc-800 border-zinc-700 text-white"
-                  : "bg-white border-zinc-200"
-              )}
-            >
-              <option value="">Sem cônjuge</option>
-              {members
-                .filter((m) => m.user_id !== currentMember.user_id)
-                .map((m) => (
-                  <option key={m.id} value={m.user_id ?? ""}>
-                    {m.display_name || m.user_id}
-                  </option>
-                ))}
-            </select>
-            <button
-              onClick={async () => {
-                await setGlobalSpouse(selfSpouseUserId || null);
-              }}
-              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold"
-            >
-              Salvar
-            </button>
-          </div>
-        </Card>
-      )}
+
 
       {/* Card: Adicionar sem conta */}
       {isAdmin && (
