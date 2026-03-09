@@ -9,9 +9,9 @@
  *   assets do app    → cache-first
  */
 
-const CACHE_APP      = "partiu-app-v2";
-const CACHE_SUPABASE = "partiu-supabase-v2";
-const CACHE_AUTH     = "partiu-auth-v2";
+const CACHE_APP      = "partiu-app-v3";
+const CACHE_SUPABASE = "partiu-supabase-v3";
+const CACHE_AUTH     = "partiu-auth-v3";
 const SUPABASE_TTL   = 24 * 60 * 60 * 1000;
 
 const PRECACHE_URLS = ["/", "/index.html", "/manifest.json"];
@@ -133,6 +133,28 @@ async function networkFirstSupabase(request) {
 
 // ─── App assets: cache-first ──────────────────────────────────────────────────
 async function cacheFirstApp(request) {
+  const isNavigationRequest =
+    request.mode === "navigate" || request.destination === "document";
+
+  // HTML principal: network-first para evitar index/chunks desatualizados entre deploys
+  if (isNavigationRequest) {
+    try {
+      const response = await fetch(request);
+      if (response.ok) {
+        const cache = await caches.open(CACHE_APP);
+        cache.put(request, response.clone());
+        cache.put("/index.html", response.clone());
+      }
+      return response;
+    } catch {
+      const cachedPage = await caches.match(request);
+      if (cachedPage) return cachedPage;
+      const fallback = await caches.match("/index.html");
+      return fallback || new Response("Offline", { status: 503 });
+    }
+  }
+
+  // Assets estáticos: cache-first
   const cached = await caches.match(request);
   if (cached) return cached;
 
@@ -144,8 +166,7 @@ async function cacheFirstApp(request) {
     }
     return response;
   } catch {
-    const fallback = await caches.match("/index.html");
-    return fallback || new Response("Offline", { status: 503 });
+    return new Response("Offline", { status: 503 });
   }
 }
 
