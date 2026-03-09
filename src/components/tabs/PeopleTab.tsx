@@ -236,7 +236,14 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                         >
                           <option value="">Sem cônjuge</option>
                           {members
-                            .filter((m) => m.id !== member.id)
+                            .filter((m) => {
+                              if (m.id === member.id) return false; // não listar si mesmo
+                              // Permitir se já é o cônjuge atual (para manter a opção visível)
+                              if (m.id === spouseMemberId) return true;
+                              // Excluir quem já está vinculado a outro cônjuge
+                              if (m.spouse_member_id && m.spouse_member_id !== member.id) return false;
+                              return true;
+                            })
                             .map((m) => (
                               <option key={m.id} value={m.id}>
                                 {m.display_name || m.user_id || "Guest"}
