@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail, Heart, HeartOff } from "lucide-react";
+import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail, Heart, HeartOff, BadgeCheck } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
@@ -301,6 +301,9 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                             <UserX size={9} />
                             guest
                           </span>
+                        )}
+                        {!isGuest && member.user_id && (
+                          <BadgeCheck size={14} className="text-blue-400 shrink-0" title="Conta vinculada" />
                         )}
                         {member.role === "admin" && (
                           <Crown
