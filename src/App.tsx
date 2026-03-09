@@ -89,7 +89,18 @@ export default function App() {
     };
   }, []);
 
-  if (loadingAuth) return <div className="min-h-screen flex items-center justify-center">Carregando sessao...</div>;
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)] px-6">
+        <div className="flex flex-col items-center gap-3 text-[var(--accent-color)]">
+          <div className="h-10 w-10 rounded-full border-4 border-current border-t-transparent animate-spin" />
+          <p className="text-sm font-medium tracking-wide">
+            Carregando app<span className="animate-pulse">...</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ToastProvider>

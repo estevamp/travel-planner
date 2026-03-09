@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card } from "./Card";
 import { getErrorMessage } from "../utils";
 import { supabase } from "../supabase";
-import { MapPin } from "lucide-react";
 import { useToast } from "../hooks/useToast";
 
 export function AuthLanding() {
@@ -22,7 +21,7 @@ export function AuthLanding() {
       <Card className="max-w-md w-full text-center space-y-6 p-8">
         <div className="flex justify-center">
           <div className="bg-[#0A2342] p-4 rounded-2xl shadow-lg shadow-blue-900/20">
-            <MapPin className="w-12 h-12 text-white" />
+            <img src="/favicon.svg" alt="Partiu!" className="w-12 h-12" />
           </div>
         </div>
         <div className="space-y-2">
