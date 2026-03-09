@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail } from "lucide-react";
+import { UserPlus, Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail, Heart, HeartOff } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
@@ -27,6 +27,10 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const [selfSpouseUserId, setSelfSpouseUserId] = useState(settings.spouse_user_id || "");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [nameValue, setNameValue] = useState("");
+
+  // Estado para edição de cônjuge pelo admin
+  const [editingSpouseMemberId, setEditingSpouseMemberId] = useState<string | null>(null);
+  const [spouseSelectValue, setSpouseSelectValue] = useState("");
 
   // Guest member states
   const [guestName, setGuestName] = useState("");
@@ -87,6 +91,35 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     setSelfSpouseUserId(spouseUserId || "");
     await reloadTrip();
     toast("Cônjuge salvo!", 'success');
+  };
+
+  // Função para admin editar cônjuge de outro membro via set_global_spouse impersonando
+  // Usamos set_global_spouse que atualiza profiles — mas essa RPC age no auth.uid().
+  // Para admin alterar outro usuário, precisamos usar uma abordagem diferente:
+  // atualizamos diretamente via update na tabela profiles com RLS permissiva para admin,
+  // ou criamos uma nova RPC. Como a RPC set_global_spouse só age no próprio usuário,
+  // vamos usar a abordagem de update direto — mas RLS não permite.
+  // A solução correta é usar a RPC set_global_spouse que já existe no banco
+  // mas ela só afeta auth.uid(). Portanto, precisamos de uma nova RPC admin.
+  // Por ora, implementamos o UI e chamamos uma RPC "admin_set_spouse" que deve ser criada.
+  // O arquivo SQL de migração também é gerado.
+  const adminSetSpouse = async (targetUserId: string, spouseUserId: string | null) => {
+    const { error } = await supabase.rpc("admin_set_global_spouse", {
+      p_target_user_id: targetUserId,
+      p_spouse_user_id: spouseUserId || null,
+    });
+    if (error) {
+      toast(getErrorMessage(error), "error");
+      return;
+    }
+    setEditingSpouseMemberId(null);
+    setSpouseSelectValue("");
+    if (reloadMembers) {
+      await reloadMembers();
+    } else {
+      await reloadTrip();
+    }
+    toast("Cônjuge atualizado!", "success");
   };
 
   const cancelInvite = async (inviteId: string) => {
@@ -212,6 +245,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
 
   return (
     <motion.div key="people" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+      {ConfirmDialogNode}
       {!isOnline && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
           <span>📶</span>
@@ -233,9 +267,11 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
               const spouseUserId = member.user_id ? (spouseByUserId.get(member.user_id) || null) : null;
               const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
               const isGuest = member.status === "guest";
+              const isEditingSpouse = editingSpouseMemberId === member.id;
 
               return (
                 <tr key={member.id}>
+                  {/* Coluna: Nome */}
                   <td className="px-4 py-3">
                     {editingMemberId === member.id ? (
                       <div className="flex items-center gap-2">
@@ -302,48 +338,102 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">{spouse?.display_name || "-"}</td>
+
+                  {/* Coluna: Cônjuge */}
+                  <td className="px-4 py-3">
+                    {/* Admin editando cônjuge deste membro */}
+                    {isAdmin && isEditingSpouse ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={spouseSelectValue}
+                          onChange={(e) => setSpouseSelectValue(e.target.value)}
+                          className={cn(
+                            "px-2 py-1 rounded-lg border text-xs",
+                            settings.dark_mode
+                              ? "bg-zinc-800 border-zinc-700 text-white"
+                              : "bg-white border-zinc-200"
+                          )}
+                        >
+                          <option value="">Sem cônjuge</option>
+                          {members
+                            .filter((m) => m.user_id && m.user_id !== member.user_id)
+                            .map((m) => (
+                              <option key={m.id} value={m.user_id ?? ""}>
+                                {m.display_name || m.user_id}
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          onClick={() => adminSetSpouse(member.user_id!, spouseSelectValue || null)}
+                          className="text-emerald-500 hover:text-emerald-600"
+                          title="Salvar cônjuge"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSpouseMemberId(null);
+                            setSpouseSelectValue("");
+                          }}
+                          className="text-zinc-400 hover:text-zinc-600"
+                          title="Cancelar"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        {spouse?.display_name || (
+                          <span className="text-zinc-400">-</span>
+                        )}
+                        {/* Botão para admin editar cônjuge (apenas membros com user_id real) */}
+                        {isAdmin && member.user_id && (
+                          <button
+                            onClick={() => {
+                              setEditingSpouseMemberId(member.id);
+                              setSpouseSelectValue(spouseUserId || "");
+                            }}
+                            className="text-zinc-400 hover:text-pink-500 transition-colors"
+                            title={spouse ? "Editar cônjuge" : "Definir cônjuge"}
+                          >
+                            {spouse ? <Heart size={13} className="text-pink-400" /> : <Heart size={13} />}
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Coluna: Ações (admin) */}
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
                       {isGuest ? (
-                        <button
-                          onClick={() => removeGuest(member.id, member.display_name || "Guest")}
-                          className="text-zinc-400 hover:text-red-500"
-                          title="Remover guest"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      ) : (
-                        member.user_id !== currentMember?.user_id && (
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Botão convidar guest */}
                           <button
-                            onClick={async () => {
-                              const confirmed = await confirm({
-                                title: 'Remover amigo?',
-                                message: `Remover ${member.display_name || member.user_id} da viagem?`,
-                                variant: 'danger',
-                                isDark: settings.dark_mode
-                              });
-                              if (!confirmed) return;
-                              const { error: memberError } = await supabase.from("trip_members").delete().eq("id", member.id);
-
-                              if (memberError) {
-                                toast(getErrorMessage(memberError), 'error');
-                              } else {
-                                await supabase
-                                  .from("trip_invites")
-                                  .delete()
-                                  .eq("trip_id", tripId)
-                                  .eq("accepted_by_user_id", member.user_id);
-
-                                reloadTrip();
-                              }
-                            }}
-                            className="text-zinc-400 hover:text-red-500"
+                            type="button"
+                            onClick={() =>
+                              setInvitingGuestId(
+                                invitingGuestId === member.id ? null : member.id
+                              )
+                            }
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                            title="Convidar para o app"
                           >
-                            <Trash2 size={16} />
+                            <Mail size={14} />
                           </button>
-                        )
-                      )}
+                          {/* Botão remover guest */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeGuest(member.id, member.display_name || "Guest")
+                            }
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Remover guest"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ) : null}
                     </td>
                   )}
                 </tr>
@@ -351,19 +441,63 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
             })}
           </tbody>
         </table>
+
+        {/* Painel inline de convite para guest */}
+        {invitingGuestId && (
+          <div className="px-4 py-3 border-t border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]">
+            <p className="text-xs text-zinc-500 mb-2">
+              Envie o link de convite para o guest assumir o slot:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="email@exemplo.com"
+                value={guestInviteEmail}
+                onChange={(e) => setGuestInviteEmail(e.target.value)}
+                className={cn(
+                  "flex-1 px-3 py-1.5 rounded-lg border text-xs",
+                  settings.dark_mode
+                    ? "bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500"
+                    : "bg-white border-zinc-200"
+                )}
+              />
+              <button
+                onClick={() => sendGuestInvite(invitingGuestId)}
+                className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-3 py-1.5 rounded-lg text-xs font-bold"
+              >
+                Copiar link
+              </button>
+              <button
+                onClick={() => {
+                  setInvitingGuestId(null);
+                  setGuestInviteEmail("");
+                }}
+                className="px-2 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-600"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
-      {currentMember && (
+      {/* Card: Meu cônjuge (apenas membros com conta) */}
+      {currentMember && currentMember.user_id && (
         <Card>
-          <h3 className="font-bold mb-4">Seu cônjuge (global)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <h3 className="font-bold mb-1">Meu cônjuge nesta viagem</h3>
+          <p className="text-xs text-zinc-500 mb-4">
+            Casais compartilham o mesmo orçamento nas despesas. Selecione quem é
+            seu cônjuge para que os gastos sejam agrupados automaticamente.
+          </p>
+          <div className="flex gap-2 items-center">
             <select
               value={selfSpouseUserId}
               onChange={(e) => setSelfSpouseUserId(e.target.value)}
               className={cn(
-                "md:col-span-2 px-4 py-2 rounded-xl border text-sm",
-                settings.dark_mode ?
-                "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                "flex-1 px-3 py-2 rounded-xl border text-sm",
+                settings.dark_mode
+                  ? "bg-zinc-800 border-zinc-700 text-white"
+                  : "bg-white border-zinc-200"
               )}
             >
               <option value="">Sem cônjuge</option>
@@ -415,114 +549,102 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                     <button
                       type="button"
                       onClick={() => {
-                        setInvitingGuestId(invitingGuestId === guest.id ? null : guest.id);
-                        setGuestInviteEmail(guest.guest_email || "");
+                        setInvitingGuestId(
+                          invitingGuestId === guest.id ? null : guest.id
+                        );
+                        setGuestInviteEmail("");
                       }}
-                      className="text-zinc-400 hover:text-[var(--sidebar-active-bg)]"
-                      title="Enviar convite para assumir conta"
+                      className="p-1 rounded-lg text-zinc-400 hover:text-blue-500 transition-colors"
+                      title="Convidar"
                     >
-                      <Mail size={14} />
+                      <Mail size={13} />
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeGuest(guest.id, guest.display_name || "Guest")}
-                      className="text-zinc-400 hover:text-red-500"
-                      title="Remover guest"
+                      onClick={() =>
+                        removeGuest(guest.id, guest.display_name || "Guest")
+                      }
+                      className="p-1 rounded-lg text-zinc-400 hover:text-red-500 transition-colors"
+                      title="Remover"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
-
-                  {/* Inline: enviar convite */}
-                  {invitingGuestId === guest.id && (
-                    <div className="mt-2 flex gap-2">
-                      <input
-                        type="email"
-                        value={guestInviteEmail}
-                        onChange={(e) => setGuestInviteEmail(e.target.value)}
-                        placeholder="email@exemplo.com"
-                        className={cn(
-                          "flex-1 px-3 py-1.5 rounded-lg border text-xs",
-                          settings.dark_mode
-                            ? "bg-zinc-800 border-zinc-700 text-white"
-                            : "bg-white border-zinc-200"
-                        )}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void sendGuestInvite(guest.id)}
-                        className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-3 py-1.5 rounded-lg text-xs font-bold"
-                      >
-                        Enviar
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Formulário novo guest */}
-          <div className="flex flex-col md:flex-row gap-3">
+          {/* Form: adicionar novo guest */}
+          <div className="flex gap-2">
             <input
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") void addGuest(); }}
               type="text"
               placeholder="Nome do amigo"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addGuest()}
               className={cn(
-                "flex-1 px-4 py-2 rounded-xl border text-sm",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                "flex-1 px-3 py-2 rounded-xl border text-sm",
+                settings.dark_mode
+                  ? "bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500"
+                  : "bg-white border-zinc-200"
               )}
             />
             <button
-              type="button"
-              onClick={() => void addGuest()}
+              onClick={addGuest}
               disabled={addingGuest || !guestName.trim()}
-              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 justify-center disabled:opacity-50"
+              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <UserX size={16} />
-              {addingGuest ? "Adicionando..." : "Adicionar"}
+              {addingGuest ? "..." : "Adicionar"}
             </button>
           </div>
         </Card>
       )}
 
+      {/* Card: Convite por email */}
       {isAdmin && (
         <Card>
-          <h3 className="font-bold mb-4">Convidar um amigo</h3>
-          <div className="flex flex-col md:flex-row gap-3">
+          <h3 className="font-bold mb-1">Convidar por e-mail</h3>
+          <p className="text-xs text-zinc-500 mb-4">
+            Gere um link de convite para uma pessoa entrar nesta viagem.
+          </p>
+          <div className="flex gap-2">
             <input
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
               type="email"
               placeholder="email@exemplo.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createInvite()}
               className={cn(
-                "flex-1 px-4 py-2 rounded-xl border text-sm",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                "flex-1 px-3 py-2 rounded-xl border text-sm",
+                settings.dark_mode
+                  ? "bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500"
+                  : "bg-white border-zinc-200"
               )}
             />
             <button
               onClick={createInvite}
-              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 justify-center"
+              disabled={!inviteEmail.trim()}
+              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
             >
-              <UserPlus size={16} />
-              Gerar convite
+              Gerar link
             </button>
           </div>
           {generatedLink && (
-            <div className={cn(
-              "mt-3 p-3 rounded-xl border text-xs break-all flex items-center justify-between gap-2",
-              settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
-            )}>
-              <span className="flex-1">{generatedLink}</span>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                readOnly
+                value={generatedLink}
+                className={cn(
+                  "flex-1 px-3 py-2 rounded-xl border text-xs truncate",
+                  settings.dark_mode
+                    ? "bg-zinc-900 border-zinc-700 text-zinc-300"
+                    : "bg-zinc-50 border-zinc-200 text-zinc-600"
+                )}
+              />
               <button
-                type="button"
-                onClick={async () => {
-                  await copyToClipboard(generatedLink);
-                  toast("Link copiado!", 'success');
-                }}
-                className="text-zinc-400 hover:text-[var(--sidebar-active-bg)] shrink-0"
+                onClick={() => copyToClipboard(generatedLink).then(() => toast("Link copiado!", "success"))}
+                className="p-2 rounded-xl border border-[var(--sidebar-border)] text-zinc-400 hover:text-zinc-700 transition-colors"
                 title="Copiar link"
               >
                 <Copy size={14} />
@@ -532,57 +654,30 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
         </Card>
       )}
 
-      {isAdmin && (
+      {/* Convites pendentes */}
+      {isAdmin && invites.filter((i) => !i.accepted_at).length > 0 && (
         <Card>
-          <h3 className="font-bold mb-4">Convites</h3>
+          <h3 className="font-bold mb-3">Convites pendentes</h3>
           <div className="space-y-2">
-            {invites.length === 0 && <p className="text-sm text-zinc-500">Nenhum convite gerado.</p>}
-            {invites.map((invite) => (
-              <div
-                key={invite.id}
-                className="p-3 rounded-xl border border-[var(--sidebar-border)] text-sm flex items-center gap-2"
-              >
-                <span className="min-w-0 flex-1 truncate">{invite.email}</span>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span
-                    className={cn(
-                      "text-xs font-bold uppercase",
-                      invite.accepted_at ? "text-emerald-600" : "text-orange-600"
-                    )}
+            {invites
+              .filter((i) => !i.accepted_at)
+              .map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between gap-2 text-sm"
+                >
+                  <span className="text-zinc-500 truncate">{invite.email}</span>
+                  <button
+                    onClick={() => cancelInvite(invite.id)}
+                    className="text-xs text-red-400 hover:text-red-600 transition-colors shrink-0"
                   >
-                    {invite.accepted_at ? "Aceito" : "Pendente"}
-                  </span>
-                  {!invite.accepted_at && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const link = `${window.location.origin}/invite/${invite.token}`;
-                          await copyToClipboard(link);
-                          toast("Link copiado!", 'success');
-                        }}
-                        className="text-zinc-400 hover:text-[var(--sidebar-active-bg)]"
-                        title="Copiar link"
-                      >
-                        <Copy size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void cancelInvite(invite.id)}
-                        className="text-xs text-red-500 shrink-0"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
+                    Cancelar
+                  </button>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </Card>
       )}
-
-      {ConfirmDialogNode}
     </motion.div>
   );
 }
