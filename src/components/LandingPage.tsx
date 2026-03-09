@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { LogOut, Info, HelpCircle } from "lucide-react";
+import { LogOut, HelpCircle } from "lucide-react";
 import { supabase } from "../supabase";
 import { Card } from "./Card";
 import { UserSettings, TripSummary } from "../types";
@@ -10,6 +10,9 @@ import { getErrorMessage } from "../utils";
 import { useToast } from "../hooks/useToast";
 
 export function LandingPage({ session, settings }: { session: Session; settings: UserSettings }) {
+  // A LandingPage sempre usa o tema padrão claro, independente das preferências do usuário
+  const landingSettings: UserSettings = { ...settings, theme_palette: "default", dark_mode: false };
+
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
@@ -53,7 +56,10 @@ export function LandingPage({ session, settings }: { session: Session; settings:
   };
 
   return (
-    <div className="min-h-screen p-6 md:p-10 bg-[var(--bg-color)]" style={{ ...getThemeStyles(settings), ["--bg-color" as string]: getThemeStyles(settings).backgroundColor } as React.CSSProperties}>
+    <div
+      className="min-h-screen p-6 md:p-10 bg-[var(--bg-color)]"
+      style={{ ...getThemeStyles(landingSettings), ["--bg-color" as string]: getThemeStyles(landingSettings).backgroundColor } as React.CSSProperties}
+    >
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -73,7 +79,10 @@ export function LandingPage({ session, settings }: { session: Session; settings:
               <HelpCircle size={16} />
               <span className="hidden sm:inline">Ajuda</span>
             </a>
-            <button onClick={() => void supabase.auth.signOut()} className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors">
+            <button
+              onClick={() => void supabase.auth.signOut()}
+              className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors"
+            >
               <LogOut size={16} />
               Sair
             </button>
@@ -87,7 +96,8 @@ export function LandingPage({ session, settings }: { session: Session; settings:
               {loadingTrips && <p className="text-sm opacity-70">Carregando...</p>}
               {!loadingTrips && trips.length === 0 && <p className="text-sm opacity-70">Nenhuma viagem.</p>}
               {trips.map((trip) => {
-                const tripTheme = getThemeStyles({ ...settings, theme_palette: trip.theme_palette || 'default' });
+                // Cada card de viagem usa o TEMA DA VIAGEM, mas sempre em modo claro
+                const tripTheme = getThemeStyles({ ...landingSettings, theme_palette: trip.theme_palette || 'default' });
                 return (
                   <button
                     key={trip.id}
@@ -111,13 +121,30 @@ export function LandingPage({ session, settings }: { session: Session; settings:
             <form onSubmit={createTrip} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">Nome da viagem</label>
-                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Férias de Verão" className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none" />
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Férias de Verão"
+                  className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">Destino</label>
-                <input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Ex: Paris, França" className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none" />
+                <input
+                  required
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="Ex: Paris, França"
+                  className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none"
+                />
               </div>
-              <button disabled={creating} className="w-full bg-[var(--accent-color)] text-white py-2 rounded-xl font-semibold mt-2 hover:opacity-90 transition-colors disabled:opacity-50">{creating ? "Criando..." : "Criar"}</button>
+              <button
+                disabled={creating}
+                className="w-full bg-[var(--accent-color)] text-white py-2 rounded-xl font-semibold mt-2 hover:opacity-90 transition-colors disabled:opacity-50"
+              >
+                {creating ? "Criando..." : "Criar"}
+              </button>
             </form>
           </Card>
         </div>
