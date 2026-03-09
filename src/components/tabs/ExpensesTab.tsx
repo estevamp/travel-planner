@@ -182,27 +182,30 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     });
   }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember]);
 
-  const payerTotals = useMemo(() => {
-    // Filtrar apenas despesas que têm splits configurados
-    const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
+const payerTotals = useMemo(() => {
 
-    const totals: Record<string, number> = {};
-
-    splitExpenses.forEach(exp => {
-      if (!exp.paid_by_member_id) return;
-      const currency = exp.currency || settings.default_currency;
-      const converted = convert(Number(exp.amount) || 0, currency);
-      totals[exp.paid_by_member_id] = (totals[exp.paid_by_member_id] || 0) + converted;
-    });
-
-    return members
-      .map(m => ({
-        name: m.display_name || "Membro",
-        amount: totals[m.id] || 0,
-      }))
-      .filter(m => m.amount > 0)
-      .sort((a, b) => b.amount - a.amount);
-  }, [expensesWithSplits, members, convert, settings.default_currency]);
+  // Filtrar apenas despesas que têm splits configurados
+const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
+const totals: Record<string, number> = {};
+const confirmedTotals: Record<string, number> = {};
+splitExpenses.forEach(exp => {
+  if (!exp.paid_by_member_id) return;
+  const currency = exp.currency || settings.default_currency;
+  const converted = convert(Number(exp.amount) || 0, currency);
+  totals[exp.paid_by_member_id] = (totals[exp.paid_by_member_id] || 0) + converted;
+  if (exp.is_confirmed) {
+    confirmedTotals[exp.paid_by_member_id] = (confirmedTotals[exp.paid_by_member_id] || 0) + converted;
+  }
+});
+return members
+  .map(m => ({
+    name: m.display_name || "Membro",
+    amount: totals[m.id] || 0,
+    confirmedAmount: confirmedTotals[m.id] || 0,
+  }))
+  .filter(m => m.amount > 0)
+  .sort((a, b) => b.amount - a.amount);
+}, [expensesWithSplits, members, convert, settings.default_currency]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -744,31 +747,53 @@ const undoPayment = async (settlementId: string) => {
         <Card className="space-y-4">
           <h3 className="text-sm font-bold">Quem pagou nas despesas rateadas</h3>
           
+          {/* Legenda confirmado vs previsto */}
+          <div className="flex items-center gap-4 text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-emerald-500" />
+              <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Confirmado</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-blue-400 opacity-50" />
+              <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Previsto</span>
+            </div>
+          </div>
+
           <div className="space-y-3">
-            {payerTotals.map(({ name, amount }) => {
+            {payerTotals.map(({ name, amount, confirmedAmount }) => {
               const maxAmount = payerTotals[0].amount; // já ordenado desc
               const pct = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+              const confirmedPct = maxAmount > 0 ? (confirmedAmount / maxAmount) * 100 : 0;
               
               return (
                 <div key={name} className="space-y-1">
-                  {/* Nome + valor */}
+                  {/* Nome + valores confirmado / previsto */}
                   <div className="flex items-center justify-between text-sm">
                     <span className={cn("font-medium", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
                       {name}
                     </span>
-                    <span className={cn("text-xs tabular-nums font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                      {formatCurrency(amount, settings.default_currency)}
-                    </span>
+                    <div className="flex items-center gap-2 text-xs tabular-nums">
+                      <span className="text-emerald-600 font-semibold">
+                        {formatCurrency(confirmedAmount, settings.default_currency)}
+                      </span>
+                      <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>/</span>
+                      <span className={cn("font-medium", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+                        {formatCurrency(amount, settings.default_currency)}
+                      </span>
+                    </div>
                   </div>
                   
-                  {/* Barra */}
-                  <div className={cn("w-full rounded-full h-2.5", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
+                  {/* Barra dupla: previsto (azul semitransparente) + confirmado (verde) */}
+                  <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
+                    {/* Barra previsto — fundo */}
                     <div
-                      className="h-2.5 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${pct}%`,
-                        background: 'var(--sidebar-active-bg)',
-                      }}
+                      className="absolute h-full rounded-full transition-all duration-500 bg-blue-400 opacity-40"
+                      style={{ width: `${pct}%` }}
+                    />
+                    {/* Barra confirmado — frente */}
+                    <div
+                      className="absolute h-full rounded-full transition-all duration-500 bg-emerald-500"
+                      style={{ width: `${confirmedPct}%` }}
                     />
                   </div>
                 </div>
