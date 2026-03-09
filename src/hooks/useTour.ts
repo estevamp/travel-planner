@@ -4,10 +4,16 @@ const TOUR_KEY = "partiu_tour_done";
 
 export function useTour(isReady: boolean, setActiveTab: (tab: string) => void) {
   const startTour = useCallback(() => {
-    const { driver } = (window as any)["driver.js"];
-    if (!driver) return;
+    const win = window as any;
+    const driverFactory =
+      win?.driver?.js?.driver ??
+      win?.["driver.js"]?.driver ??
+      win?.driverjs?.driver ??
+      win?.driver;
 
-    const driverObj = driver({
+    if (typeof driverFactory !== "function") return;
+
+    const driverObj = driverFactory({
       showProgress: true,
       nextBtnText: "Próximo →",
       prevBtnText: "← Anterior",
