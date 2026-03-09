@@ -34,7 +34,7 @@ export function useTour(isReady: boolean, setActiveTab: (tab: string) => void) {
           element: "#tour-tab-itinerary",
           popover: {
             title: "📅 Atividades",
-            description: "Monte o roteiro dia a dia — passeios, voos, restaurantes com horário e local. O cérebro da viagem!",
+            description: "Aqui você monta o roteiro dia a dia — passeios, voos, restaurantes, hoteis com horário e local. É o cérebro da viagem!",
             side: "right",
           },
           onHighlightStarted: () => setActiveTab("itinerary"),
@@ -43,7 +43,7 @@ export function useTour(isReady: boolean, setActiveTab: (tab: string) => void) {
           element: "#tour-tab-ideas",
           popover: {
             title: "💡 Ideias",
-            description: "Aquela ideia das 2h da manhã? Salva aqui. Depois vira atividade com um toque.",
+            description: "Teve uma ideia às 2h da manhã? Salva ela aqui. Depois ela vira uma atividade com um toque.",
             side: "right",
           },
           onHighlightStarted: () => setActiveTab("ideas"),
@@ -52,7 +52,7 @@ export function useTour(isReady: boolean, setActiveTab: (tab: string) => void) {
           element: "#tour-tab-expenses",
           popover: {
             title: "💸 Despesas",
-            description: "Registre quem pagou o quê e divida as contas. Sem o famoso 'a gente acerta depois'.",
+            description: "Registre quem pagou o quê e divida as contas.",
             side: "right",
           },
           onHighlightStarted: () => setActiveTab("expenses"),
@@ -61,7 +61,7 @@ export function useTour(isReady: boolean, setActiveTab: (tab: string) => void) {
           element: "#tour-tab-documents",
           popover: {
             title: "📄 Documentos",
-            description: "Passaportes, vouchers e reservas ficam aqui — acessíveis até offline.",
+            description: "Reservas, documentos e papelada ficam aqui — acessíveis até offline.",
             side: "right",
           },
           onHighlightStarted: () => setActiveTab("documents"),
@@ -70,7 +70,7 @@ export function useTour(isReady: boolean, setActiveTab: (tab: string) => void) {
           element: "#tour-tab-people",
           popover: {
             title: "👥 Amigos",
-            description: "Convide seus companheiros por e-mail para planejar juntos.",
+            description: "Convide seus amigos por e-mail e planejem juntos.",
             side: "right",
           },
           onHighlightStarted: () => setActiveTab("people"),
