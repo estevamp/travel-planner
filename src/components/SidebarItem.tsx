@@ -2,17 +2,20 @@ import type { LucideIcon } from 'lucide-react';
 import { cn } from "../utils";
 
 export const SidebarItem = ({
+  id,
   icon: Icon,
   label,
   active,
   onClick,
 }: {
+  id?: string;
   icon: LucideIcon;
   label: string;
   active?: boolean;
   onClick: () => void;
 }) => (
   <button
+    id={id}
     onClick={onClick}
     className={cn(
       // LAYOUT: padding aumentado de py-3 para py-2.5, gap ajustado

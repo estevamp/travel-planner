@@ -86,3 +86,30 @@
 .animate-slide-up {
   animation: slide-up 0.35s cubic-bezier(0.34, 1.26, 0.64, 1) both;
 }
+
+/* Driver.js tour customization */
+.driver-popover {
+  border-radius: 16px !important;
+  font-family: inherit !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+}
+.driver-popover-title {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+.driver-popover-description {
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+}
+.driver-popover-next-btn {
+  background-color: var(--accent-color, #6366f1) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: white !important;
+}
+.driver-popover-prev-btn {
+  border-radius: 8px !important;
+}
+.driver-popover-close-btn {
+  border-radius: 6px !important;
+}

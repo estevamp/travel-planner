@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, LayoutDashboard, Lightbulb, LogOut, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
@@ -16,6 +16,7 @@ import { TripProvider, useTripContext } from "../context/TripContext";
 
 // Hooks customizados
 import { useTripList } from "../hooks/useTripList";
+import { useTour } from "../hooks/useTour";
 import { useToast } from "../hooks/useToast";
 
 // Componentes de abas
@@ -88,6 +89,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   
   // Estado local apenas para UI
   const [activeTab, setActiveTab] = useState<ActiveTab>("itinerary");
+  const { startTour } = useTour(!!trip, setActiveTab);
 
   const { enqueue, pendingCount, isSyncing, isOnline } = useOfflineQueue();
 
@@ -494,11 +496,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <span className="font-bold text-xl">Partiu!</span>
         </button>
         <nav className="space-y-2">
-          <SidebarItem icon={LayoutDashboard} label="Atividades" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
-          <SidebarItem icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
-          <SidebarItem icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
-          <SidebarItem icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
-          <SidebarItem icon={Users} label="Amigos" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
+          <SidebarItem id="tour-tab-itinerary" icon={LayoutDashboard} label="Atividades" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
+          <SidebarItem id="tour-tab-ideas" icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
+          <SidebarItem id="tour-tab-expenses" icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
+          <SidebarItem id="tour-tab-documents" icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
+          <SidebarItem id="tour-tab-people" icon={Users} label="Amigos" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
           <SidebarItem icon={Settings} label="Configurações" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
         <div className="flex-1 flex flex-col min-h-0">
@@ -547,6 +549,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <h2
+                id="tour-trip-name"
                 onClick={() => setActiveTab("itinerary")}
                 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
@@ -561,6 +564,14 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   aria-label="Trocar viagem"
                 >
                   <Briefcase size={20} />
+                </button>
+                <button
+                  onClick={startTour}
+                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  title="Ver tour do app"
+                  aria-label="Tour do app"
+                >
+                  <HelpCircle size={18} />
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
