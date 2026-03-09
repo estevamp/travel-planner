@@ -16,6 +16,8 @@ import type {
   IdeaAsset,
 } from "../types";
 
+const MEMBERS_SELECT = "id,trip_id,user_id,role,display_name,spouse_member_id,status,guest_email";
+
 export function useTripData(tripId: string | undefined, userId: string) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [members, setMembers] = useState<TripMember[]>([]);
@@ -40,7 +42,7 @@ export function useTripData(tripId: string | undefined, userId: string) {
     setLoading(true);
     const [tripRes, membersRes, itineraryRes, expensesRes, docsRes, ideasRes, categoriesRes, itineraryTypesRes] = await Promise.all([
       supabase.from("trips").select("*").eq("id", id).single(),
-      supabase.from("trip_members").select("id,trip_id,user_id,role,display_name").eq("trip_id", id),
+      supabase.from("trip_members").select(MEMBERS_SELECT).eq("trip_id", id),
       supabase.from("itinerary").select("*").eq("trip_id", id).order("start_time", { ascending: true }),
       supabase.from("expenses").select("*").eq("trip_id", id).order("date", { ascending: true }),
       supabase.from("documents").select("*").eq("trip_id", id),
@@ -72,8 +74,6 @@ export function useTripData(tripId: string | undefined, userId: string) {
     if (userIds.length > 0) {
       const { data: profileRows, error: profileError } = await supabase.from("profiles").select("user_id,spouse_user_id").in("user_id", userIds);
       if (profileError) {
-        // Não-crítico: dados de cônjuge são usados para splitting de despesas.
-        // Se falharem, o app funciona normalmente sem essa info.
         console.error('[useTripData] Falha ao carregar profiles:', profileError);
         setSpouseByUserId(new Map());
       } else {
@@ -117,10 +117,8 @@ export function useTripData(tripId: string | undefined, userId: string) {
       if (ideaLinksRes.error || ideaAssetsRes.error) {
         console.error('[useTripData] Falha ao carregar assets de ideias:', ideaLinksRes.error || ideaAssetsRes.error);
         toast('Alguns anexos de ideias não puderam ser carregados.', 'info');
-        // Continua com arrays vazios em vez de derrubar tudo
         ideaLinksData = [];
         ideaAssetsData = [];
-        // Não retorna — continua o fluxo normalmente
       } else {
         ideaLinksData = (ideaLinksRes.data || []) as IdeaLink[];
         ideaAssetsData = (ideaAssetsRes.data || []) as IdeaAsset[];
@@ -257,7 +255,7 @@ export function useTripData(tripId: string | undefined, userId: string) {
   const reloadMembers = useCallback(async (id: string) => {
     const { data: membersData, error: membersError } = await supabase
       .from("trip_members")
-      .select("id,trip_id,user_id,role,display_name")
+      .select(MEMBERS_SELECT)
       .eq("trip_id", id);
 
     if (membersError || !membersData) return;
@@ -313,7 +311,6 @@ export function useTripData(tripId: string | undefined, userId: string) {
     spouseByUserId,
     setSpouseByUserId,
     reloadTrip: tripId ? () => loadTrip(tripId) : () => {},
-    // Novas funções granulares — retornam () => {} se tripId não existir
     reloadItinerary: tripId ? () => reloadItinerary(tripId) : () => {},
     reloadExpenses:  tripId ? () => reloadExpenses(tripId)  : () => {},
     reloadDocuments: tripId ? () => reloadDocuments(tripId) : () => {},

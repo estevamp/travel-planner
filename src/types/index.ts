@@ -121,10 +121,12 @@ export interface IdeaAsset {
 export interface TripMember {
   id: string;
   trip_id: string;
-  user_id: string;
+  user_id: string | null;       // null para guests (sem conta)
   role: "admin" | "member";
   display_name: string | null;
   spouse_member_id: string | null;
+  status?: string | null;       // "guest" | null
+  guest_email?: string | null;
 }
 
 export interface TripInvite {
