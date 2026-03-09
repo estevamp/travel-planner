@@ -21,7 +21,7 @@ export function AuthLanding() {
       <Card className="max-w-md w-full text-center space-y-6 p-8">
         <div className="flex justify-center">
           <div className="bg-[#0A2342] p-4 rounded-2xl shadow-lg shadow-blue-900/20">
-            <img src="/favicon.svg" alt="Partiu!" className="w-12 h-12" />
+            <img src="/icon-192.png" alt="Partiu!" className="w-12 h-12" />
           </div>
         </div>
         <div className="space-y-2">
