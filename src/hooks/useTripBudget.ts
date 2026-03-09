@@ -70,6 +70,14 @@ export function useTripBudget(tripId: string | undefined, userId: string) {
 
   useEffect(() => {
     if (!tripId) return;
+
+    // Limpar estado anterior imediatamente ao trocar de viagem,
+    // evitando que o orçamento de uma viagem apareça em outra.
+    setTripBudget(null);
+    setBudgetOwnerUserId("");
+    setBudgetCurrency("BRL");
+    budgetAutosaveReadyRef.current = false;
+
     void loadTripBudget(tripId);
   }, [tripId, userId]);
 
