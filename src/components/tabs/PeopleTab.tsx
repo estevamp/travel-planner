@@ -17,7 +17,7 @@ interface PeopleTabProps {
 export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const {
     tripId, members, invites, currentMember, isAdmin,
-    settings, spouseByUserId, reloadTrip,
+    settings, reloadTrip,
     reloadMembers,
   } = useTripContext();
   const { toast } = useToast();
@@ -37,7 +37,6 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const [invitingGuestId, setInvitingGuestId] = useState<string | null>(null);
   const [guestInviteEmail, setGuestInviteEmail] = useState("");
 
-  const memberByUserId = new Map(members.map((m) => [m.user_id, m]));
 
   const createInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
@@ -78,20 +77,12 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     reloadTrip();
   };
 
-  // Função para admin editar cônjuge
-  // Usamos set_global_spouse que atualiza profiles — mas essa RPC age no auth.uid().
-  // Para admin alterar outro usuário, precisamos usar uma abordagem diferente:
-  // atualizamos diretamente via update na tabela profiles com RLS permissiva para admin,
-  // ou criamos uma nova RPC. Como a RPC set_global_spouse só age no próprio usuário,
-  // vamos usar a abordagem de update direto — mas RLS não permite.
-  // A solução correta é usar a RPC set_global_spouse que já existe no banco
-  // mas ela só afeta auth.uid(). Portanto, precisamos de uma nova RPC admin.
-  // Por ora, implementamos o UI e chamamos uma RPC "admin_set_spouse" que deve ser criada.
-  // O arquivo SQL de migração também é gerado.
-  const adminSetSpouse = async (targetUserId: string, spouseUserId: string | null) => {
-    const { error } = await supabase.rpc("admin_set_global_spouse", {
-      p_target_user_id: targetUserId,
-      p_spouse_user_id: spouseUserId || null,
+  // set_trip_spouse opera por member.id (não user_id), funciona com guests também.
+  const adminSetSpouse = async (targetMemberId: string, spouseMemberId: string | null) => {
+    const { error } = await supabase.rpc("set_trip_spouse", {
+      p_trip_id: tripId,
+      p_member_id: targetMemberId,
+      p_spouse_member_id: spouseMemberId || null,
     });
     if (error) {
       toast(getErrorMessage(error), "error");
@@ -249,8 +240,9 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
           </thead>
           <tbody className="divide-y divide-[var(--sidebar-border)]">
             {members.map((member) => {
-              const spouseUserId = member.user_id ? (spouseByUserId.get(member.user_id) || null) : null;
-              const spouse = spouseUserId ? memberByUserId.get(spouseUserId) : null;
+              // spouse_member_id está direto no objeto — funciona para usuários e guests
+              const spouseMemberId = member.spouse_member_id || null;
+              const spouse = spouseMemberId ? members.find((m) => m.id === spouseMemberId) : null;
               const isGuest = member.status === "guest";
               const isEditingSpouse = editingSpouseMemberId === member.id;
 
@@ -344,15 +336,16 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                         >
                           <option value="">Sem cônjuge</option>
                           {members
-                            .filter((m) => m.user_id && m.user_id !== member.user_id)
+                            .filter((m) => m.id !== member.id)
                             .map((m) => (
-                              <option key={m.id} value={m.user_id ?? ""}>
-                                {m.display_name || m.user_id}
+                              <option key={m.id} value={m.id}>
+                                {m.display_name || m.user_id || "Guest"}
+                                {m.status === "guest" ? " (guest)" : ""}
                               </option>
                             ))}
                         </select>
                         <button
-                          onClick={() => adminSetSpouse(member.user_id!, spouseSelectValue || null)}
+                          onClick={() => adminSetSpouse(member.id, spouseSelectValue || null)}
                           className="text-emerald-500 hover:text-emerald-600"
                           title="Salvar cônjuge"
                         >
@@ -375,11 +368,11 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                           <span className="text-zinc-400">-</span>
                         )}
                         {/* Botão para admin editar cônjuge (apenas membros com user_id real) */}
-                        {isAdmin && member.user_id && (
+                        {isAdmin && (
                           <button
                             onClick={() => {
                               setEditingSpouseMemberId(member.id);
-                              setSpouseSelectValue(spouseUserId || "");
+                              setSpouseSelectValue(spouseMemberId || "");
                             }}
                             className="text-zinc-400 hover:text-pink-500 transition-colors"
                             title={spouse ? "Editar cônjuge" : "Definir cônjuge"}
