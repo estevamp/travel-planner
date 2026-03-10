@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
   ChevronDown, ChevronRight, MapPin, Lock, Users,
-  AlignLeft, Clock,
+  AlignLeft, Clock, ImagePlus,
 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
@@ -691,6 +691,54 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 rows={2}
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm resize-none"
               />
+
+            <label className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-xl border text-sm cursor-pointer w-fit transition-colors",
+              item.photo_url
+                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                : isDark
+                  ? "border-zinc-600 bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+            )}>
+              <ImagePlus size={15} />
+              <span className="text-xs font-medium">
+                {item.photo_url ? "Trocar foto" : "Adicionar foto"}
+              </span>
+              {item.photo_url && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 ml-1" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const dataUrl = await fileToDataUrl(file);
+                    const resized = await resizeImage(dataUrl, 1200);
+                    const ext = file.name.split(".").pop() || "jpg";
+                    const path = `${trip.id}/itinerary/${item.id}.${ext}`;
+                    const blob = await (await fetch(resized)).blob();
+                    await supabase.storage.from("travel-documents").upload(path, blob, { upsert: true });
+                    const { data: urlData } = supabase.storage.from("travel-documents").getPublicUrl(path);
+                    const photo = urlData.publicUrl;
+                    onTripUpdate((prev) => ({
+                      ...prev,
+                      itinerary: prev.itinerary.map((i) =>
+                        i.id === item.id ? { ...i, photo_url: photo } : i
+                      ),
+                    }));
+                    await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
+                    toast("Foto adicionada!", "success");
+                  } catch (err) {
+                    toast(getErrorMessage(err), "error");
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </label>
+
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => void saveItineraryEdit(item.id)}

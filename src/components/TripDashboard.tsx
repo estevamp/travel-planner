@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
@@ -855,16 +855,31 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Foto</label>
-            <input
-              type="file"
-              name="photo"
-              accept="image/*"
-              className={cn(
-                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-              )}
-              disabled={isSubmittingItinerary}
-            />
+            <label className={cn(
+              "flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all w-fit",
+              isSubmittingItinerary ? "opacity-50 cursor-not-allowed pointer-events-none" : "",
+              settings.dark_mode
+                ? "border-zinc-600 bg-zinc-800 text-zinc-300 hover:border-zinc-400 hover:bg-zinc-700"
+                : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-zinc-400 hover:bg-zinc-100"
+            )}>
+              <span className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-lg",
+                settings.dark_mode ? "bg-zinc-700" : "bg-white shadow-sm"
+              )}>
+                <ImagePlus size={17} className={settings.dark_mode ? "text-zinc-300" : "text-zinc-500"} />
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-semibold">Adicionar foto</span>
+                <span className="text-[10px] opacity-60">JPG, PNG ou HEIC</span>
+              </div>
+              <input
+                type="file"
+                name="photo"
+                accept="image/*"
+                className="hidden"
+                disabled={isSubmittingItinerary}
+              />
+            </label>
           </div>
           
           <button disabled={isSubmittingItinerary} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
