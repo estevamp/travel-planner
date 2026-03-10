@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { LogOut, HelpCircle } from "lucide-react";
+import { LogOut, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "../supabase";
 import { Card } from "./Card";
 import { UserSettings, TripSummary } from "../types";
@@ -79,6 +79,15 @@ export function LandingPage({ session, settings }: { session: Session; settings:
               <HelpCircle size={16} />
               <span className="hidden sm:inline">Ajuda</span>
             </a>
+            <a
+                href="/terms.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors"
+              >
+                <FileText size={16} />
+                <span className="hidden sm:inline">Termos</span>
+              </a>            
             <button
               onClick={() => void supabase.auth.signOut()}
               className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors"

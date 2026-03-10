@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Termos de Uso — Partiu!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0A2342;
+      --sky: #1D6FA4;
+      --gold: #F5A623;
+      --sand: #FFF8EE;
+      --white: #FFFFFF;
+      --ink: #1a1a2e;
+      --muted: #6b7794;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--sand);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--navy);
+      color: white;
+      padding: 60px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 0%, #1D6FA4 0%, transparent 60%),
+                  radial-gradient(ellipse at 10% 100%, #F5A62322 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .hero-logo {
+      width: 72px;
+      height: 72px;
+      background: var(--gold);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 30px #F5A62355;
+      position: relative;
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.05;
+      position: relative;
+    }
+
+    .hero h1 span { color: var(--gold); }
+
+    .hero-sub {
+      margin-top: 14px;
+      font-size: 1rem;
+      color: #a8bfd4;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+    .back-button:hover { background: rgba(255,255,255,0.2); }
+
+    .wave {
+      display: block;
+      width: 100%;
+      margin-top: -2px;
+      background: var(--navy);
+    }
+
+    /* ── CONTAINER ── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    .update-badge {
+      text-align: center;
+      padding: 32px 0 8px;
+    }
+
+    .update-badge span {
+      display: inline-block;
+      background: var(--white);
+      border: 1px solid #e0e0e8;
+      border-radius: 100px;
+      padding: 6px 18px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ── SECTION ── */
+    .section {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 28px 28px 24px;
+      margin-top: 20px;
+      border: 1px solid #e8e8ef;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-number {
+      width: 32px;
+      height: 32px;
+      background: var(--navy);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .section h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .section h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--sky);
+      margin: 18px 0 8px;
+    }
+
+    .section p {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .section ul {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 12px;
+    }
+
+    .section ul li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.93rem;
+      line-height: 1.6;
+      color: var(--muted);
+      padding: 5px 0;
+      border-bottom: 1px solid #f0f0f5;
+    }
+    .section ul li:last-child { border-bottom: none; }
+
+    .section ul li::before {
+      content: '✦';
+      color: var(--gold);
+      font-size: 0.7rem;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── HIGHLIGHT BOX ── */
+    .highlight {
+      background: #EEF6FF;
+      border-left: 3px solid var(--sky);
+      border-radius: 0 12px 12px 0;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: var(--sky);
+      margin: 12px 0;
+      line-height: 1.6;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      margin-top: 48px;
+      background: var(--navy);
+      border-radius: 24px;
+      padding: 36px 28px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .footer::before {
+      content: '⚖️';
+      position: absolute;
+      font-size: 8rem;
+      right: -20px;
+      bottom: -20px;
+      opacity: 0.06;
+      line-height: 1;
+    }
+
+    .footer p {
+      font-size: 0.95rem;
+      color: #a8bfd4;
+      line-height: 1.6;
+      max-width: 420px;
+      margin: 0 auto 6px;
+    }
+
+    .footer .copyright {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 8px;
+    }
+
+    .footer .sub {
+      font-size: 0.8rem;
+      color: #6a8aaa;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <a href="/" class="back-button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Voltar ao App
+    </a>
+    <div class="hero-logo">
+      <img src="/apple-touch-icon.png" alt="Partiu!" style="width:52px;height:52px;border-radius:10px;object-fit:cover;" />
+    </div>
+    <h1>Termos de Uso<br><span>Partiu!</span></h1>
+    <p class="hero-sub">Planejador de Viagens Colaborativo — leia antes de embarcar.</p>
+  </div>
+
+  <svg class="wave" viewBox="0 0 1440 40" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <path d="M0,40 C360,0 1080,60 1440,20 L1440,0 L0,0 Z" fill="#0A2342"/>
+  </svg>
+
+  <div class="container">
+
+    <div class="update-badge">
+      <span>📅 Última atualização: Março de 2026</span>
+    </div>
+
+    <!-- 1 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <h2>Aceitação dos Termos</h2>
+      </div>
+      <p>Ao acessar ou utilizar o aplicativo <strong>Partiu!</strong>, você concorda com estes Termos de Uso. Se não concordar com qualquer disposição, não utilize o Aplicativo.</p>
+      <p>O uso contínuo após alterações nestes Termos implica aceitação das novas condições.</p>
+    </div>
+
+    <!-- 2 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <h2>Descrição do Serviço</h2>
+      </div>
+      <p>O Partiu! é um planejador de viagens colaborativo que permite:</p>
+      <ul>
+        <li>Criar e gerenciar roteiros de viagem com datas, horários e localizações</li>
+        <li>Registrar e dividir despesas entre os participantes da viagem</li>
+        <li>Armazenar e compartilhar documentos relevantes (passaportes, vouchers, reservas etc.)</li>
+        <li>Salvar ideias e sugestões de atividades para a viagem</li>
+        <li>Convidar amigos e familiares para colaborar no planejamento</li>
+        <li>Organizar viagens em grupo com controle de visibilidade por item (público ou privado)</li>
+      </ul>
+    </div>
+
+    <!-- 3 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <h2>Cadastro e Conta de Usuário</h2>
+      </div>
+      <h3>3.1 Criação de Conta</h3>
+      <p>Para utilizar as funcionalidades completas do Aplicativo, é necessário criar uma conta fornecendo um endereço de e-mail válido e informações de perfil como nome completo.</p>
+      <h3>3.2 Responsabilidade do Usuário</h3>
+      <ul>
+        <li>Manter a confidencialidade de suas credenciais de acesso</li>
+        <li>Todas as atividades realizadas em sua conta</li>
+        <li>Notificar imediatamente sobre qualquer uso não autorizado</li>
+        <li>Garantir que as informações fornecidas sejam verdadeiras e atualizadas</li>
+      </ul>
+      <h3>3.3 Participação como Convidado</h3>
+      <p>O Aplicativo permite a participação de convidados (guests) sem conta cadastrada, mediante convite por e-mail realizado pelo administrador de uma viagem.</p>
+    </div>
+
+    <!-- 4 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <h2>Coleta e Uso de Dados Pessoais</h2>
+      </div>
+      <h3>4.1 Dados Coletados</h3>
+      <ul>
+        <li>Nome completo e endereço de e-mail</li>
+        <li>Foto de perfil (quando fornecida via redes sociais)</li>
+        <li>Dados de viagens: nome, destino, datas, itinerário e atividades</li>
+        <li>Registros financeiros inseridos pelo usuário (despesas, valores, moedas)</li>
+        <li>Documentos enviados (armazenados com segurança)</li>
+        <li>Preferências de configuração (tema, moeda padrão, modo escuro etc.)</li>
+      </ul>
+      <h3>4.2 Finalidade do Tratamento</h3>
+      <p>Os dados são utilizados exclusivamente para prover as funcionalidades do Aplicativo, personalizar a experiência, enviar convites de viagem e garantir a segurança dos dados.</p>
+      <h3>4.3 Compartilhamento de Dados</h3>
+      <p>Dados pessoais não são vendidos, alugados ou compartilhados com terceiros para fins comerciais.</p>
+      <h3>4.4 Base Legal (LGPD)</h3>
+      <div class="highlight">
+        O tratamento de dados pessoais ocorre com base no consentimento do usuário (Art. 7º, I da Lei nº 13.709/2018 — LGPD) e na execução de contrato (Art. 7º, V).
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <h2>Visibilidade e Privacidade dos Conteúdos</h2>
+      </div>
+      <p>O Aplicativo oferece controle de privacidade por item:</p>
+      <ul>
+        <li><strong>Público:</strong> visível para todos os membros da viagem</li>
+        <li><strong>Privado:</strong> visível apenas para o criador do item e, quando configurado, para seu cônjuge/parceiro vinculado</li>
+      </ul>
+      <p>O usuário é responsável pela configuração de visibilidade de seus próprios conteúdos.</p>
+    </div>
+
+    <!-- 6 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">6</div>
+        <h2>Conteúdo do Usuário</h2>
+      </div>
+      <p>Ao inserir conteúdo no Aplicativo, você declara possuir os direitos necessários sobre ele e concede ao Aplicativo licença limitada para armazenar e exibir esse conteúdo exclusivamente na prestação do serviço.</p>
+      <p>É vedado inserir conteúdo ilegal, ofensivo, que viole direitos de terceiros ou que contenha informações falsas.</p>
+    </div>
+
+    <!-- 7 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">7</div>
+        <h2>Limitação de Responsabilidade</h2>
+      </div>
+      <p>O Aplicativo é fornecido "como está", sem garantias de disponibilidade ininterrupta. Não nos responsabilizamos por:</p>
+      <ul>
+        <li>Perdas de dados decorrentes de falhas técnicas ou uso inadequado</li>
+        <li>Decisões financeiras ou de viagem tomadas com base nas informações registradas</li>
+        <li>Conteúdo inserido por outros membros da viagem</li>
+        <li>Interrupções temporárias de serviço para manutenção ou atualização</li>
+      </ul>
+    </div>
+
+    <!-- 8 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">8</div>
+        <h2>Propriedade Intelectual</h2>
+      </div>
+      <p>O nome "Partiu!", logotipo, design, código-fonte e demais elementos do Aplicativo são de propriedade exclusiva de seus desenvolvedores e estão protegidos pela legislação de propriedade intelectual aplicável.</p>
+      <p>É vedada a reprodução, modificação, distribuição ou engenharia reversa do Aplicativo sem autorização prévia e expressa.</p>
+    </div>
+
+    <!-- 9 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">9</div>
+        <h2>Cancelamento e Exclusão de Conta</h2>
+      </div>
+      <p>O usuário pode solicitar a exclusão de sua conta a qualquer momento nas configurações do Aplicativo. Após a exclusão, os dados pessoais serão removidos conforme os prazos legais, e conteúdos em viagens compartilhadas poderão ser mantidos de forma anonimizada.</p>
+    </div>
+
+    <!-- 10 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">10</div>
+        <h2>Alterações nos Termos</h2>
+      </div>
+      <p>Reservamo-nos o direito de atualizar estes Termos a qualquer momento. Alterações relevantes serão comunicadas pelo Aplicativo. O uso continuado após a notificação implica aceitação dos termos atualizados.</p>
+    </div>
+
+    <!-- 11 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">11</div>
+        <h2>Lei Aplicável e Foro</h2>
+      </div>
+      <p>Estes Termos são regidos pelas leis da República Federativa do Brasil. Para dirimir quaisquer controvérsias, fica eleito o foro da comarca do domicílio do usuário, salvo disposição legal em contrário.</p>
+    </div>
+
+    <!-- 12 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">12</div>
+        <h2>Contato</h2>
+      </div>
+      <p>Para dúvidas, solicitações ou exercício de direitos previstos na LGPD, entre em contato por meio dos canais disponíveis no Aplicativo.</p>
+      <a href="mailto:estevamp@gmail.com" style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:10px 20px;background:var(--navy);color:white;border-radius:12px;text-decoration:none;font-size:0.9rem;font-weight:600;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+        ✉️ estevamp@gmail.com
+      </a>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <p class="copyright">© 2026 Partiu! — Todos os direitos reservados.</p>
+      <p class="sub">A reprodução ou distribuição deste conteúdo sem autorização expressa é proibida.</p>
+    </div>
+
+  </div>
+
+</body>
+</html>

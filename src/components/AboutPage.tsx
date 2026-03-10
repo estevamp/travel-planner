@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Info, ShieldCheck, Coffee } from "lucide-react";
+import { ArrowLeft, Mail, Info, ShieldCheck, Coffee, Scale } from "lucide-react";
 import { UserSettings } from "../types";
 import { getThemeStyles } from "../utils/theme";
 
@@ -62,6 +62,25 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
             Esse app é distribuído sem custo. Mas, se quiser me pagar um cafezinho, pode fazer um pix para <b>estevamp@gmail.com</b>.
           </p>
         </section>
+
+        <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
+            <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
+              <Scale className="w-6 h-6" />
+              <h2 className="text-lg font-semibold">Termos de Uso</h2>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">
+              Leia os nossos Termos de Uso para entender como o Partiu! funciona, quais dados coletamos e seus direitos.
+            </p>
+            <a
+              href="/terms.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)] hover:opacity-90 text-white rounded-lg transition-colors font-medium"
+            >
+              <Scale className="w-4 h-4" />
+              Ver Termos de Uso
+            </a>
+          </section>
 
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
