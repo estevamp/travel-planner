@@ -30,14 +30,12 @@ export function PayerSelector({
           <button
             type="button"
             onClick={() => onSelect(currentUserMember.id)}
-            className={`
-              w-full sm:w-auto flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
-              ${
-                isCurrentUserSelected
-                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
-                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300 hover:opacity-80 border border-transparent"
-              }
-            `}
+            className={cn(
+              "w-full sm:w-auto flex-shrink-0 px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all duration-200",
+              isCurrentUserSelected
+                ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "border-[var(--card-border)] bg-[var(--card-bg)] opacity-60 hover:opacity-100"
+            )}
           >
             Eu
           </button>
