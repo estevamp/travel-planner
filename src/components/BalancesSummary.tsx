@@ -3,7 +3,7 @@ import { TripMember } from "../types";
 import { MemberBalance, Settlement } from "../types/splitting";
 import { formatCurrency, simplifyDebts, mergeSpouseTransfers, GroupedTransfer } from "../utils/splitting";
 import { maskCurrency, parseCurrencyToNumber, cn } from "../utils";
-import { ChevronDown, ChevronUp } from "lucide-react";
+
 
 interface BalancesSummaryProps {
   balances: MemberBalance[];
@@ -57,8 +57,6 @@ export function BalancesSummary({
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [undoingId, setUndoingId] = useState<string | null>(null);
   const [expandedHistoryKey, setExpandedHistoryKey] = useState<string | null>(null);
-  const [isPaymentsHistoryOpen, setIsPaymentsHistoryOpen] = useState(false);
-
   // Chave única para um GroupedTransfer
   const transferKey = (t: GroupedTransfer) =>
     `${t.from_member_ids.join(",")}-${t.to_member_ids.join(",")}`;
@@ -137,8 +135,6 @@ export function BalancesSummary({
 
   const overallKind: "pos" | "neg" | "neu" =
     netBalance > 0 ? "pos" : netBalance < 0 ? "neg" : "neu";
-
-  const confirmedSettlements = settlements.filter((s) => s.is_confirmed);
 
   return (
     <div className="space-y-4">
@@ -401,82 +397,7 @@ export function BalancesSummary({
         </div>
       )}
 
-      {/* Histórico global de pagamentos — colapsável */}
-      {confirmedSettlements.length > 0 && (
-        <div className={cn("rounded-lg border overflow-hidden", surfaceNeutral)}>
-          <button
-            type="button"
-            onClick={() => setIsPaymentsHistoryOpen((v) => !v)}
-            className={cn(
-              "w-full flex items-center justify-between px-4 py-3 transition-colors",
-              isDark ? "hover:bg-slate-800" : "hover:bg-slate-50"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span className={cn("font-semibold text-sm", textNeutralMain)}>
-                Pagamentos registrados
-              </span>
-              <span className={cn(
-                "text-xs font-semibold px-2 py-0.5 rounded-full",
-                isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-500"
-              )}>
-                {confirmedSettlements.length}
-              </span>
-            </div>
-            {isPaymentsHistoryOpen
-              ? <ChevronUp size={16} className={isDark ? "text-slate-400" : "text-slate-500"} />
-              : <ChevronDown size={16} className={isDark ? "text-slate-400" : "text-slate-500"} />
-            }
-          </button>
-
-          {isPaymentsHistoryOpen && (
-            <div className={cn(
-              "border-t divide-y",
-              isDark ? "border-slate-700 divide-slate-700" : "border-slate-100 divide-slate-100"
-            )}>
-              {confirmedSettlements
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((s) => {
-                  const fromMember = members.find((m) => m.id === s.from_member_id);
-                  const toMember = members.find((m) => m.id === s.to_member_id);
-                  const myId = currentMember?.id ?? "";
-                  const spouseId = currentMember?.spouse_member_id ?? null;
-                  const isFromMe = s.from_member_id === myId || s.from_member_id === spouseId;
-                  const isToMe = s.to_member_id === myId || s.to_member_id === spouseId;
-                  const fromName = isFromMe ? "Você" : (fromMember?.display_name ?? "?");
-                  const toName = isToMe ? "você" : (toMember?.display_name ?? "?");
-
-                  return (
-                    <div key={s.id} className="px-4 py-3 flex items-center gap-3">
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
-                        isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-slate-400 text-white"
-                      )}>
-                        {isFromMe ? "V" : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn("text-sm font-medium leading-tight", textNeutralSub)}>
-                          {fromName} pagou {toName}
-                        </p>
-                        <p className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
-                          {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                        </p>
-                      </div>
-                      <p className={cn(
-                        "text-sm font-bold tabular-nums shrink-0",
-                        isFromMe ? "text-red-500" : isToMe ? "text-green-600" : isDark ? "text-slate-300" : "text-slate-700"
-                      )}>
-                        {formatCurrency(s.amount, s.currency)}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!hasBalances && confirmedSettlements.length === 0 && (
+      {!hasBalances && (
         <div className={cn(
           "p-6 rounded-xl border text-center",
           isDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
