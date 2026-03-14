@@ -97,14 +97,15 @@ export function calculateNetBalances(
 
     // Skip expenses with no splits or only the payer in splits
     if (!expense.splits || expense.splits.length === 0) return;
-    
+
     // Check if only the payer is in the splits
-    const onlyPayerInSplits = expense.splits.length === 1 &&
-                               expense.splits[0].member_id === expense.paid_by_member_id;
+    const onlyPayerInSplits =
+      expense.splits.length === 1 &&
+      expense.splits[0].member_id === expense.paid_by_member_id;
     if (onlyPayerInSplits) return;
 
     const expenseCurrency = expense.currency || targetCurrency || "BRL";
-    
+
     // Add to payer's credit (they paid the full amount) - converted to target currency
     const convertedExpenseAmount = convertAmount(expense.amount, expenseCurrency);
     balances[expense.paid_by_member_id] =
@@ -143,9 +144,9 @@ export function calculateNetBalances(
         net_balance: Math.round(net_balance * 100) / 100, // Round to 2 decimals
       };
     })
-    .map(balance => ({
+    .map((balance) => ({
       ...balance,
-      net_balance: Math.abs(balance.net_balance) < 0.01 ? 0 : balance.net_balance
+      net_balance: Math.abs(balance.net_balance) < 0.01 ? 0 : balance.net_balance,
     }))
     .filter((balance) => Math.abs(balance.net_balance) > 0.01); // Filter out zero balances for display
 }
@@ -204,6 +205,107 @@ export function simplifyDebts(
 }
 
 /**
+ * Compute bilateral (pair-wise) transfers WITHOUT global debt optimization.
+ *
+ * For each pair (A, B): debts in both directions are netted against each other,
+ * but NO consolidation happens across three or more members.
+ * This preserves the original "who owes whom" relationship from the splits.
+ *
+ * Example:
+ *   A→B raw 10, B→A raw 20  → bilateral net: B paga A 10
+ *   C→A raw 30              → C paga A 30
+ *   B→C raw 10              → B paga C 10
+ *
+ * Already-confirmed settlements are discounted before netting.
+ */
+export function computeBilateralTransfers(
+  expenses: ExpenseWithSplits[],
+  settlements: Settlement[],
+  members: TripMember[],
+  targetCurrency: string,
+  exchangeRates?: Record<string, number>
+): SimplifiedTransfer[] {
+  const convertAmount = (amount: number, fromCurrency: string): number => {
+    if (!exchangeRates || fromCurrency === targetCurrency) return amount;
+    const rate = exchangeRates[fromCurrency];
+    return rate ? amount / rate : amount;
+  };
+
+  // rawDebt[fromId][toId] = total gross amount fromId owes toId
+  const rawDebt: Record<string, Record<string, number>> = {};
+
+  const addDebt = (fromId: string, toId: string, amount: number) => {
+    if (fromId === toId || amount <= 0) return;
+    if (!rawDebt[fromId]) rawDebt[fromId] = {};
+    rawDebt[fromId][toId] = (rawDebt[fromId][toId] || 0) + amount;
+  };
+
+  // Build gross debts from confirmed expense splits
+  for (const expense of expenses) {
+    if (!expense.is_confirmed) continue;
+    if (!expense.paid_by_member_id || !expense.splits?.length) continue;
+
+    const payerId = expense.paid_by_member_id;
+    const currency = expense.currency || targetCurrency;
+
+    for (const split of expense.splits) {
+      if (split.member_id === payerId) continue;
+      addDebt(
+        split.member_id,
+        payerId,
+        convertAmount(Number(split.amount) || 0, currency)
+      );
+    }
+  }
+
+  // Discount already-confirmed settlements from raw debts
+  for (const settlement of settlements) {
+    if (!settlement.is_confirmed) continue;
+    const { from_member_id: f, to_member_id: t } = settlement;
+    const paid = convertAmount(
+      Number(settlement.amount) || 0,
+      settlement.currency || targetCurrency
+    );
+    if (rawDebt[f]?.[t] !== undefined) {
+      rawDebt[f][t] = Math.max(0, rawDebt[f][t] - paid);
+    }
+  }
+
+  // For every pair (A, B): net both directions → at most one transfer per pair
+  const memberIds = members.map((m) => m.id);
+  const transfers: SimplifiedTransfer[] = [];
+
+  for (let i = 0; i < memberIds.length; i++) {
+    for (let j = i + 1; j < memberIds.length; j++) {
+      const A = memberIds[i];
+      const B = memberIds[j];
+      const aOwesB = rawDebt[A]?.[B] || 0;
+      const bOwesA = rawDebt[B]?.[A] || 0;
+      const net = aOwesB - bOwesA;
+
+      if (Math.abs(net) < 0.01) continue;
+
+      const fromId = net > 0 ? A : B;
+      const toId = net > 0 ? B : A;
+      const fromMember = members.find((m) => m.id === fromId);
+      const toMember = members.find((m) => m.id === toId);
+
+      transfers.push({
+        from_member_id: fromId,
+        from_member_name: fromMember?.display_name ?? "?",
+        to_member_id: toId,
+        to_member_name: toMember?.display_name ?? "?",
+        amount: Math.round(Math.abs(net) * 100) / 100,
+        currency: targetCurrency,
+        is_completed: false,
+      });
+    }
+  }
+
+  return transfers;
+}
+
+/**
  * Get balance between current user and another member
  * Positive = other member owes current user
  * Negative = current user owes other member
@@ -222,9 +324,10 @@ export function getBalanceBetweenMembers(
 
     // Skip expenses with no splits or only the payer in splits
     if (!expense.splits || expense.splits.length === 0) return;
-    
-    const onlyPayerInSplits = expense.splits.length === 1 &&
-                               expense.splits[0].member_id === expense.paid_by_member_id;
+
+    const onlyPayerInSplits =
+      expense.splits.length === 1 &&
+      expense.splits[0].member_id === expense.paid_by_member_id;
     if (onlyPayerInSplits) return;
 
     // If current user paid

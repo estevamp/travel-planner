@@ -18,7 +18,7 @@ import { useCurrencyConversion } from "../../hooks/useCurrencyConversion";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
-import { calculateNetBalances, simplifyDebts } from "../../utils/splitting";
+import { calculateNetBalances, simplifyDebts, computeBilateralTransfers } from "../../utils/splitting";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 import { ExpenseListItem } from "../ExpenseListItem";
@@ -35,6 +35,7 @@ interface ExpensesTabProps {
   isOnline: boolean;
   enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
+
 export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: ExpensesTabProps) {
   const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
   const { toast } = useToast();
@@ -46,6 +47,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   );
   const { convert, rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
+
+  // Sub-aba da tela de despesas
+  const [expenseSubTab, setExpenseSubTab] = useState<"relatorio" | "pagamentos">("relatorio");
 
   // Estados para rateio e saldos
   const [expensesWithSplits, setExpensesWithSplits] = useState<ExpenseWithSplits[]>([]);
@@ -60,12 +64,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       .from("expenses")
       .select("*, expense_splits(*)")
       .eq("trip_id", tripId);
-    
+
     const { data: settlementsData, error: settlementsError } = await supabase
       .from("settlements")
       .select("*")
       .eq("trip_id", tripId);
-    
+
     if (!expError) {
       const expensesWithSplitsData: ExpenseWithSplits[] = (
         (expensesData as ExpenseRowFromSupabase[]) || []
@@ -75,7 +79,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       }));
       setExpensesWithSplits(expensesWithSplitsData);
     }
-    
+
     if (!settlementsError) {
       setSettlements(settlementsData || []);
     }
@@ -126,6 +130,40 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     setRawBalances(calculated);
   }, [expensesWithSplits, members, settings.default_currency, exchangeRates]);
 
+  // Transferências bilaterais par a par (sem otimização global)
+  const bilateralTransfers = useMemo(
+    () =>
+      computeBilateralTransfers(
+        expensesWithSplits,
+        settlements,
+        members,
+        settings.default_currency,
+        exchangeRates
+      ),
+    [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]
+  );
+
+  // Resumo a pagar / a receber por membro (para a aba Relatório)
+  const memberPaymentSummary = useMemo(() => {
+    return members
+      .map((m) => {
+        const aPagar = bilateralTransfers
+          .filter((t) => t.from_member_id === m.id)
+          .reduce((sum, t) => sum + t.amount, 0);
+        const aReceber = bilateralTransfers
+          .filter((t) => t.to_member_id === m.id)
+          .reduce((sum, t) => sum + t.amount, 0);
+        return {
+          id: m.id,
+          name: m.display_name ?? "Membro",
+          aPagar,
+          aReceber,
+          saldo: aReceber - aPagar,
+        };
+      })
+      .filter((m) => m.aPagar > 0.01 || m.aReceber > 0.01);
+  }, [bilateralTransfers, members]);
+
   // Calcular saldos com conversão de moedas
   useEffect(() => {
     const calculatedBalances = calculateNetBalances(
@@ -161,17 +199,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         } else {
           userAmount = 0;
         }
-
-        // Debug log
-        console.log(`[Budget Debug] Expense: ${exp.description}`, {
-          convertedAmount,
-          userAmount,
-          totalSplitAmount,
-          originalAmount,
-          relevantSplitsCount: relevantSplits.length,
-          currentMemberId: currentMember?.id,
-          spouseMemberId: currentMember?.spouse_member_id
-        });
       }
 
       return {
@@ -182,30 +209,29 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     });
   }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember]);
 
-const payerTotals = useMemo(() => {
-
-  // Filtrar apenas despesas que têm splits configurados
-const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
-const totals: Record<string, number> = {};
-const confirmedTotals: Record<string, number> = {};
-splitExpenses.forEach(exp => {
-  if (!exp.paid_by_member_id) return;
-  const currency = exp.currency || settings.default_currency;
-  const converted = convert(Number(exp.amount) || 0, currency);
-  totals[exp.paid_by_member_id] = (totals[exp.paid_by_member_id] || 0) + converted;
-  if (exp.is_confirmed) {
-    confirmedTotals[exp.paid_by_member_id] = (confirmedTotals[exp.paid_by_member_id] || 0) + converted;
-  }
-});
-return members
-  .map(m => ({
-    name: m.display_name || "Membro",
-    amount: totals[m.id] || 0,
-    confirmedAmount: confirmedTotals[m.id] || 0,
-  }))
-  .filter(m => m.amount > 0)
-  .sort((a, b) => b.amount - a.amount);
-}, [expensesWithSplits, members, convert, settings.default_currency]);
+  const payerTotals = useMemo(() => {
+    // Filtrar apenas despesas que têm splits configurados
+    const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
+    const totals: Record<string, number> = {};
+    const confirmedTotals: Record<string, number> = {};
+    splitExpenses.forEach(exp => {
+      if (!exp.paid_by_member_id) return;
+      const currency = exp.currency || settings.default_currency;
+      const converted = convert(Number(exp.amount) || 0, currency);
+      totals[exp.paid_by_member_id] = (totals[exp.paid_by_member_id] || 0) + converted;
+      if (exp.is_confirmed) {
+        confirmedTotals[exp.paid_by_member_id] = (confirmedTotals[exp.paid_by_member_id] || 0) + converted;
+      }
+    });
+    return members
+      .map(m => ({
+        name: m.display_name || "Membro",
+        amount: totals[m.id] || 0,
+        confirmedAmount: confirmedTotals[m.id] || 0,
+      }))
+      .filter(m => m.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+  }, [expensesWithSplits, members, convert, settings.default_currency]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -223,36 +249,34 @@ return members
     is_confirmed: false,
   });
 
+  const registerPayment = async (
+    fromMemberId: string,
+    toMemberId: string,
+    amount: number
+  ) => {
+    const { error } = await supabase.from("settlements").insert({
+      trip_id: tripId,
+      from_member_id: fromMemberId,
+      to_member_id: toMemberId,
+      amount,
+      currency: settings.default_currency,
+      date: new Date().toISOString(),
+      is_confirmed: true,
+    });
+    if (error) { toast(getErrorMessage(error), "error"); return; }
+    await fetchBalanceData();
+    toast("Pagamento registrado!", "success");
+  };
 
-const registerPayment = async (
-  fromMemberId: string,
-  toMemberId: string,
-  amount: number
-) => {
-  const { error } = await supabase.from("settlements").insert({
-    trip_id: tripId,
-    from_member_id: fromMemberId,
-    to_member_id: toMemberId,
-    amount,
-    currency: settings.default_currency,
-    date: new Date().toISOString(),
-    is_confirmed: true,
-  });
-  if (error) { toast(getErrorMessage(error), "error"); return; }
-  await fetchBalanceData();
-  toast("Pagamento registrado!", "success");
-};
-
-const undoPayment = async (settlementId: string) => {
-  const { error } = await supabase
-    .from("settlements")
-    .delete()
-    .eq("id", settlementId);
-  if (error) { toast(getErrorMessage(error), "error"); return; }
-  await fetchBalanceData();
-  toast("Pagamento desfeito.", "success");
-};
-
+  const undoPayment = async (settlementId: string) => {
+    const { error } = await supabase
+      .from("settlements")
+      .delete()
+      .eq("id", settlementId);
+    if (error) { toast(getErrorMessage(error), "error"); return; }
+    await fetchBalanceData();
+    toast("Pagamento desfeito.", "success");
+  };
 
   // Estados para modal de edição completo (com splits)
   const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
@@ -318,7 +342,9 @@ const undoPayment = async (settlementId: string) => {
               amount: nextAmount,
               visibility: expenseDraft.visibility,
               is_confirmed: expenseDraft.is_confirmed,
-              category: expenseDraft.category_id ? categories.find(c => c.id === expenseDraft.category_id) || null : null
+              category: expenseDraft.category_id
+                ? categories.find(c => c.id === expenseDraft.category_id) || null
+                : null
             }
           : exp
       ),
@@ -354,7 +380,7 @@ const undoPayment = async (settlementId: string) => {
         is_confirmed: expenseDraft.is_confirmed,
       })
       .eq("id", expenseId);
-    
+
     setSavingExpense(false);
 
     if (error) {
@@ -369,14 +395,14 @@ const undoPayment = async (settlementId: string) => {
     setEditingExpense(expense);
     setEditExpenseAmount(maskCurrency(String(Math.round((expense.amount || 0) * 100))));
     setEditExpenseCurrency(expense.currency || settings.default_currency);
-    
+
     // Buscar dados extras da despesa (pagador e tipo de rateio)
     const { data: expenseData } = await supabase
       .from("expenses")
       .select("paid_by_member_id, split_type")
       .eq("id", expense.id)
       .single();
-    
+
     if (expenseData) {
       setEditExpensePayerId(expenseData.paid_by_member_id || currentMember?.id || "");
       setEditExpenseSplitType(expenseData.split_type || "equal");
@@ -390,7 +416,7 @@ const undoPayment = async (settlementId: string) => {
       .from("expense_splits")
       .select("*")
       .eq("expense_id", expense.id);
-    
+
     if (splitsData) {
       setEditExpenseSplits(splitsData.map(s => ({
         member_id: s.member_id,
@@ -415,16 +441,18 @@ const undoPayment = async (settlementId: string) => {
 
   const saveEditExpense = async (form: FormData) => {
     if (!editingExpense || !currentMember) return;
-    
+
     setIsSubmittingExpense(true);
     try {
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
       // Despesas com rateio devem ser obrigatoriamente públicas
-      const visibility = editExpenseSplits.length > 0 ? "public" : ((form.get("visibility") as string) === "private" ? "private" : "public");
+      const visibility = editExpenseSplits.length > 0
+        ? "public"
+        : ((form.get("visibility") as string) === "private" ? "private" : "public");
       const description = (form.get("description") as string) || "Despesa";
       const category_id = (form.get("category_id") as string) || null;
       const is_confirmed = form.get("is_confirmed") === "on";
-      
+
       // Optimistic update
       onTripUpdate((prev) => ({
         ...prev,
@@ -457,7 +485,7 @@ const undoPayment = async (settlementId: string) => {
           split_type: editExpenseSplitType,
         })
         .eq("id", editingExpense.id);
-      
+
       if (error) {
         toast(getErrorMessage(error), 'error');
       } else {
@@ -474,12 +502,12 @@ const undoPayment = async (settlementId: string) => {
               percentage: split.percentage,
             }))
           );
-          
+
           if (splitsError) {
             console.error("Erro ao salvar splits na edição:", splitsError);
           }
         }
-        
+
         closeEditExpenseModal();
       }
     } finally {
@@ -504,7 +532,7 @@ const undoPayment = async (settlementId: string) => {
 
     if (!isOnline) {
       enqueue({ id: expense.id, tripId, type: "delete", table: "expenses", payload: { id: expense.id } });
-      return; // optimistic update já removeu da UI
+      return;
     }
 
     const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
@@ -525,150 +553,218 @@ const undoPayment = async (settlementId: string) => {
 
   return (
     <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-      {/* Budget Overview Card */}
-      <Card
-        className={cn(
-          "border-2",
-          settings.dark_mode
-            ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
-            : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
-        )}
-      >
-        <div className="space-y-4">
-          {/* LAYOUT: header responsivo — empilha no mobile, lado a lado no sm+ */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div>
-              <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                Orçamento da Viagem
-              </h3>
-              <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-                {budgetLimit > 0
-                  ? `Limite: ${formatCurrency(budgetLimit, settings.default_currency)}`
-                  : "Nenhum orçamento definido"}
-              </p>
-            </div>
-            {/* LAYOUT: valores lado a lado no mobile, coluna no sm+ */}
-            <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
-              <div>
-                <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Confirmado</p>
-                <p className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">
-                  {formatCurrency(confirmedTotal, settings.default_currency)}
-                </p>
-              </div>
-              <div>
-                <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Total Previsto</p>
-                <p className={cn("text-base sm:text-lg font-bold tabular-nums", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>
-                  {formatCurrency(predictedTotal, settings.default_currency)}
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {budgetLimit > 0 && (
-            <button
-              onClick={() => setIsBudgetExpanded(!isBudgetExpanded)}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 py-1 transition-colors border-t mt-2",
-                settings.dark_mode
-                  ? "text-zinc-500 hover:text-zinc-300 border-zinc-700"
-                  : "text-zinc-400 hover:text-zinc-600 border-blue-100"
-              )}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                {isBudgetExpanded ? "Recolher Detalhes" : "Ver Detalhes do Orçamento"}
-              </span>
-              {isBudgetExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
-          )}
+      {/* ── Sub-abas: Relatório | Pagamentos ── */}
+      <div className={cn(
+        "flex rounded-xl p-1 gap-1",
+        settings.dark_mode ? "bg-zinc-800" : "bg-zinc-100"
+      )}>
+        {(["relatorio", "pagamentos"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setExpenseSubTab(tab)}
+            className={cn(
+              "flex-1 py-2 text-sm font-semibold rounded-lg transition-all",
+              expenseSubTab === tab
+                ? settings.dark_mode
+                  ? "bg-zinc-700 text-white shadow"
+                  : "bg-white text-zinc-900 shadow"
+                : settings.dark_mode
+                ? "text-zinc-400 hover:text-zinc-200"
+                : "text-zinc-500 hover:text-zinc-700"
+            )}
+          >
+            {tab === "relatorio" ? "Relatório" : "Pagamentos"}
+          </button>
+        ))}
+      </div>
 
-          {budgetLimit > 0 && isBudgetExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden space-y-4 pt-2"
-            >
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>Progresso</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-emerald-600">
-                      Confirmado: {confirmedProgress.toFixed(1)}%
-                    </span>
-                    <span className={cn(
-                      "font-bold",
-                      isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600")
-                    )}>
-                      Previsto: {predictedProgress.toFixed(1)}%
-                    </span>
+      {/* ══════════════════════════════════════════════ */}
+      {/* ABA: RELATÓRIO                                 */}
+      {/* ══════════════════════════════════════════════ */}
+      {expenseSubTab === "relatorio" && (
+        <>
+          {/* Budget Overview Card */}
+          <Card
+            className={cn(
+              "border-2",
+              settings.dark_mode
+                ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
+                : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+            )}
+          >
+            <div className="space-y-4">
+              {/* Header responsivo */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                    Orçamento da Viagem
+                  </h3>
+                  <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                    {budgetLimit > 0
+                      ? `Limite: ${formatCurrency(budgetLimit, settings.default_currency)}`
+                      : "Nenhum orçamento definido"}
+                  </p>
+                </div>
+                <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
+                  <div>
+                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Confirmado</p>
+                    <p className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">
+                      {formatCurrency(confirmedTotal, settings.default_currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Total Previsto</p>
+                    <p className={cn("text-base sm:text-lg font-bold tabular-nums", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>
+                      {formatCurrency(predictedTotal, settings.default_currency)}
+                    </p>
                   </div>
                 </div>
-                <div className="relative h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-                  {/* Confirmed expenses bar */}
-                  <div
-                    className="absolute h-full transition-all duration-500 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
-                    style={{ width: `${Math.min(confirmedProgress, 100)}%` }}
-                  />
-                  {/* Predicted expenses bar (semi-transparent overlay) */}
-                  <div
-                    className={cn(
-                      "absolute h-full transition-all duration-500 rounded-full opacity-40",
-                      isOverBudget
-                        ? "bg-gradient-to-r from-red-500 to-red-600"
-                        : "bg-gradient-to-r from-blue-500 to-blue-600"
-                    )}
-                    style={{ width: `${Math.min(predictedProgress, 100)}%` }}
-                  />
-                </div>
               </div>
 
-              {/* Remaining Budget */}
-              <div className={cn(
-                "p-4 rounded-xl border-2",
-                isOverBudget
-                  ? (settings.dark_mode ? "bg-red-950/30 border-red-900/50" : "bg-red-50 border-red-300")
-                  : (settings.dark_mode ? "bg-emerald-950/30 border-emerald-900/50" : "bg-emerald-50 border-emerald-300")
-              )}>
-                {/* LAYOUT: flex-wrap para não quebrar em telas estreitas */}
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
-                    {isOverBudget ? "Acima do orçamento" : "Restante"}
+              {budgetLimit > 0 && (
+                <button
+                  onClick={() => setIsBudgetExpanded(!isBudgetExpanded)}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 py-1 transition-colors border-t mt-2",
+                    settings.dark_mode
+                      ? "text-zinc-500 hover:text-zinc-300 border-zinc-700"
+                      : "text-zinc-400 hover:text-zinc-600 border-blue-100"
+                  )}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    {isBudgetExpanded ? "Recolher Detalhes" : "Ver Detalhes do Orçamento"}
                   </span>
-                  <span className={cn(
-                    "text-lg sm:text-xl font-bold tabular-nums",
-                    isOverBudget ? "text-red-600" : "text-emerald-600"
+                  {isBudgetExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+              )}
+
+              {budgetLimit > 0 && isBudgetExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden space-y-4 pt-2"
+                >
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>Progresso</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-emerald-600">
+                          Confirmado: {confirmedProgress.toFixed(1)}%
+                        </span>
+                        <span className={cn(
+                          "font-bold",
+                          isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600")
+                        )}>
+                          Previsto: {predictedProgress.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="relative h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                      <div
+                        className="absolute h-full transition-all duration-500 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
+                        style={{ width: `${Math.min(confirmedProgress, 100)}%` }}
+                      />
+                      <div
+                        className={cn(
+                          "absolute h-full transition-all duration-500 rounded-full opacity-40",
+                          isOverBudget
+                            ? "bg-gradient-to-r from-red-500 to-red-600"
+                            : "bg-gradient-to-r from-blue-500 to-blue-600"
+                        )}
+                        style={{ width: `${Math.min(predictedProgress, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Remaining Budget */}
+                  <div className={cn(
+                    "p-4 rounded-xl border-2",
+                    isOverBudget
+                      ? (settings.dark_mode ? "bg-red-950/30 border-red-900/50" : "bg-red-50 border-red-300")
+                      : (settings.dark_mode ? "bg-emerald-950/30 border-emerald-900/50" : "bg-emerald-50 border-emerald-300")
                   )}>
-                    {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
-                  </span>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
+                        {isOverBudget ? "Acima do orçamento" : "Restante"}
+                      </span>
+                      <span className={cn(
+                        "text-lg sm:text-xl font-bold tabular-nums",
+                        isOverBudget ? "text-red-600" : "text-emerald-600"
+                      )}>
+                        {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {budgetLimit === 0 && (
+                <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                  <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
+                    💡 Defina um orçamento nas <button
+                      onClick={() => onSetActiveTab("settings")}
+                      className={cn("font-semibold hover:underline", settings.dark_mode ? "text-blue-400" : "text-blue-600")}
+                    >Configurações</button> para acompanhar seus gastos
+                  </p>
                 </div>
-              </div>
-            </motion.div>
-          )}
-
-          {budgetLimit === 0 && (
-            <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-              <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
-                💡 Defina um orçamento nas <button
-                  onClick={() => onSetActiveTab("settings")}
-                  className={cn("font-semibold hover:underline", settings.dark_mode ? "text-blue-400" : "text-blue-600")}
-                >Configurações</button> para acompanhar seus gastos
-              </p>
+              )}
             </div>
-          )}
-        </div>
-      </Card>
+          </Card>
 
-      {/* Desktop table view */}
-      <Card className="p-0 overflow-hidden hidden md:block">
-        <table className="w-full text-left border-collapse">
-          <thead><tr className={settings.dark_mode ? "bg-zinc-800/50" : "bg-zinc-50"}><th className="px-4 py-3 text-xs uppercase">Descricao</th><th className="px-4 py-3 text-xs uppercase">Categoria</th><th className="px-4 py-3 text-xs uppercase">Valor</th><th className="px-4 py-3 text-xs uppercase text-right">Acao</th></tr></thead>
-          <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
+          {/* Desktop table view */}
+          <Card className="p-0 overflow-hidden hidden md:block">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className={settings.dark_mode ? "bg-zinc-800/50" : "bg-zinc-50"}>
+                  <th className="px-4 py-3 text-xs uppercase">Descricao</th>
+                  <th className="px-4 py-3 text-xs uppercase">Categoria</th>
+                  <th className="px-4 py-3 text-xs uppercase">Valor</th>
+                  <th className="px-4 py-3 text-xs uppercase text-right">Acao</th>
+                </tr>
+              </thead>
+              <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
+                {trip.expenses.map((exp) => (
+                  <ExpenseListItem
+                    key={exp.id}
+                    exp={exp}
+                    layout="table"
+                    editingExpenseId={editingExpenseId}
+                    expenseDraft={expenseDraft}
+                    expensesWithSplits={expensesWithSplits}
+                    savingExpense={savingExpense}
+                    categories={categories}
+                    members={members}
+                    settings={settings}
+                    currency={settings.default_currency}
+                    convertedAmount={convertedExpenses.find((entry) => entry.id === exp.id)?.convertedAmount || 0}
+                    onToggleVisibility={handleToggleExpenseVisibility}
+                    onEdit={openEditExpenseModal}
+                    onSave={(expenseId) => void saveExpenseEdit(expenseId)}
+                    onCancel={() => setEditingExpenseId(null)}
+                    onDelete={(expense) => void deleteExpense(expense)}
+                    onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </Card>
+
+          {/* Mobile card view */}
+          <div className="space-y-3 md:hidden">
+            {trip.expenses.length === 0 && (
+              <Card>
+                <p className="text-sm text-zinc-500 text-center">Nenhuma despesa cadastrada.</p>
+              </Card>
+            )}
             {trip.expenses.map((exp) => (
               <ExpenseListItem
                 key={exp.id}
                 exp={exp}
-                layout="table"
+                layout="card"
                 editingExpenseId={editingExpenseId}
                 expenseDraft={expenseDraft}
                 expensesWithSplits={expensesWithSplits}
@@ -686,124 +782,165 @@ const undoPayment = async (settlementId: string) => {
                 onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
               />
             ))}
-          </tbody>
-        </table>
-      </Card>
+          </div>
 
-      {/* Mobile card view */}
-      <div className="space-y-3 md:hidden">
-        {trip.expenses.length === 0 && (
-          <Card>
-            <p className="text-sm text-zinc-500 text-center">Nenhuma despesa cadastrada.</p>
-          </Card>
-        )}
-        {trip.expenses.map((exp) => (
-          <ExpenseListItem
-            key={exp.id}
-            exp={exp}
-            layout="card"
-            editingExpenseId={editingExpenseId}
-            expenseDraft={expenseDraft}
-            expensesWithSplits={expensesWithSplits}
-            savingExpense={savingExpense}
-            categories={categories}
-            members={members}
-            settings={settings}
-            currency={settings.default_currency}
-            convertedAmount={convertedExpenses.find((entry) => entry.id === exp.id)?.convertedAmount || 0}
-            onToggleVisibility={handleToggleExpenseVisibility}
-            onEdit={openEditExpenseModal}
-            onSave={(expenseId) => void saveExpenseEdit(expenseId)}
-            onCancel={() => setEditingExpenseId(null)}
-            onDelete={(expense) => void deleteExpense(expense)}
-            onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
-          />
-        ))}
-      </div>
+          {/* Quem pagou nas despesas rateadas */}
+          {payerTotals.length > 0 && (
+            <Card className="space-y-4">
+              <h3 className="text-sm font-bold">Quem pagou nas despesas rateadas</h3>
 
-      {/* Seção de Saldos */}
-      {currentMember && (
-        <Card>
-          <h3 className="font-bold mb-4">Saldos da Viagem</h3>
-            <BalancesSummary
-              balances={balances}
-              currentUserId={currentMember.user_id}
-              members={members}
-              currency={settings.default_currency}
-              isDark={Boolean(settings.dark_mode)}
-              settlements={settlements}
-              onSettleClick={() => {
-                const simplified = simplifyDebts(rawBalances, settings.default_currency);
-                setTransfers(simplified);
-                setShowSettlement(true);
-              }}
-              onRegisterPayment={registerPayment}
-              onUndoPayment={undoPayment}
-            />
-        </Card>
+              {/* Legenda confirmado vs previsto */}
+              <div className="flex items-center gap-4 text-[10px]">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Confirmado</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-blue-400 opacity-50" />
+                  <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Previsto</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {payerTotals.map(({ name, amount, confirmedAmount }) => {
+                  const maxAmount = payerTotals[0].amount;
+                  const pct = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+                  const confirmedPct = maxAmount > 0 ? (confirmedAmount / maxAmount) * 100 : 0;
+
+                  return (
+                    <div key={name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className={cn("font-medium", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
+                          {name}
+                        </span>
+                        <div className="flex items-center gap-2 text-xs tabular-nums">
+                          <span className="text-emerald-600 font-semibold">
+                            {formatCurrency(confirmedAmount, settings.default_currency)}
+                          </span>
+                          <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>/</span>
+                          <span className={cn("font-medium", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+                            {formatCurrency(amount, settings.default_currency)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
+                        <div
+                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-400 opacity-40"
+                          style={{ width: `${pct}%` }}
+                        />
+                        <div
+                          className="absolute h-full rounded-full transition-all duration-500 bg-emerald-500"
+                          style={{ width: `${confirmedPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                Somente despesas com rateio entre membros · valores em {settings.default_currency}
+              </p>
+            </Card>
+          )}
+
+          {/* Resumo por participante */}
+          {memberPaymentSummary.length > 0 && (
+            <Card className="space-y-4">
+              <h3 className="text-sm font-bold">Resumo por participante</h3>
+              <div className="space-y-3">
+                {memberPaymentSummary.map((m) => {
+                  const isCredit = m.saldo > 0.01;
+                  const isDebt = m.saldo < -0.01;
+                  return (
+                    <div
+                      key={m.id}
+                      className={cn(
+                        "p-3 rounded-xl border",
+                        isCredit
+                          ? settings.dark_mode
+                            ? "bg-emerald-950/30 border-emerald-800/50"
+                            : "bg-emerald-50 border-emerald-200"
+                          : isDebt
+                          ? settings.dark_mode
+                            ? "bg-red-950/30 border-red-800/50"
+                            : "bg-red-50 border-red-200"
+                          : settings.dark_mode
+                          ? "bg-zinc-800 border-zinc-700"
+                          : "bg-zinc-50 border-zinc-200"
+                      )}
+                    >
+                      <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
+                        {m.name}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <div>
+                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+                            A receber
+                          </p>
+                          <p className="text-sm font-semibold text-emerald-600">
+                            {formatCurrency(m.aReceber, settings.default_currency)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+                            A pagar
+                          </p>
+                          <p className="text-sm font-semibold text-red-500">
+                            {formatCurrency(m.aPagar, settings.default_currency)}
+                          </p>
+                        </div>
+                        <div className="ml-auto text-right">
+                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+                            Saldo
+                          </p>
+                          <p className={cn(
+                            "text-sm font-bold",
+                            isCredit
+                              ? "text-emerald-600"
+                              : isDebt
+                              ? "text-red-500"
+                              : settings.dark_mode ? "text-zinc-300" : "text-zinc-600"
+                          )}>
+                            {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                Saldos após netting bilateral · valores em {settings.default_currency}
+              </p>
+            </Card>
+          )}
+        </>
       )}
 
-      {payerTotals.length > 0 && (
-        <Card className="space-y-4">
-          <h3 className="text-sm font-bold">Quem pagou nas despesas rateadas</h3>
-          
-          {/* Legenda confirmado vs previsto */}
-          <div className="flex items-center gap-4 text-[10px]">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Confirmado</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-blue-400 opacity-50" />
-              <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Previsto</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {payerTotals.map(({ name, amount, confirmedAmount }) => {
-              const maxAmount = payerTotals[0].amount; // já ordenado desc
-              const pct = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
-              const confirmedPct = maxAmount > 0 ? (confirmedAmount / maxAmount) * 100 : 0;
-              
-              return (
-                <div key={name} className="space-y-1">
-                  {/* Nome + valores confirmado / previsto */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className={cn("font-medium", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
-                      {name}
-                    </span>
-                    <div className="flex items-center gap-2 text-xs tabular-nums">
-                      <span className="text-emerald-600 font-semibold">
-                        {formatCurrency(confirmedAmount, settings.default_currency)}
-                      </span>
-                      <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>/</span>
-                      <span className={cn("font-medium", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
-                        {formatCurrency(amount, settings.default_currency)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Barra dupla: previsto (azul semitransparente) + confirmado (verde) */}
-                  <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
-                    {/* Barra previsto — fundo */}
-                    <div
-                      className="absolute h-full rounded-full transition-all duration-500 bg-blue-400 opacity-40"
-                      style={{ width: `${pct}%` }}
-                    />
-                    {/* Barra confirmado — frente */}
-                    <div
-                      className="absolute h-full rounded-full transition-all duration-500 bg-emerald-500"
-                      style={{ width: `${confirmedPct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-            Somente despesas com rateio entre membros · valores em {settings.default_currency}
-          </p>
+      {/* ══════════════════════════════════════════════ */}
+      {/* ABA: PAGAMENTOS                                */}
+      {/* ══════════════════════════════════════════════ */}
+      {expenseSubTab === "pagamentos" && currentMember && (
+        <Card>
+          <h3 className="font-bold mb-4">Detalhamento</h3>
+          <BalancesSummary
+            balances={balances}
+            currentUserId={currentMember.user_id}
+            members={members}
+            currency={settings.default_currency}
+            isDark={Boolean(settings.dark_mode)}
+            settlements={settlements}
+            transfers={bilateralTransfers}
+            onSettleClick={() => {
+              const simplified = simplifyDebts(rawBalances, settings.default_currency);
+              setTransfers(simplified);
+              setShowSettlement(true);
+            }}
+            onRegisterPayment={registerPayment}
+            onUndoPayment={undoPayment}
+          />
         </Card>
       )}
 
@@ -846,7 +983,7 @@ const undoPayment = async (settlementId: string) => {
               if (error) {
                 toast(getErrorMessage(error), 'error');
               } else {
-                await fetchBalanceData(); // ← substitui o fetch manual
+                await fetchBalanceData();
               }
             }
           }}
@@ -862,7 +999,7 @@ const undoPayment = async (settlementId: string) => {
             if (error) {
               toast(getErrorMessage(error), 'error');
             } else {
-              await fetchBalanceData(); // ← substitui o fetch manual
+              await fetchBalanceData();
             }
           }}
 
@@ -879,14 +1016,13 @@ const undoPayment = async (settlementId: string) => {
               toast(getErrorMessage(error), 'error');
             } else {
               setShowSettlement(false);
-              toast("Viagem quitada com sucesso!", 'success');
+              toast("Viagem quitada com sucesso!", "success");
             }
           }}
         />
       )}
 
-
-      {/* Modal de Edição Completo (com splits) */}
+      {/* Modal de edição de despesa (com splits) */}
       <Modal
         isOpen={showEditExpenseModal}
         onClose={closeEditExpenseModal}
@@ -902,26 +1038,26 @@ const undoPayment = async (settlementId: string) => {
           }}
         >
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Descrição</label>
             <input
               name="description"
+              defaultValue={editingExpense?.description}
               disabled={isSubmittingExpense}
               required
-              defaultValue={editingExpense?.description}
               placeholder="Ex: Almoço"
               className={cn(
-                "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
           </div>
-          
+
           <select
             name="category_id"
-            disabled={isSubmittingExpense}
             defaultValue={editingExpense?.category_id || ""}
+            disabled={isSubmittingExpense}
             className={cn(
-              "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+              "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           >
@@ -930,25 +1066,21 @@ const undoPayment = async (settlementId: string) => {
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Valor</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Valor</label>
               <input
                 name="amount"
                 disabled={isSubmittingExpense}
                 required
                 placeholder="0,00"
                 value={editExpenseAmount}
+                onChange={(e) => setEditExpenseAmount(maskCurrency(e.target.value))}
                 className={cn(
-                  "w-full px-3 py-2 rounded-xl border text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                  "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                 )}
-                onChange={(e) => {
-                  const masked = maskCurrency(e.target.value);
-                  setEditExpenseAmount(masked);
-                  e.target.value = masked;
-                }}
               />
             </div>
             <div className="space-y-1">
@@ -956,51 +1088,49 @@ const undoPayment = async (settlementId: string) => {
               <CurrencySelector
                 value={editExpenseCurrency}
                 onChange={setEditExpenseCurrency}
-                disabled={isSubmittingExpense}
+                isDark={settings.dark_mode}
               />
             </div>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4">
-            <label className="flex items-center gap-2 text-sm">
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 name="is_confirmed"
-                disabled={isSubmittingExpense}
                 defaultChecked={editingExpense?.is_confirmed}
+                className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)]"
               />
-              Marcar como confirmada
+              <span>Despesa confirmada</span>
             </label>
 
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="visibility"
-                  value="private"
-                  disabled={isSubmittingExpense || editExpenseSplits.length > 0}
-                  checked={editExpenseSplits.length > 0 ? false : (editingExpense?.visibility === "private")}
-                  className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)] disabled:opacity-50"
-                />
-                <div className={cn("flex items-center gap-1.5 text-zinc-600", editExpenseSplits.length > 0 && "opacity-50")}>
-                  {editExpenseSplits.length > 0 ? <Unlock size={14} /> : <Lock size={14} />}
-                  <span>{editExpenseSplits.length > 0 ? "Público (obrigatório para rateio)" : "Privado (apenas eu e cônjuge)"}</span>
-                </div>
-              </label>
-            </div>
+            <label className={cn("flex items-center gap-2 text-sm cursor-pointer", editExpenseSplits.length > 0 && "opacity-50 pointer-events-none")}>
+              <input
+                type="checkbox"
+                name="visibility"
+                value="private"
+                defaultChecked={editExpenseSplits.length > 0 ? false : (editingExpense?.visibility === "private")}
+                disabled={editExpenseSplits.length > 0}
+                className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)] disabled:opacity-50"
+              />
+              <div className={cn("flex items-center gap-1.5 text-zinc-600", editExpenseSplits.length > 0 && "opacity-50")}>
+                {editExpenseSplits.length > 0 ? <Unlock size={14} /> : <Lock size={14} />}
+                <span>{editExpenseSplits.length > 0 ? "Público (obrigatório para rateio)" : "Privado (apenas eu e cônjuge)"}</span>
+              </div>
+            </label>
           </div>
 
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
             <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
-            
+
             <PayerSelector
               members={members}
               selectedPayerId={editExpensePayerId}
               currentUserId={currentMember?.user_id || ""}
               onSelect={setEditExpensePayerId}
             />
-            
+
             <div className="space-y-2">
               <SplitSelector
                 key={`edit-expense-split-${editingExpense?.id || 'new'}`}
@@ -1015,7 +1145,7 @@ const undoPayment = async (settlementId: string) => {
                 initialSplits={editExpenseSplits}
                 initialSplitType={editExpenseSplitType}
               />
-              
+
               {editExpenseSplits.length > 0 && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
                   <Unlock size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
@@ -1026,7 +1156,7 @@ const undoPayment = async (settlementId: string) => {
               )}
             </div>
           </div>
-          
+
           <button
             disabled={isSubmittingExpense || !isEditExpenseSplitValid}
             className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
