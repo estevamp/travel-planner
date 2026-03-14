@@ -18,6 +18,9 @@ import { TripProvider, useTripContext } from "../context/TripContext";
 import { useTripList } from "../hooks/useTripList";
 import { useTour } from "../hooks/useTour";
 import { useToast } from "../hooks/useToast";
+import { useCreateItinerary } from "../hooks/useCreateItinerary";
+import { useCreateExpense } from "../hooks/useCreateExpense";
+import { useCreateIdea } from "../hooks/useCreateIdea";
 
 // Componentes de abas
 import { ItineraryTab } from "./tabs/ItineraryTab";
@@ -93,7 +96,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
 
   const { enqueue, pendingCount, isSyncing, isOnline } = useOfflineQueue();
 
-    // Restaurar aba salva quando a viagem carrega (uma vez por id)
+  // Restaurar aba salva quando a viagem carrega (uma vez por id)
   useEffect(() => {
     if (!tripId) return;
     const saved = localStorage.getItem(`activeTab_${tripId}`);
@@ -120,23 +123,33 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       opacity: 0,
     }),
   };
-  
+
   // Persistir aba atual
   useEffect(() => {
     if (tripId) {
       localStorage.setItem(`activeTab_${tripId}`, activeTab);
     }
   }, [activeTab, tripId]);
+
   const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
-  
-  // Estados de submissão para evitar múltiplos cliques
-  const [isSubmittingItinerary, setIsSubmittingItinerary] = useState(false);
-  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
-  const [isSubmittingIdea, setIsSubmittingIdea] = useState(false);
-  
+
+  // Custom hooks para CRUD
+  const { create: createItinerary, isSubmitting: isSubmittingItinerary } = useCreateItinerary({
+    enqueue,
+    isOnline,
+  });
+  const { create: createExpense, isSubmitting: isSubmittingExpense } = useCreateExpense({
+    enqueue,
+    isOnline,
+  });
+  const { create: createIdea, isSubmitting: isSubmittingIdea } = useCreateIdea({
+    enqueue,
+    isOnline,
+  });
+
   // Feature: Dia Todo (All Day)
   const [itineraryAllDay, setItineraryAllDay] = useState(false);
   
@@ -186,290 +199,34 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     setExpenseAmount("0");
   };
 
-  // Funções de criação (mantidas aqui pois são usadas nos modais)
-  const createItinerary = async (form: FormData) => {
-    if (!tripId || !currentMember) return;
-    
-    setIsSubmittingItinerary(true);
-    try {
-      const itineraryId = crypto.randomUUID();
-      const title = ((form.get("title") as string) || "").trim() || "Item do itinerário";
-      const visibility = (form.get("visibility") as string) === "private" ? "private" : "public";
-      const type_id = (form.get("type_id") as string) || null;
-      const description = (form.get("description") as string) || "";
-      const location = (form.get("location") as string) || "";
-      
-      // Handle all-day events
-      let start_time: string | null = null;
-      let end_time: string | null = null;
-      
-      if (itineraryAllDay) {
-        const start_date = (form.get("start_date") as string) || null;
-        const end_date = (form.get("end_date") as string) || null;
-        // Store as dates only (00:00:00)
-        start_time = start_date ? `${start_date}T00:00:00` : null;
-        end_time = end_date ? `${end_date}T00:00:00` : null;
-      } else {
-        start_time = (form.get("start_time") as string) || null;
-        end_time = (form.get("end_time") as string) || null;
-      }
-      
-      const photoFile = form.get("photo") as File;
-      let photo_url = null;
-
-      if (photoFile && photoFile.size > 0) {
-        try {
-          photo_url = await resizeImage(photoFile);
-        } catch (err) {
-          console.error("Error resizing photo:", err);
-        }
-      }
-
-      // Optimistic update
-      const newItem: ItineraryItem = {
-        id: itineraryId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        type_id,
-        type: type_id ? (itineraryTypes.find(t => t.id === type_id) ?? null) : null,
-        title,
-        description,
-        location,
-        start_time,
-        end_time,
-        is_all_day: itineraryAllDay,
-        amount: 0,
-        currency: settings.default_currency,
-        visibility,
-        photo_url,
-      };
-
-      setTrip(prev => prev ? { ...prev, itinerary: [...prev.itinerary, newItem].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")) } : null);
-
-      // ── OFFLINE GUARD ──
-      const itineraryPayload = {
-        id: itineraryId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        type_id,
-        title,
-        description,
-        location,
-        start_time,
-        end_time,
-        is_all_day: itineraryAllDay,
-        amount: 0,
-        currency: settings.default_currency,
-        visibility,
-        photo_url,
-      };
-
-      if (!isOnline) {
-        enqueue({ id: itineraryId, tripId, type: "insert", table: "itinerary", payload: itineraryPayload });
-        toast("Atividade salva offline — será sincronizada ao reconectar.", "info");
-        closeModal();
-        return;
-      }
-      // ── FIM OFFLINE GUARD ──
-      
-      const { error } = await supabase.from("itinerary").insert({
-        id: itineraryId,
-      trip_id: tripId,
-      created_by_member_id: currentMember.id,
-      type_id,
-      title,
-      description,
-      location,
-      start_time,
-      end_time,
-      is_all_day: itineraryAllDay,
-      amount: 0,
-      currency: settings.default_currency,
-      visibility,
-      photo_url,
+  // Wrappers para os hooks (adaptam as chamadas dos modais)
+  const handleCreateItinerary = async (form: FormData) => {
+    await createItinerary({
+      form,
+      allDay: itineraryAllDay,
+      onClose: closeModal,
     });
-
-      if (error) {
-        toast(getErrorMessage(error), 'error');
-      } else {
-        closeModal();
-      }
-    } finally {
-      setIsSubmittingItinerary(false);
-    }
   };
 
-  const createExpense = async (form: FormData) => {
-    if (!tripId || !currentMember) return;
-    
-    setIsSubmittingExpense(true);
-    try {
-      const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
-      // Despesas com rateio devem ser obrigatoriamente públicas
-      const visibility = expenseSplits.length > 0 ? "public" : ((form.get("visibility") as string) === "private" ? "private" : "public");
-      const description = (form.get("description") as string) || "Despesa";
-      const category_id = (form.get("category_id") as string) || null;
-      const is_confirmed = form.get("is_confirmed") === "on";
-      const expenseId = crypto.randomUUID();
-      
-      // Optimistic update
-      const newExpense: Expense = {
-        id: expenseId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        description,
-        amount,
-        currency: expenseCurrency,
-        category_id,
-        visibility,
-        date: new Date().toISOString().split("T")[0],
-        category: category_id ? categories.find(c => c.id === category_id) || null : null,
-        is_confirmed
-      };
-
-      setTrip(prev => prev ? { ...prev, expenses: [...prev.expenses, newExpense].sort((a, b) => a.date.localeCompare(b.date)) } : null);
-    // ── OFFLINE GUARD 
-      const expensePayload = {
-        id: expenseId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        description,
-        amount,
-        currency: expenseCurrency,
-        category_id,
-        visibility,
-        date: new Date().toISOString().split("T")[0],
-        is_confirmed,
-        paid_by_member_id: expensePayerId || currentMember.id,
-        split_type: expenseSplitType,
-      };
-
-      if (!isOnline) {
-        enqueue({ id: expenseId, tripId, type: "insert", table: "expenses", payload: expensePayload });
-        toast("Despesa salva offline — será sincronizada ao reconectar.", "info");
-        closeModal();
-        setExpenseCurrency(settings.default_currency);
-        return;
-      }
-      // ── FIM OFFLINE GUARD ──
-
-      const { error } = await supabase.from("expenses").insert({
-        id: expenseId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        description,
-        amount,
-        currency: expenseCurrency,
-        category_id,
-        visibility,
-        date: new Date().toISOString().split("T")[0],
-        is_confirmed,
-        paid_by_member_id: expensePayerId || currentMember.id,
-        split_type: expenseSplitType,
-      });
-      
-      if (error) {
-        toast(getErrorMessage(error), 'error');
-      } else {
-        // Salvar splits se houver
-        if (expenseSplits.length > 0 && visibility === "public") {
-          const { error: splitsError } = await supabase.from("expense_splits").insert(
-            expenseSplits.map(split => ({
-              expense_id: expenseId,
-              member_id: split.member_id,
-              amount: split.amount || 0,
-              percentage: split.percentage,
-            }))
-          );
-          
-          if (splitsError) {
-            console.error("Erro ao salvar splits:", splitsError);
-            toast("Despesa criada, mas houve erro ao salvar o rateio: " + getErrorMessage(splitsError), 'error');
-          }
-        }
-        
-        closeModal();
-        setExpenseCurrency(settings.default_currency);
-      }
-    } finally {
-      setIsSubmittingExpense(false);
-    }
+  const handleCreateExpense = async (form: FormData) => {
+    await createExpense({
+      form,
+      payerId: expensePayerId,
+      splits: expenseSplits,
+      splitType: expenseSplitType,
+      currency: expenseCurrency,
+      onClose: closeModal,
+      onResetCurrency: () => setExpenseCurrency(settings.default_currency),
+    });
   };
 
-  const createIdea = async (form: FormData) => {
-    if (!tripId || !currentMember) return;
-    
-    setIsSubmittingIdea(true);
-    try {
-      const title = ((form.get("title") as string) || "").trim();
-      if (!title) return;
-      
-      const visibility = (form.get("visibility") as string) === "private" ? "private" : "public";
-      const notes = ((form.get("notes") as string) || "").trim() || null;
-      const mapsUrl = ((form.get("maps_url") as string) || "").trim() || null;
-      const ideaId = crypto.randomUUID();
-
-      // Optimistic update
-      const newIdea: Idea = {
-        id: ideaId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        title,
-        notes,
-        maps_url: mapsUrl,
-        estimated_amount: 0,
-        currency: ideaCurrency,
-        visibility,
-        is_converted: false,
-        created_at: new Date().toISOString(),
-      };
-
-      setTrip(prev => prev ? { ...prev, ideas: [newIdea, ...(prev.ideas || [])] } : null);
-
-      // ── OFFLINE GUARD ──
-      const ideaPayload = {
-        id: ideaId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        title,
-        notes,
-        maps_url: mapsUrl,
-        estimated_amount: 0,
-        currency: ideaCurrency,
-        visibility,
-        is_converted: false,
-      };
-
-      if (!isOnline) {
-        enqueue({ id: ideaId, tripId, type: "insert", table: "ideas", payload: ideaPayload });
-        toast("Ideia salva offline — será sincronizada ao reconectar.", "info");
-        closeModal();
-        return;
-      }
-      // ── FIM OFFLINE GUARD ──
-
-      const { error } = await supabase.from("ideas").insert({
-        id: ideaId,
-        trip_id: tripId,
-        created_by_member_id: currentMember.id,
-        title,
-        notes,
-        maps_url: mapsUrl,
-        estimated_amount: 0,
-        currency: ideaCurrency,
-        visibility,
-        created_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        toast(getErrorMessage(error), 'error');
-      } else {
-        closeModal();
-        setIdeaCurrency(settings.default_currency);
-      }
-    } finally {
-      setIsSubmittingIdea(false);
-    }
+  const handleCreateIdea = async (form: FormData) => {
+    await createIdea({
+      form,
+      currency: ideaCurrency,
+      onClose: closeModal,
+      onResetCurrency: () => setIdeaCurrency(settings.default_currency),
+    });
   };
 
   return (
@@ -722,7 +479,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            await createItinerary(new FormData(e.currentTarget));
+            await handleCreateItinerary(new FormData(e.currentTarget));
             (e.target as HTMLFormElement).reset();
           }}
         >
@@ -899,7 +656,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            await createExpense(new FormData(e.currentTarget));
+            await handleCreateExpense(new FormData(e.currentTarget));
             (e.target as HTMLFormElement).reset();
           }}
         >
@@ -1040,7 +797,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            await createIdea(new FormData(e.currentTarget));
+            await handleCreateIdea(new FormData(e.currentTarget));
             (e.target as HTMLFormElement).reset();
           }}
         >

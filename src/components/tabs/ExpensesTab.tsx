@@ -26,6 +26,8 @@ import {
 } from "../../utils/splitting";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
+import { useUpdateExpense } from "../../hooks/useUpdateExpense";
+import { useDeleteExpense } from "../../hooks/useDeleteExpense";
 import { ExpenseListItem } from "../ExpenseListItem";
 
 // Tipo da resposta bruta do Supabase para a query "*, expense_splits(*)"
@@ -51,6 +53,19 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     onTripUpdate
   );
   const { convert, rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
+  
+  // Custom hooks para UPDATE e DELETE
+  const { update: updateExpense, isSubmitting: isUpdatingExpense } = useUpdateExpense({
+    enqueue,
+    isOnline,
+    onSuccess: fetchBalanceData,
+  });
+  const { delete: deleteExpenseItem, isSubmitting: isDeletingExpense } = useDeleteExpense({
+    enqueue,
+    isOnline,
+    onSuccess: fetchBalanceData,
+  });
+  
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
 
   // Sub-aba da tela de despesas
@@ -310,13 +325,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   };
 
   const saveExpenseEdit = async (expenseId: string) => {
-    if (!editingExpenseId || editingExpenseId !== expenseId || savingExpense) return;
+    if (!editingExpenseId || editingExpenseId !== expenseId || isUpdatingExpense) return;
     const description = expenseDraft.description.trim();
     if (!description) return;
     const nextAmount = parseCurrencyToNumber(expenseDraft.amount) || 0;
 
-    setSavingExpense(true);
-
+    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       expenses: prev.expenses.map((exp) =>
@@ -336,46 +350,20 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       ),
     }));
 
-    if (!isOnline) {
-      enqueue({
-        id: expenseId,
-        tripId: tripId!,
-        type: "update",
-        table: "expenses",
-        payload: {
-          id: expenseId,
-          description,
-          category_id: expenseDraft.category_id || null,
-          amount: nextAmount,
-          visibility: expenseDraft.visibility,
-          is_confirmed: expenseDraft.is_confirmed,
-        },
-      });
-      setSavingExpense(false);
+    const success = await updateExpense({
+      expenseId,
+      description,
+      amount: nextAmount,
+      currency: expenseDraft.currency || settings.default_currency,
+      visibility: expenseDraft.visibility,
+      is_confirmed: expenseDraft.is_confirmed,
+      category_id: expenseDraft.category_id || null,
+      tripId: tripId!,
+    });
+
+    if (success) {
       setEditingExpenseId(null);
-      return;
     }
-
-    const { error } = await supabase
-      .from("expenses")
-      .update({
-        description,
-        category_id: expenseDraft.category_id || null,
-        amount: nextAmount,
-        visibility: expenseDraft.visibility,
-        is_confirmed: expenseDraft.is_confirmed,
-      })
-      .eq("id", expenseId);
-
-    setSavingExpense(false);
-
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-      return;
-    }
-
-    setEditingExpenseId(null);
-    await fetchBalanceData();
   };
 
   const openEditExpenseModal = async (expense: Expense) => {
@@ -427,95 +415,65 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const saveEditExpense = async (form: FormData) => {
     if (!editingExpense || !currentMember) return;
 
-    setIsSubmittingExpense(true);
-    try {
-      const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
-      const visibility = editExpenseSplits.length > 0
-        ? "public"
-        : ((form.get("visibility") as string) === "private" ? "private" : "public");
-      const description = (form.get("description") as string) || "Despesa";
-      const category_id = (form.get("category_id") as string) || null;
-      const is_confirmed = form.get("is_confirmed") === "on";
+    const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
+    const visibility = editExpenseSplits.length > 0
+      ? "public"
+      : ((form.get("visibility") as string) === "private" ? "private" : "public");
+    const description = (form.get("description") as string) || "Despesa";
+    const category_id = (form.get("category_id") as string) || null;
+    const is_confirmed = form.get("is_confirmed") === "on";
 
-      onTripUpdate((prev) => ({
-        ...prev,
-        expenses: prev.expenses.map((exp) =>
-          exp.id === editingExpense.id
-            ? {
-                ...exp,
-                description,
-                category_id,
-                amount,
-                currency: editExpenseCurrency,
-                visibility,
-                is_confirmed,
-                category: category_id ? categories.find(c => c.id === category_id) || null : null
-              }
-            : exp
-        ),
-      }));
+    // Optimistic update
+    onTripUpdate((prev) => ({
+      ...prev,
+      expenses: prev.expenses.map((exp) =>
+        exp.id === editingExpense.id
+          ? {
+              ...exp,
+              description,
+              category_id,
+              amount,
+              currency: editExpenseCurrency,
+              visibility,
+              is_confirmed,
+              category: category_id ? categories.find(c => c.id === category_id) || null : null
+            }
+          : exp
+      ),
+    }));
 
-      const { error } = await supabase
-        .from("expenses")
-        .update({
-          description,
-          amount,
-          currency: editExpenseCurrency,
-          category_id,
-          visibility,
-          is_confirmed,
-          paid_by_member_id: editExpensePayerId,
-          split_type: editExpenseSplitType,
-        })
-        .eq("id", editingExpense.id);
+    const success = await updateExpense({
+      expenseId: editingExpense.id,
+      description,
+      amount,
+      currency: editExpenseCurrency,
+      visibility,
+      is_confirmed,
+      category_id,
+      payerId: editExpensePayerId,
+      splitType: editExpenseSplitType,
+      splits: editExpenseSplits,
+      tripId: tripId!,
+    });
 
-      if (error) {
-        toast(getErrorMessage(error), 'error');
-      } else {
-        await supabase.from("expense_splits").delete().eq("expense_id", editingExpense.id);
-
-        if (editExpenseSplits.length > 0 && visibility === "public") {
-          const { error: splitsError } = await supabase.from("expense_splits").insert(
-            editExpenseSplits.map(split => ({
-              expense_id: editingExpense.id,
-              member_id: split.member_id,
-              amount: split.amount || 0,
-              percentage: split.percentage,
-            }))
-          );
-          if (splitsError) console.error("Erro ao salvar splits na edição:", splitsError);
-        }
-
-        await fetchBalanceData();
-        closeEditExpenseModal();
-      }
-    } finally {
-      setIsSubmittingExpense(false);
+    if (success) {
+      closeEditExpenseModal();
     }
   };
 
-  const deleteExpense = async (expense: Expense) => {
-    const confirmed = await confirm({
-      title: 'Remover despesa?',
-      message: `Remover a despesa "${expense.description}"? Esta ação não pode ser desfeita.`,
-      variant: 'danger',
-      isDark: settings.dark_mode
-    });
-    if (!confirmed) return;
-
+  const deleteExpenseHandler = async (expense: Expense) => {
+    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       expenses: prev.expenses.filter((exp) => exp.id !== expense.id),
     }));
 
-    if (!isOnline) {
-      enqueue({ id: expense.id, tripId, type: "delete", table: "expenses", payload: { id: expense.id } });
-      return;
-    }
-
-    const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
-    if (error) toast(getErrorMessage(error), 'error');
-    else await fetchBalanceData();
+    await deleteExpenseItem({
+      expenseId: expense.id,
+      description: expense.description,
+      tripId: tripId!,
+      isDark: settings.dark_mode,
+    });
   };
 
   const confirmedTotal = convertedExpenses
@@ -704,7 +662,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                     onEdit={openEditExpenseModal}
                     onSave={(expenseId) => void saveExpenseEdit(expenseId)}
                     onCancel={() => setEditingExpenseId(null)}
-                    onDelete={(expense) => void deleteExpense(expense)}
+                    onDelete={(expense) => void deleteExpenseHandler(expense)}
                     onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
                   />
                 ))}
@@ -737,7 +695,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 onEdit={openEditExpenseModal}
                 onSave={(expenseId) => void saveExpenseEdit(expenseId)}
                 onCancel={() => setEditingExpenseId(null)}
-                onDelete={(expense) => void deleteExpense(expense)}
+                onDelete={(expense) => void deleteExpenseHandler(expense)}
                 onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
               />
             ))}

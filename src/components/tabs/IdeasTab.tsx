@@ -14,6 +14,8 @@ import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
+import { useUpdateIdea } from "../../hooks/useUpdateIdea";
+import { useDeleteIdea } from "../../hooks/useDeleteIdea";
 
 interface IdeasTabProps {
   onOpenModal: () => void;
@@ -27,6 +29,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   const { trip, currentMember, isAdmin, settings, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const { update: updateIdea } = useUpdateIdea({ enqueue, isOnline });
+  const { delete: deleteIdea } = useDeleteIdea({ enqueue, isOnline });
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
@@ -93,9 +97,6 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     const notes = ideaDraft.notes.trim() || null;
     const mapsUrl = ideaDraft.maps_url.trim() || null;
 
-    const originalIdea = trip.ideas.find((i) => i.id === ideaId);
-    if (!originalIdea) return;
-    
     // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
@@ -112,47 +113,18 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
       ),
     }));
 
-    if (!isOnline) {
-      enqueue({
-        id: ideaId,
-        tripId: trip.id,
-        type: "update",
-        table: "ideas",
-        payload: {
-          id: ideaId,
-          title,
-          notes,
-          maps_url: mapsUrl,
-          visibility: ideaDraft.visibility,
-        },
-      });
+    const success = await updateIdea({
+      ideaId,
+      title,
+      notes,
+      maps_url: mapsUrl,
+      visibility: ideaDraft.visibility,
+      tripId: trip.id,
+    });
+
+    if (success) {
       setEditingIdeaId(null);
-      return;
     }
-
-    const { error } = await supabase
-      .from("ideas")
-      .update({
-        title,
-        notes,
-        maps_url: mapsUrl,
-        visibility: ideaDraft.visibility,
-      })
-      .eq("id", ideaId);
-    
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-      // Rollback
-      onTripUpdate((prev) => ({
-        ...prev,
-        ideas: prev.ideas.map((idea) =>
-          idea.id === ideaId ? originalIdea : idea
-        ),
-      }));
-      return;
-    }
-
-    setEditingIdeaId(null);
   };
 
   const openIdeaAsset = async (asset: IdeaAsset) => {
@@ -171,64 +143,20 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     }
   };
 
-  const deleteIdea = async (idea: Idea) => {
-    const confirmed = await confirm({
-      title: 'Remover ideia?',
-      message: `Remover a ideia "${idea.title}"? Esta ação não pode ser desfeita.`,
-      variant: 'danger',
-      isDark: settings.dark_mode
-    });
-    if (!confirmed) return;
-
-    // Snapshot for rollback
-    const previousIdeas = trip.ideas;
-    const previousLinks = trip.idea_links || [];
-    const previousAssets = trip.idea_assets || [];
-
-    // Optimistic update: remove idea + its links and assets from state
-    const ideaAssets = ideaAssetsByIdeaId.get(idea.id) || [];
+  const deleteIdeaHandler = async (idea: Idea) => {
+    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       ideas: prev.ideas.filter((i) => i.id !== idea.id),
       idea_links: (prev.idea_links || []).filter((l) => l.idea_id !== idea.id),
       idea_assets: (prev.idea_assets || []).filter((a) => a.idea_id !== idea.id),
     }));
-
-    const rollback = () => {
-      onTripUpdate((prev) => ({
-        ...prev,
-        ideas: previousIdeas,
-        idea_links: previousLinks,
-        idea_assets: previousAssets,
-      }));
-    };
-
-    // Phase 1: delete assets from Storage
-    const paths = ideaAssets.map((a) => a.url);
-    if (paths.length > 0) {
-      const { error: storageError } = await supabase.storage.from(DOCS_BUCKET).remove(paths);
-      if (storageError) {
-        toast(getErrorMessage(storageError), 'error');
-        rollback();
-        return;
-      }
-    }
-
-    // Phase 2: delete the idea (cascade in DB removes links and assets automatically)
-    if (!isOnline) {
-      enqueue({ id: idea.id, tripId: trip.id, type: "delete", table: "ideas", payload: { id: idea.id } });
-      onTripUpdate((prev) => ({
-        ...prev,
-        ideas: prev.ideas.filter((i) => i.id !== idea.id),
-      }));
-      return;
-    } 
-
-    const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-      rollback();
-    }
+    await deleteIdea({
+      ideaId: idea.id,
+      title: idea.title,
+      tripId: trip.id,
+      isDark: settings.dark_mode,
+    });
   };
 
   const convertIdeaToActivity = async (idea: Idea) => {
@@ -656,7 +584,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                           )}
                           <button
                             type="button"
-                            onClick={() => void deleteIdea(idea)}
+                            onClick={() => void deleteIdeaHandler(idea)}
                             className="p-1.5 text-zinc-400 hover:text-red-500"
                             aria-label="Excluir ideia"
                           >

@@ -18,6 +18,8 @@ import { ACTIVITY_ICON_COMPONENTS } from "../../constants/icons";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
+import { useUpdateItinerary } from "../../hooks/useUpdateItinerary";
+import { useDeleteItinerary } from "../../hooks/useDeleteItinerary";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -379,6 +381,16 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     onTripUpdate
   );
 
+  // Custom hooks para UPDATE e DELETE
+  const { update: updateItinerary, isSubmitting: isUpdatingItinerary } = useUpdateItinerary({
+    enqueue,
+    isOnline,
+  });
+  const { delete: deleteItineraryItem, isSubmitting: isDeletingItinerary } = useDeleteItinerary({
+    enqueue,
+    isOnline,
+  });
+
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
 
@@ -445,13 +457,11 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   };
 
   const saveItineraryEdit = async (itemId: string) => {
-    if (!editingItineraryId || editingItineraryId !== itemId || savingItinerary) return;
+    if (!editingItineraryId || editingItineraryId !== itemId || isUpdatingItinerary) return;
     const sourceItem = trip.itinerary.find((entry) => entry.id === itemId);
     if (!sourceItem) return;
     const title = itineraryDraft.title.trim();
     if (!title) return;
-
-    setSavingItinerary(true);
 
     let start_time: string | null = null;
     let end_time: string | null = null;
@@ -464,6 +474,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       end_time = itineraryDraft.end_time || null;
     }
 
+    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: prev.itinerary.map((item) =>
@@ -484,76 +495,43 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       ),
     }));
 
-    if (!isOnline) {
-      enqueue({
-        id: itemId,
-        tripId: trip.id,
-        type: "update",
-        table: "itinerary",
-        payload: {
-          id: itemId,
-          type_id: itineraryDraft.type_id || null,
-          title,
-          description: itineraryDraft.description.trim(),
-          location: itineraryDraft.location.trim(),
-          visibility: itineraryDraft.visibility,
-          start_time,
-          end_time,
-          is_all_day: itineraryDraft.is_all_day,
-        },
-      });
-      setSavingItinerary(false);
+    const success = await updateItinerary({
+      itemId,
+      type_id: itineraryDraft.type_id || null,
+      title,
+      description: itineraryDraft.description.trim(),
+      location: itineraryDraft.location.trim(),
+      visibility: itineraryDraft.visibility,
+      start_time,
+      end_time,
+      is_all_day: itineraryDraft.is_all_day,
+      tripId: trip.id,
+    });
+
+    if (success) {
       setEditingItineraryId(null);
-      return;
-    }
-
-    const { error } = await supabase
-      .from("itinerary")
-      .update({
-        type_id: itineraryDraft.type_id || null,
-        title,
-        description: itineraryDraft.description.trim(),
-        location: itineraryDraft.location.trim(),
-        visibility: itineraryDraft.visibility,
-        start_time,
-        end_time,
-        is_all_day: itineraryDraft.is_all_day,
-      })
-      .eq("id", itemId);
-
-    if (error) {
-      setSavingItinerary(false);
-      toast(getErrorMessage(error), "error");
+    } else {
+      // Rollback on error
       onTripUpdate((prev) => ({
         ...prev,
         itinerary: prev.itinerary.map((i) => (i.id === itemId ? sourceItem : i)),
       }));
-      return;
     }
-
-    setSavingItinerary(false);
-    setEditingItineraryId(null);
   };
 
-  const deleteItineraryItem = async (item: ItineraryItem) => {
+  const deleteItineraryItemHandler = async (item: ItineraryItem) => {
+    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: prev.itinerary.filter((i) => i.id !== item.id),
     }));
 
-    if (!isOnline) {
-      enqueue({ id: item.id, tripId, type: "delete", table: "itinerary", payload: { id: item.id } });
-      return;
-    }
-
-    const { error } = await supabase.from("itinerary").delete().eq("id", item.id);
-    if (error) {
-      toast(getErrorMessage(error), "error");
-      onTripUpdate((prev) => ({
-        ...prev,
-        itinerary: [...prev.itinerary, item],
-      }));
-    }
+    await deleteItineraryItem({
+      itemId: item.id,
+      title: item.title,
+      tripId: trip.id,
+      isDark: settings.dark_mode,
+    });
   };
 
   const toggleCompleted = async (item: ItineraryItem) => {
@@ -881,14 +859,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             </button>
             <button
               onClick={async () => {
-                const confirmed = await confirm({
-                  title: "Remover do itinerário?",
-                  message: `Deseja realmente remover "${item.title}" do itinerário?`,
-                  variant: "danger",
-                  isDark,
-                });
-                if (!confirmed) return;
-                await deleteItineraryItem(item);
+                await deleteItineraryItemHandler(item);
               }}
               className="p-2 text-zinc-400 hover:text-red-500"
             >
