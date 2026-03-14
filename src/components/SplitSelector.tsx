@@ -90,11 +90,15 @@ export function SplitSelector({
 
   // Initialize unequal split values with equal split amounts when switching to unequal
   const handleSetSplitType = (type: SplitType) => {
-    if (type === "unequal" && splitType === "equal") {
-      const equalAmount = getEqualAmount();
+    // Ao clicar em qualquer tipo de divisão, seleciona todos os membros automaticamente
+    const allMemberIds = new Set(members.map(m => m.id));
+    setSelectedMembers(allMemberIds);
+
+    if (type === "unequal") {
+      const equalAmount = totalAmount / members.length;
       const newCustomAmounts: Record<string, number> = {};
-      selectedMembers.forEach(id => {
-        newCustomAmounts[id] = Number(equalAmount.toFixed(2));
+      members.forEach(m => {
+        newCustomAmounts[m.id] = Number(equalAmount.toFixed(2));
       });
       setCustomAmounts(newCustomAmounts);
     }
