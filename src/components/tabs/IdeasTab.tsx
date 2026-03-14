@@ -29,8 +29,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   const { trip, currentMember, isAdmin, settings, members } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
-  const { update: updateIdea } = useUpdateIdea({ enqueue, isOnline });
-  const { deleteItem: deleteIdea } = useDeleteIdea({ enqueue, isOnline });
+  const { update: updateIdea } = useUpdateIdea({ enqueue, isOnline, onSuccess: undefined });
+  const { deleteItem: deleteIdea } = useDeleteIdea({ enqueue, isOnline, onSuccess: undefined });
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);

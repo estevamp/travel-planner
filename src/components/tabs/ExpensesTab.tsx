@@ -58,12 +58,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const { update: updateExpense, isSubmitting: isUpdatingExpense } = useUpdateExpense({
     enqueue,
     isOnline,
-    onSuccess: fetchBalanceData,
   });
   const { deleteItem: deleteExpenseItem, isSubmitting: isDeletingExpense } = useDeleteExpense({
     enqueue,
     isOnline,
-    onSuccess: fetchBalanceData,
   });
   
   const [isBudgetExpanded, setIsBudgetExpanded] = useState(false);
@@ -363,6 +361,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
     if (success) {
       setEditingExpenseId(null);
+      await fetchBalanceData();
     }
   };
 
@@ -458,6 +457,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
     if (success) {
       closeEditExpenseModal();
+      await fetchBalanceData();
     }
   };
 
@@ -474,6 +474,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       tripId: tripId!,
       isDark: settings.dark_mode,
     });
+    
+    await fetchBalanceData();
   };
 
   const confirmedTotal = convertedExpenses

@@ -385,10 +385,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   const { update: updateItinerary, isSubmitting: isUpdatingItinerary } = useUpdateItinerary({
     enqueue,
     isOnline,
+    onSuccess: undefined,
   });
   const { deleteItem: deleteItineraryItem, isSubmitting: isDeletingItinerary } = useDeleteItinerary({
     enqueue,
     isOnline,
+    onSuccess: undefined,
   });
 
   // View mode
