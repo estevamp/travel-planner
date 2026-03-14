@@ -375,6 +375,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     }
 
     setEditingExpenseId(null);
+    await fetchBalanceData();
   };
 
   const openEditExpenseModal = async (expense: Expense) => {
@@ -485,6 +486,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           if (splitsError) console.error("Erro ao salvar splits na edição:", splitsError);
         }
 
+        await fetchBalanceData();
         closeEditExpenseModal();
       }
     } finally {
@@ -513,6 +515,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
     const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
     if (error) toast(getErrorMessage(error), 'error');
+    else await fetchBalanceData();
   };
 
   const confirmedTotal = convertedExpenses
