@@ -72,5 +72,5 @@ export function useDeleteItinerary(deps: UseDeleteItineraryDeps): UseDeleteItine
     }
   };
 
-  return { deleteItem: deleteItinerary, isSubmitting };
+  return { deleteItem, isSubmitting };
 }
