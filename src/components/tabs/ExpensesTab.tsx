@@ -370,19 +370,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     setEditExpenseAmount(maskCurrency(String(Math.round((expense.amount || 0) * 100))));
     setEditExpenseCurrency(expense.currency || settings.default_currency);
 
-    const { data: expenseData } = await supabase
-      .from("expenses")
-      .select("paid_by_member_id, split_type")
-      .eq("id", expense.id)
-      .single();
-
-    if (expenseData) {
-      setEditExpensePayerId(expenseData.paid_by_member_id || currentMember?.id || "");
-      setEditExpenseSplitType(expenseData.split_type || "equal");
-    } else {
-      setEditExpensePayerId(currentMember?.id || "");
-      setEditExpenseSplitType("equal");
-    }
+    // Use expense data directly instead of making redundant query
+    setEditExpensePayerId(expense.paid_by_member_id || currentMember?.id || "");
+    setEditExpenseSplitType(expense.split_type || "equal");
 
     const { data: splitsData } = await supabase
       .from("expense_splits")
