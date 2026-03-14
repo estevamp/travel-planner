@@ -18,7 +18,12 @@ import { useCurrencyConversion } from "../../hooks/useCurrencyConversion";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import { BalancesSummary } from "../BalancesSummary";
 import { TripSettlementModal } from "../TripSettlementModal";
-import { calculateNetBalances, simplifyDebts, computeBilateralTransfers } from "../../utils/splitting";
+import {
+  calculateNetBalances,
+  simplifyDebts,
+  computeBilateralTransfers,
+  mergeSpouseTransfers,
+} from "../../utils/splitting";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 import { ExpenseListItem } from "../ExpenseListItem";
@@ -143,7 +148,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]
   );
 
+  // Transferências com casais agrupados — exibidas na aba Pagamentos
+  const mergedTransfers = useMemo(
+    () => mergeSpouseTransfers(bilateralTransfers, members, settings.default_currency),
+    [bilateralTransfers, members, settings.default_currency]
+  );
+
   // Resumo a pagar / a receber por membro (para a aba Relatório)
+  // Usa os valores bilaterais individuais para manter precisão por pessoa
   const memberPaymentSummary = useMemo(() => {
     return members
       .map((m) => {
@@ -181,7 +193,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       const currency = exp.currency || settings.default_currency;
       const convertedAmount = convert(Number(exp.amount) || 0, currency);
 
-      // Calcular userAmount considerando splits
       let userAmount = convertedAmount;
       const expenseWithSplits = expensesWithSplits.find(e => e.id === exp.id);
 
@@ -201,16 +212,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         }
       }
 
-      return {
-        ...exp,
-        convertedAmount,
-        userAmount
-      };
+      return { ...exp, convertedAmount, userAmount };
     });
   }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember]);
 
   const payerTotals = useMemo(() => {
-    // Filtrar apenas despesas que têm splits configurados
     const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
     const totals: Record<string, number> = {};
     const confirmedTotals: Record<string, number> = {};
@@ -249,11 +255,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     is_confirmed: false,
   });
 
-  const registerPayment = async (
-    fromMemberId: string,
-    toMemberId: string,
-    amount: number
-  ) => {
+  const registerPayment = async (fromMemberId: string, toMemberId: string, amount: number) => {
     const { error } = await supabase.from("settlements").insert({
       trip_id: tripId,
       from_member_id: fromMemberId,
@@ -269,10 +271,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   };
 
   const undoPayment = async (settlementId: string) => {
-    const { error } = await supabase
-      .from("settlements")
-      .delete()
-      .eq("id", settlementId);
+    const { error } = await supabase.from("settlements").delete().eq("id", settlementId);
     if (error) { toast(getErrorMessage(error), "error"); return; }
     await fetchBalanceData();
     toast("Pagamento desfeito.", "success");
@@ -302,23 +301,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       toast("Despesas com rateio devem ser públicas", "error");
       return;
     }
-
     setVisibilitySheet({
       open: true,
       itemId: exp.id,
       currentVisibility: exp.visibility,
       onConfirm: () => void toggleExpenseVisibility(exp),
-    });
-  };
-
-  const startEditExpense = (expense: Expense) => {
-    setEditingExpenseId(expense.id);
-    setExpenseDraft({
-      description: expense.description,
-      category_id: expense.category_id || "",
-      amount: maskCurrency(String(Math.round((expense.amount || 0) * 100))),
-      visibility: expense.visibility,
-      is_confirmed: expense.is_confirmed,
     });
   };
 
@@ -330,7 +317,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
     setSavingExpense(true);
 
-    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       expenses: prev.expenses.map((exp) =>
@@ -396,7 +382,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     setEditExpenseAmount(maskCurrency(String(Math.round((expense.amount || 0) * 100))));
     setEditExpenseCurrency(expense.currency || settings.default_currency);
 
-    // Buscar dados extras da despesa (pagador e tipo de rateio)
     const { data: expenseData } = await supabase
       .from("expenses")
       .select("paid_by_member_id, split_type")
@@ -411,7 +396,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       setEditExpenseSplitType("equal");
     }
 
-    // Buscar splits existentes
     const { data: splitsData } = await supabase
       .from("expense_splits")
       .select("*")
@@ -445,7 +429,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     setIsSubmittingExpense(true);
     try {
       const amount = parseCurrencyToNumber(form.get("amount") as string) || 0;
-      // Despesas com rateio devem ser obrigatoriamente públicas
       const visibility = editExpenseSplits.length > 0
         ? "public"
         : ((form.get("visibility") as string) === "private" ? "private" : "public");
@@ -453,7 +436,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       const category_id = (form.get("category_id") as string) || null;
       const is_confirmed = form.get("is_confirmed") === "on";
 
-      // Optimistic update
       onTripUpdate((prev) => ({
         ...prev,
         expenses: prev.expenses.map((exp) =>
@@ -489,10 +471,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       if (error) {
         toast(getErrorMessage(error), 'error');
       } else {
-        // Deletar splits antigos
         await supabase.from("expense_splits").delete().eq("expense_id", editingExpense.id);
 
-        // Salvar novos splits se houver e for pública
         if (editExpenseSplits.length > 0 && visibility === "public") {
           const { error: splitsError } = await supabase.from("expense_splits").insert(
             editExpenseSplits.map(split => ({
@@ -502,10 +482,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               percentage: split.percentage,
             }))
           );
-
-          if (splitsError) {
-            console.error("Erro ao salvar splits na edição:", splitsError);
-          }
+          if (splitsError) console.error("Erro ao salvar splits na edição:", splitsError);
         }
 
         closeEditExpenseModal();
@@ -524,7 +501,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     });
     if (!confirmed) return;
 
-    // Optimistic update
     onTripUpdate((prev) => ({
       ...prev,
       expenses: prev.expenses.filter((exp) => exp.id !== expense.id),
@@ -536,9 +512,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     }
 
     const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-    }
+    if (error) toast(getErrorMessage(error), 'error');
   };
 
   const confirmedTotal = convertedExpenses
@@ -586,16 +560,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {expenseSubTab === "relatorio" && (
         <>
           {/* Budget Overview Card */}
-          <Card
-            className={cn(
-              "border-2",
-              settings.dark_mode
-                ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
-                : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
-            )}
-          >
+          <Card className={cn(
+            "border-2",
+            settings.dark_mode
+              ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
+              : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+          )}>
             <div className="space-y-4">
-              {/* Header responsivo */}
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
                   <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
@@ -647,18 +618,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden space-y-4 pt-2"
                 >
-                  {/* Progress Bar */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-semibold">
                       <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>Progresso</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-emerald-600">
-                          Confirmado: {confirmedProgress.toFixed(1)}%
-                        </span>
-                        <span className={cn(
-                          "font-bold",
-                          isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600")
-                        )}>
+                        <span className="text-emerald-600">Confirmado: {confirmedProgress.toFixed(1)}%</span>
+                        <span className={cn("font-bold", isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600"))}>
                           Previsto: {predictedProgress.toFixed(1)}%
                         </span>
                       </div>
@@ -669,18 +634,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                         style={{ width: `${Math.min(confirmedProgress, 100)}%` }}
                       />
                       <div
-                        className={cn(
-                          "absolute h-full transition-all duration-500 rounded-full opacity-40",
-                          isOverBudget
-                            ? "bg-gradient-to-r from-red-500 to-red-600"
-                            : "bg-gradient-to-r from-blue-500 to-blue-600"
-                        )}
+                        className={cn("absolute h-full transition-all duration-500 rounded-full opacity-40", isOverBudget ? "bg-gradient-to-r from-red-500 to-red-600" : "bg-gradient-to-r from-blue-500 to-blue-600")}
                         style={{ width: `${Math.min(predictedProgress, 100)}%` }}
                       />
                     </div>
                   </div>
 
-                  {/* Remaining Budget */}
                   <div className={cn(
                     "p-4 rounded-xl border-2",
                     isOverBudget
@@ -691,10 +650,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                       <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
                         {isOverBudget ? "Acima do orçamento" : "Restante"}
                       </span>
-                      <span className={cn(
-                        "text-lg sm:text-xl font-bold tabular-nums",
-                        isOverBudget ? "text-red-600" : "text-emerald-600"
-                      )}>
+                      <span className={cn("text-lg sm:text-xl font-bold tabular-nums", isOverBudget ? "text-red-600" : "text-emerald-600")}>
                         {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
                       </span>
                     </div>
@@ -715,7 +671,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </div>
           </Card>
 
-          {/* Desktop table view */}
+          {/* Desktop table */}
           <Card className="p-0 overflow-hidden hidden md:block">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -753,7 +709,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </table>
           </Card>
 
-          {/* Mobile card view */}
+          {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
             {trip.expenses.length === 0 && (
               <Card>
@@ -784,12 +740,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             ))}
           </div>
 
-          {/* Quem pagou nas despesas rateadas */}
+          {/* Quem pagou */}
           {payerTotals.length > 0 && (
             <Card className="space-y-4">
               <h3 className="text-sm font-bold">Quem pagou nas despesas rateadas</h3>
-
-              {/* Legenda confirmado vs previsto */}
               <div className="flex items-center gap-4 text-[10px]">
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
@@ -800,45 +754,29 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                   <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Previsto</span>
                 </div>
               </div>
-
               <div className="space-y-3">
                 {payerTotals.map(({ name, amount, confirmedAmount }) => {
                   const maxAmount = payerTotals[0].amount;
                   const pct = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
                   const confirmedPct = maxAmount > 0 ? (confirmedAmount / maxAmount) * 100 : 0;
-
                   return (
                     <div key={name} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className={cn("font-medium", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
-                          {name}
-                        </span>
+                        <span className={cn("font-medium", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>{name}</span>
                         <div className="flex items-center gap-2 text-xs tabular-nums">
-                          <span className="text-emerald-600 font-semibold">
-                            {formatCurrency(confirmedAmount, settings.default_currency)}
-                          </span>
+                          <span className="text-emerald-600 font-semibold">{formatCurrency(confirmedAmount, settings.default_currency)}</span>
                           <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>/</span>
-                          <span className={cn("font-medium", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
-                            {formatCurrency(amount, settings.default_currency)}
-                          </span>
+                          <span className={cn("font-medium", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{formatCurrency(amount, settings.default_currency)}</span>
                         </div>
                       </div>
-
                       <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
-                        <div
-                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-400 opacity-40"
-                          style={{ width: `${pct}%` }}
-                        />
-                        <div
-                          className="absolute h-full rounded-full transition-all duration-500 bg-emerald-500"
-                          style={{ width: `${confirmedPct}%` }}
-                        />
+                        <div className="absolute h-full rounded-full transition-all duration-500 bg-blue-400 opacity-40" style={{ width: `${pct}%` }} />
+                        <div className="absolute h-full rounded-full transition-all duration-500 bg-emerald-500" style={{ width: `${confirmedPct}%` }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
-
               <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
                 Somente despesas com rateio entre membros · valores em {settings.default_currency}
               </p>
@@ -859,50 +797,25 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                       className={cn(
                         "p-3 rounded-xl border",
                         isCredit
-                          ? settings.dark_mode
-                            ? "bg-emerald-950/30 border-emerald-800/50"
-                            : "bg-emerald-50 border-emerald-200"
+                          ? settings.dark_mode ? "bg-emerald-950/30 border-emerald-800/50" : "bg-emerald-50 border-emerald-200"
                           : isDebt
-                          ? settings.dark_mode
-                            ? "bg-red-950/30 border-red-800/50"
-                            : "bg-red-50 border-red-200"
-                          : settings.dark_mode
-                          ? "bg-zinc-800 border-zinc-700"
-                          : "bg-zinc-50 border-zinc-200"
+                          ? settings.dark_mode ? "bg-red-950/30 border-red-800/50" : "bg-red-50 border-red-200"
+                          : settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
                       )}
                     >
-                      <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
-                        {m.name}
-                      </p>
+                      <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
                       <div className="flex flex-wrap gap-3">
                         <div>
-                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
-                            A receber
-                          </p>
-                          <p className="text-sm font-semibold text-emerald-600">
-                            {formatCurrency(m.aReceber, settings.default_currency)}
-                          </p>
+                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A receber</p>
+                          <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
                         </div>
                         <div>
-                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
-                            A pagar
-                          </p>
-                          <p className="text-sm font-semibold text-red-500">
-                            {formatCurrency(m.aPagar, settings.default_currency)}
-                          </p>
+                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A pagar</p>
+                          <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
                         </div>
                         <div className="ml-auto text-right">
-                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
-                            Saldo
-                          </p>
-                          <p className={cn(
-                            "text-sm font-bold",
-                            isCredit
-                              ? "text-emerald-600"
-                              : isDebt
-                              ? "text-red-500"
-                              : settings.dark_mode ? "text-zinc-300" : "text-zinc-600"
-                          )}>
+                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Saldo</p>
+                          <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : isDebt ? "text-red-500" : settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
                             {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
                           </p>
                         </div>
@@ -932,7 +845,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             currency={settings.default_currency}
             isDark={Boolean(settings.dark_mode)}
             settlements={settlements}
-            transfers={bilateralTransfers}
+            transfers={mergedTransfers}
             onSettleClick={() => {
               const simplified = simplifyDebts(rawBalances, settings.default_currency);
               setTransfers(simplified);
@@ -954,21 +867,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           currency={settings.default_currency}
           onClose={() => setShowSettlement(false)}
           isDark={settings.dark_mode}
-
           initialCompleted={new Set(
             settlements
-              .filter(s =>
-                transfers.some(
-                  t => t.from_member_id === s.from_member_id && t.to_member_id === s.to_member_id
-                )
-              )
+              .filter(s => transfers.some(t => t.from_member_id === s.from_member_id && t.to_member_id === s.to_member_id))
               .map(s => `${s.from_member_id}-${s.to_member_id}`)
           )}
-
           onMarkComplete={async (fromId, toId) => {
-            const transfer = transfers.find(
-              t => t.from_member_id === fromId && t.to_member_id === toId
-            );
+            const transfer = transfers.find(t => t.from_member_id === fromId && t.to_member_id === toId);
             if (transfer) {
               const { error } = await supabase.from("settlements").insert({
                 trip_id: tripId,
@@ -979,15 +884,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 date: new Date().toISOString(),
                 is_confirmed: true,
               });
-
-              if (error) {
-                toast(getErrorMessage(error), 'error');
-              } else {
-                await fetchBalanceData();
-              }
+              if (error) toast(getErrorMessage(error), 'error');
+              else await fetchBalanceData();
             }
           }}
-
           onUnmarkComplete={async (fromId, toId) => {
             const { error } = await supabase
               .from("settlements")
@@ -995,26 +895,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               .eq("trip_id", tripId)
               .eq("from_member_id", fromId)
               .eq("to_member_id", toId);
-
-            if (error) {
-              toast(getErrorMessage(error), 'error');
-            } else {
-              await fetchBalanceData();
-            }
+            if (error) toast(getErrorMessage(error), 'error');
+            else await fetchBalanceData();
           }}
-
           onFinalize={async () => {
             const { error } = await supabase
               .from("trip_settlement_status")
-              .upsert({
-                trip_id: tripId,
-                is_settled: true,
-                settled_at: new Date().toISOString(),
-              });
-
-            if (error) {
-              toast(getErrorMessage(error), 'error');
-            } else {
+              .upsert({ trip_id: tripId, is_settled: true, settled_at: new Date().toISOString() });
+            if (error) toast(getErrorMessage(error), 'error');
+            else {
               setShowSettlement(false);
               toast("Viagem quitada com sucesso!", "success");
             }
@@ -1022,7 +911,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         />
       )}
 
-      {/* Modal de edição de despesa (com splits) */}
+      {/* Modal de edição de despesa */}
       <Modal
         isOpen={showEditExpenseModal}
         onClose={closeEditExpenseModal}
@@ -1085,11 +974,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Moeda</label>
-              <CurrencySelector
-                value={editExpenseCurrency}
-                onChange={setEditExpenseCurrency}
-                isDark={settings.dark_mode}
-              />
+              <CurrencySelector value={editExpenseCurrency} onChange={setEditExpenseCurrency} isDark={settings.dark_mode} />
             </div>
           </div>
 
@@ -1120,17 +1005,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </label>
           </div>
 
-          {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
             <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
-
             <PayerSelector
               members={members}
               selectedPayerId={editExpensePayerId}
               currentUserId={currentMember?.user_id || ""}
               onSelect={setEditExpensePayerId}
             />
-
             <div className="space-y-2">
               <SplitSelector
                 key={`edit-expense-split-${editingExpense?.id || 'new'}`}
@@ -1145,7 +1027,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 initialSplits={editExpenseSplits}
                 initialSplitType={editExpenseSplitType}
               />
-
               {editExpenseSplits.length > 0 && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
                   <Unlock size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { TripMember } from "../types";
-import type { SimplifiedTransfer } from "../types";
 import { MemberBalance, Settlement } from "../types/splitting";
-import { formatCurrency, simplifyDebts } from "../utils/splitting";
+import { formatCurrency, simplifyDebts, mergeSpouseTransfers, GroupedTransfer } from "../utils/splitting";
 import { maskCurrency, parseCurrencyToNumber, cn } from "../utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
@@ -16,8 +15,11 @@ interface BalancesSummaryProps {
   onRegisterPayment: (fromMemberId: string, toMemberId: string, amount: number) => Promise<void>;
   onUndoPayment: (settlementId: string) => Promise<void>;
   isDark?: boolean;
-  /** Se fornecido, substitui o simplifyDebts interno (ex: transferências bilaterais) */
-  transfers?: SimplifiedTransfer[];
+  /**
+   * Se fornecido, usa esta lista de transferências em vez de computar pelo simplifyDebts.
+   * Aceita GroupedTransfer[] para exibir casais agrupados.
+   */
+  transfers?: GroupedTransfer[];
 }
 
 export function BalancesSummary({
@@ -36,8 +38,18 @@ export function BalancesSummary({
   const currentMemberBalance = balances.find((b) => b.member_id === currentMember?.id);
   const netBalance = currentMemberBalance?.net_balance ?? 0;
 
-  const allTransfers =
-    transfersProp !== undefined ? transfersProp : simplifyDebts(balances, currency);
+  // Se não receber transferências prontas, calcula via simplifyDebts e converte para GroupedTransfer
+  const allTransfers: GroupedTransfer[] = transfersProp !== undefined
+    ? transfersProp
+    : simplifyDebts(balances, currency).map((t) => ({
+        from_member_ids: [t.from_member_id],
+        to_member_ids: [t.to_member_id],
+        from_display_name: t.from_member_name,
+        to_display_name: t.to_member_name,
+        amount: t.amount,
+        currency: t.currency,
+      }));
+
   const hasBalances = allTransfers.length > 0;
 
   const [openPaymentKey, setOpenPaymentKey] = useState<string | null>(null);
@@ -47,8 +59,12 @@ export function BalancesSummary({
   const [expandedHistoryKey, setExpandedHistoryKey] = useState<string | null>(null);
   const [isPaymentsHistoryOpen, setIsPaymentsHistoryOpen] = useState(false);
 
-  const openPayment = (fromId: string, toId: string, suggestedAmount: number) => {
-    const key = `${fromId}-${toId}`;
+  // Chave única para um GroupedTransfer
+  const transferKey = (t: GroupedTransfer) =>
+    `${t.from_member_ids.join(",")}-${t.to_member_ids.join(",")}`;
+
+  const openPayment = (t: GroupedTransfer) => {
+    const key = transferKey(t);
     if (openPaymentKey === key) {
       setOpenPaymentKey(null);
       setPaymentAmount("");
@@ -56,15 +72,16 @@ export function BalancesSummary({
     }
     setOpenPaymentKey(key);
     setExpandedHistoryKey(null);
-    setPaymentAmount(maskCurrency(Math.round(suggestedAmount * 100).toFixed(0)));
+    setPaymentAmount(maskCurrency(Math.round(t.amount * 100).toFixed(0)));
   };
 
-  const submitPayment = async (fromId: string, toId: string) => {
-    const key = `${fromId}-${toId}`;
+  const submitPayment = async (t: GroupedTransfer) => {
+    const key = transferKey(t);
     const amount = parseCurrencyToNumber(paymentAmount);
     if (amount <= 0) return;
     setSavingKey(key);
-    await onRegisterPayment(fromId, toId, amount);
+    // Para casais, registra o pagamento usando o primeiro membro de cada grupo
+    await onRegisterPayment(t.from_member_ids[0], t.to_member_ids[0], amount);
     setSavingKey(null);
     setOpenPaymentKey(null);
     setPaymentAmount("");
@@ -76,9 +93,15 @@ export function BalancesSummary({
     setUndoingId(null);
   };
 
-  const getSettlementsForPair = (fromId: string, toId: string) =>
+  // Busca settlements para todos os pares de IDs do grupo
+  const getSettlementsForTransfer = (t: GroupedTransfer) =>
     settlements
-      .filter((s) => s.from_member_id === fromId && s.to_member_id === toId && s.is_confirmed)
+      .filter(
+        (s) =>
+          s.is_confirmed &&
+          t.from_member_ids.includes(s.from_member_id) &&
+          t.to_member_ids.includes(s.to_member_id)
+      )
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Helpers de tema
@@ -99,30 +122,18 @@ export function BalancesSummary({
 
   const statusTextMain = (pos: "pos" | "neg" | "neu") =>
     isDark
-      ? pos === "pos"
-        ? "text-green-100"
-        : pos === "neg"
-        ? "text-red-100"
-        : "text-slate-100"
+      ? pos === "pos" ? "text-green-100" : pos === "neg" ? "text-red-100" : "text-slate-100"
       : "text-slate-900";
 
   const statusTextSub = (pos: "pos" | "neg" | "neu") =>
     isDark
-      ? pos === "pos"
-        ? "text-green-200"
-        : pos === "neg"
-        ? "text-red-200"
-        : "text-slate-200"
+      ? pos === "pos" ? "text-green-200" : pos === "neg" ? "text-red-200" : "text-slate-200"
       : "text-slate-600";
 
   const lineText = (isCreditor: boolean) =>
     isDark
-      ? isCreditor
-        ? "text-green-200"
-        : "text-red-200"
-      : isCreditor
-      ? "text-green-800"
-      : "text-red-800";
+      ? isCreditor ? "text-green-200" : "text-red-200"
+      : isCreditor ? "text-green-800" : "text-red-800";
 
   const overallKind: "pos" | "neg" | "neu" =
     netBalance > 0 ? "pos" : netBalance < 0 ? "neg" : "neu";
@@ -131,7 +142,7 @@ export function BalancesSummary({
 
   return (
     <div className="space-y-4">
-      {/* Saldo geral */}
+      {/* Saldo geral do usuário atual (individual, não agrupado) */}
       <div className={`p-6 rounded-xl border ${statusBg(overallKind)}`}>
         <div className="text-center">
           <p className={`text-sm mb-2 ${statusTextSub(overallKind)}`}>Seu saldo</p>
@@ -154,15 +165,53 @@ export function BalancesSummary({
           <h3 className={`font-bold mb-4 ${textNeutralMain}`}>Detalhamento</h3>
 
           {allTransfers.map((transfer) => {
-            const isCurrentUserDebtor = transfer.from_member_id === currentMember?.id;
-            const isCurrentUserCreditor = transfer.to_member_id === currentMember?.id;
+            const myId = currentMember?.id ?? "";
+            const spouseId = currentMember?.spouse_member_id ?? null;
+
+            // O usuário (ou seu cônjuge) está no grupo "de"?
+            const isCurrentUserDebtor =
+              transfer.from_member_ids.includes(myId) ||
+              (spouseId ? transfer.from_member_ids.includes(spouseId) : false);
+
+            // O usuário (ou seu cônjuge) está no grupo "para"?
+            const isCurrentUserCreditor =
+              transfer.to_member_ids.includes(myId) ||
+              (spouseId ? transfer.to_member_ids.includes(spouseId) : false);
+
             const isInvolved = isCurrentUserDebtor || isCurrentUserCreditor;
 
-            const fromName = isCurrentUserDebtor ? "Você" : transfer.from_member_name;
-            const toName = isCurrentUserCreditor ? "Você" : transfer.to_member_name;
+            // Nome do grupo "de"
+            const buildFromName = () => {
+              if (!isCurrentUserDebtor) return transfer.from_display_name;
+              // Substitui o nome do usuário atual (e do cônjuge se presente) por "Você"
+              const parts = transfer.from_member_ids.map((id) => {
+                const m = members.find((x) => x.id === id);
+                if (id === myId || id === spouseId) return "Você";
+                return m?.display_name ?? "?";
+              });
+              // Deduplica "Você/Você" → "Você"
+              const unique = [...new Set(parts)];
+              return unique.join("/");
+            };
+
+            const buildToName = () => {
+              if (!isCurrentUserCreditor) return transfer.to_display_name;
+              const parts = transfer.to_member_ids.map((id) => {
+                const m = members.find((x) => x.id === id);
+                if (id === myId || id === spouseId) return "você";
+                return m?.display_name ?? "?";
+              });
+              const unique = [...new Set(parts)];
+              return unique.join("/");
+            };
+
+            const fromName = buildFromName();
+            const toName = buildToName();
+
+            // Initial para o avatar
             const fromInitial = isCurrentUserDebtor
               ? "V"
-              : transfer.from_member_name.charAt(0).toUpperCase();
+              : transfer.from_display_name.charAt(0).toUpperCase();
 
             const chipColor = isCurrentUserDebtor
               ? "bg-red-600 text-white"
@@ -172,24 +221,19 @@ export function BalancesSummary({
               ? "bg-slate-600 text-white"
               : "bg-slate-400 text-white";
 
-            const key = `${transfer.from_member_id}-${transfer.to_member_id}`;
+            const key = transferKey(transfer);
             const isPaymentOpen = openPaymentKey === key;
             const isHistoryOpen = expandedHistoryKey === key;
-            const pairSettlements = getSettlementsForPair(
-              transfer.from_member_id,
-              transfer.to_member_id
-            );
+            const pairSettlements = getSettlementsForTransfer(transfer);
             const paidAmount = pairSettlements.reduce((sum, s) => sum + s.amount, 0);
             const remaining = Math.max(0, transfer.amount - paidAmount);
 
+            // Se é um grupo casal, mostra um badge indicando isso
+            const isFromCouple = transfer.from_member_ids.length > 1;
+            const isToCouple = transfer.to_member_ids.length > 1;
+
             return (
-              <div
-                key={key}
-                className={cn(
-                  "rounded-xl border overflow-hidden",
-                  surfaceNeutral
-                )}
-              >
+              <div key={key} className={cn("rounded-xl border overflow-hidden", surfaceNeutral)}>
                 {/* Linha principal */}
                 <div className="px-4 py-3 flex items-center gap-3">
                   {/* Avatar */}
@@ -199,7 +243,9 @@ export function BalancesSummary({
                       chipColor
                     )}
                   >
-                    {fromInitial}
+                    {isFromCouple && !isCurrentUserDebtor
+                      ? transfer.from_display_name.charAt(0).toUpperCase()
+                      : fromInitial}
                   </div>
 
                   {/* Texto */}
@@ -216,12 +262,16 @@ export function BalancesSummary({
                           · {formatCurrency(remaining, currency)} restante
                         </span>
                       )}
+                      {(isFromCouple || isToCouple) && (
+                        <span className={cn("ml-1", isDark ? "text-slate-500" : "text-slate-400")}>
+                          · casal
+                        </span>
+                      )}
                     </p>
                   </div>
 
                   {/* Botões */}
                   <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                    {/* Histórico */}
                     {pairSettlements.length > 0 && (
                       <button
                         type="button"
@@ -231,38 +281,23 @@ export function BalancesSummary({
                         className={cn(
                           "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
                           isHistoryOpen
-                            ? isDark
-                              ? "bg-slate-700 text-slate-300"
-                              : "bg-slate-100 text-slate-600"
-                            : isDark
-                            ? "bg-slate-700 text-slate-400 hover:text-slate-200"
-                            : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                            : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
                         )}
                       >
                         {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
                       </button>
                     )}
 
-                    {/* Botão registrar pagamento */}
                     {isInvolved && (
                       <button
                         type="button"
-                        onClick={() =>
-                          openPayment(
-                            transfer.from_member_id,
-                            transfer.to_member_id,
-                            transfer.amount
-                          )
-                        }
+                        onClick={() => openPayment(transfer)}
                         className={cn(
                           "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
                           isPaymentOpen
-                            ? isDark
-                              ? "bg-slate-700 text-slate-300"
-                              : "bg-slate-100 text-slate-600"
-                            : isDark
-                            ? "bg-blue-700 hover:bg-blue-600 text-white"
-                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                            : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
                         )}
                       >
                         {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
@@ -271,60 +306,51 @@ export function BalancesSummary({
                   </div>
                 </div>
 
-                {/* Histórico de pagamentos com desfazer */}
+                {/* Histórico de pagamentos */}
                 {isHistoryOpen && (
                   <div
                     className={cn(
                       "border-t px-4 py-3 space-y-2",
-                      isDark
-                        ? "border-slate-700 bg-slate-800/40"
-                        : "border-slate-100 bg-slate-50"
+                      isDark ? "border-slate-700 bg-slate-800/40" : "border-slate-100 bg-slate-50"
                     )}
                   >
-                    <p
-                      className={cn(
-                        "text-xs font-semibold uppercase mb-2",
-                        isDark ? "text-slate-400" : "text-slate-500"
-                      )}
-                    >
+                    <p className={cn("text-xs font-semibold uppercase mb-2", isDark ? "text-slate-400" : "text-slate-500")}>
                       Pagamentos registrados
                     </p>
-                    {pairSettlements.map((s) => (
-                      <div key={s.id} className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "flex-1 text-sm font-medium",
-                            isDark ? "text-slate-200" : "text-slate-700"
-                          )}
-                        >
-                          {formatCurrency(s.amount, s.currency)}
-                        </span>
-                        <span
-                          className={cn(
-                            "text-xs",
-                            isDark ? "text-slate-500" : "text-slate-400"
-                          )}
-                        >
-                          {new Date(s.date).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                          })}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleUndoPayment(s.id)}
-                          disabled={undoingId === s.id}
-                          className={cn(
-                            "text-xs px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-40",
-                            isDark
-                              ? "bg-slate-700 text-slate-300 hover:bg-red-900/40 hover:text-red-300"
-                              : "bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600"
-                          )}
-                        >
-                          {undoingId === s.id ? "..." : "Desfazer"}
-                        </button>
-                      </div>
-                    ))}
+                    {pairSettlements.map((s) => {
+                      const fromM = members.find((m) => m.id === s.from_member_id);
+                      const toM = members.find((m) => m.id === s.to_member_id);
+                      const isFromMe = s.from_member_id === myId || s.from_member_id === spouseId;
+                      const isToMe = s.to_member_id === myId || s.to_member_id === spouseId;
+                      const fName = isFromMe ? "Você" : (fromM?.display_name ?? "?");
+                      const tName = isToMe ? "você" : (toM?.display_name ?? "?");
+                      return (
+                        <div key={s.id} className="flex items-center gap-3">
+                          <span className={cn("flex-1 text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
+                            {formatCurrency(s.amount, s.currency)}
+                            <span className={cn("ml-1 text-xs font-normal", isDark ? "text-slate-400" : "text-slate-500")}>
+                              ({fName} → {tName})
+                            </span>
+                          </span>
+                          <span className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
+                            {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUndoPayment(s.id)}
+                            disabled={undoingId === s.id}
+                            className={cn(
+                              "text-xs px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-40",
+                              isDark
+                                ? "bg-slate-700 text-slate-300 hover:bg-red-900/40 hover:text-red-300"
+                                : "bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                            )}
+                          >
+                            {undoingId === s.id ? "..." : "Desfazer"}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -333,17 +359,10 @@ export function BalancesSummary({
                   <div
                     className={cn(
                       "border-t px-4 py-3 space-y-3",
-                      isDark
-                        ? "border-slate-700 bg-slate-800/60"
-                        : "border-slate-100 bg-slate-50"
+                      isDark ? "border-slate-700 bg-slate-800/60" : "border-slate-100 bg-slate-50"
                     )}
                   >
-                    <p
-                      className={cn(
-                        "text-xs font-semibold uppercase",
-                        isDark ? "text-slate-400" : "text-slate-500"
-                      )}
-                    >
+                    <p className={cn("text-xs font-semibold uppercase", isDark ? "text-slate-400" : "text-slate-500")}>
                       Valor pago
                     </p>
                     <div className="flex gap-2">
@@ -351,9 +370,7 @@ export function BalancesSummary({
                         type="text"
                         inputMode="numeric"
                         value={paymentAmount}
-                        onChange={(e) =>
-                          setPaymentAmount(maskCurrency(e.target.value))
-                        }
+                        onChange={(e) => setPaymentAmount(maskCurrency(e.target.value))}
                         placeholder="0,00"
                         className={cn(
                           "flex-1 px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2",
@@ -364,12 +381,7 @@ export function BalancesSummary({
                       />
                       <button
                         type="button"
-                        onClick={() =>
-                          void submitPayment(
-                            transfer.from_member_id,
-                            transfer.to_member_id
-                          )
-                        }
+                        onClick={() => void submitPayment(transfer)}
                         disabled={savingKey === key}
                         className={cn(
                           "px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50",
@@ -389,10 +401,9 @@ export function BalancesSummary({
         </div>
       )}
 
-      {/* Histórico global de pagamentos registrados — colapsável */}
+      {/* Histórico global de pagamentos — colapsável */}
       {confirmedSettlements.length > 0 && (
         <div className={cn("rounded-lg border overflow-hidden", surfaceNeutral)}>
-          {/* Cabeçalho colapsável */}
           <button
             type="button"
             onClick={() => setIsPaymentsHistoryOpen((v) => !v)}
@@ -405,103 +416,56 @@ export function BalancesSummary({
               <span className={cn("font-semibold text-sm", textNeutralMain)}>
                 Pagamentos registrados
               </span>
-              <span
-                className={cn(
-                  "text-xs font-semibold px-2 py-0.5 rounded-full",
-                  isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-500"
-                )}
-              >
+              <span className={cn(
+                "text-xs font-semibold px-2 py-0.5 rounded-full",
+                isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-500"
+              )}>
                 {confirmedSettlements.length}
               </span>
             </div>
-            {isPaymentsHistoryOpen ? (
-              <ChevronUp
-                size={16}
-                className={isDark ? "text-slate-400" : "text-slate-500"}
-              />
-            ) : (
-              <ChevronDown
-                size={16}
-                className={isDark ? "text-slate-400" : "text-slate-500"}
-              />
-            )}
+            {isPaymentsHistoryOpen
+              ? <ChevronUp size={16} className={isDark ? "text-slate-400" : "text-slate-500"} />
+              : <ChevronDown size={16} className={isDark ? "text-slate-400" : "text-slate-500"} />
+            }
           </button>
 
-          {/* Lista de pagamentos */}
           {isPaymentsHistoryOpen && (
-            <div
-              className={cn(
-                "border-t divide-y",
-                isDark
-                  ? "border-slate-700 divide-slate-700"
-                  : "border-slate-100 divide-slate-100"
-              )}
-            >
+            <div className={cn(
+              "border-t divide-y",
+              isDark ? "border-slate-700 divide-slate-700" : "border-slate-100 divide-slate-100"
+            )}>
               {confirmedSettlements
-                .sort(
-                  (a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                )
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((s) => {
                   const fromMember = members.find((m) => m.id === s.from_member_id);
                   const toMember = members.find((m) => m.id === s.to_member_id);
-                  const isFromMe = s.from_member_id === currentMember?.id;
-                  const isToMe = s.to_member_id === currentMember?.id;
-                  const fromName = isFromMe
-                    ? "Você"
-                    : (fromMember?.display_name ?? "?");
+                  const myId = currentMember?.id ?? "";
+                  const spouseId = currentMember?.spouse_member_id ?? null;
+                  const isFromMe = s.from_member_id === myId || s.from_member_id === spouseId;
+                  const isToMe = s.to_member_id === myId || s.to_member_id === spouseId;
+                  const fromName = isFromMe ? "Você" : (fromMember?.display_name ?? "?");
                   const toName = isToMe ? "você" : (toMember?.display_name ?? "?");
 
                   return (
                     <div key={s.id} className="px-4 py-3 flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
-                          isFromMe
-                            ? "bg-red-600 text-white"
-                            : isToMe
-                            ? "bg-green-600 text-white"
-                            : "bg-slate-400 text-white"
-                        )}
-                      >
-                        {isFromMe
-                          ? "V"
-                          : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
+                        isFromMe ? "bg-red-600 text-white" : isToMe ? "bg-green-600 text-white" : "bg-slate-400 text-white"
+                      )}>
+                        {isFromMe ? "V" : (fromMember?.display_name?.charAt(0).toUpperCase() ?? "?")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p
-                          className={cn(
-                            "text-sm font-medium leading-tight",
-                            textNeutralSub
-                          )}
-                        >
+                        <p className={cn("text-sm font-medium leading-tight", textNeutralSub)}>
                           {fromName} pagou {toName}
                         </p>
-                        <p
-                          className={cn(
-                            "text-xs",
-                            isDark ? "text-slate-500" : "text-slate-400"
-                          )}
-                        >
-                          {new Date(s.date).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                        <p className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
+                          {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                         </p>
                       </div>
-                      <p
-                        className={cn(
-                          "text-sm font-bold tabular-nums shrink-0",
-                          isFromMe
-                            ? "text-red-500"
-                            : isToMe
-                            ? "text-green-600"
-                            : isDark
-                            ? "text-slate-300"
-                            : "text-slate-700"
-                        )}
-                      >
+                      <p className={cn(
+                        "text-sm font-bold tabular-nums shrink-0",
+                        isFromMe ? "text-red-500" : isToMe ? "text-green-600" : isDark ? "text-slate-300" : "text-slate-700"
+                      )}>
                         {formatCurrency(s.amount, s.currency)}
                       </p>
                     </div>
@@ -513,12 +477,10 @@ export function BalancesSummary({
       )}
 
       {!hasBalances && confirmedSettlements.length === 0 && (
-        <div
-          className={cn(
-            "p-6 rounded-xl border text-center",
-            isDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
-          )}
-        >
+        <div className={cn(
+          "p-6 rounded-xl border text-center",
+          isDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
+        )}>
           <p className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-500")}>
             Nenhum saldo pendente entre os participantes.
           </p>
