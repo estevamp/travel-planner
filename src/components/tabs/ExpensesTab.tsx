@@ -1032,9 +1032,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               />
               {editExpenseSplits.length > 0 && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
-                  <Unlock size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                  <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300">
-                    Despesas com rateio são obrigatoriamente públicas para que todos os envolvidos possam visualizá-las.
+                  <Unlock size={14} className="text-blue-800 dark:text-blue-400 flex-shrink-0" />
+                  <p className="text-[10px] font-medium text-blue-300 dark:text-blue-300">
+                    Despesas com rateio são obrigatoriamente públicas.
                   </p>
                 </div>
               )}
