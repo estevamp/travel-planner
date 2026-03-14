@@ -135,28 +135,24 @@ export function SplitSelector({
           <button
             type="button"
             onClick={() => handleSetSplitType("equal")}
-            className={`
-              px-3 py-1 rounded-md text-sm font-medium transition-all
-              ${
-                splitType === "equal"
-                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                  : "bg-[var(--sidebar-hover)] text-zinc-900 dark:text-zinc-100"
-              }
-            `}
+            className={cn(
+              "px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all duration-200",
+              splitType === "equal"
+                ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "border-[var(--card-border)] bg-[var(--card-bg)] opacity-60 hover:opacity-100"
+            )}
           >
             Dividir igualmente
           </button>
           <button
             type="button"
             onClick={() => handleSetSplitType("unequal")}
-            className={`
-              px-3 py-1 rounded-md text-sm font-medium transition-all
-              ${
-                splitType === "unequal"
-                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                  : "bg-[var(--sidebar-hover)] text-zinc-900 dark:text-zinc-100"
-              }
-            `}
+            className={cn(
+              "px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all duration-200",
+              splitType === "unequal"
+                ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "border-[var(--card-border)] bg-[var(--card-bg)] opacity-60 hover:opacity-100"
+            )}
           >
             Divisão desigual
           </button>
