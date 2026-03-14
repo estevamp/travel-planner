@@ -1011,12 +1011,12 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             />
 
             {expenseSplits.length > 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50">
                 <Unlock size={14} className="text-blue-800 dark:text-blue-400 flex-shrink-0" />
-                <p className="text-[10px] font-bold text-[var(--sidebar-active-text)] dark:text-blue-300">
+                <p className="text-[10px] font-bold text-white dark:text-blue-300">
                   Despesas com rateio são obrigatoriamente públicas.
                 </p>
-              </div>
+                </div>
             )}
           </div>
           
