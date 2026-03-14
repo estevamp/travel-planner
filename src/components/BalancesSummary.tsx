@@ -221,6 +221,7 @@ export function BalancesSummary({
             const isPaymentOpen = openPaymentKey === key;
             const isHistoryOpen = expandedHistoryKey === key;
             const pairSettlements = getSettlementsForTransfer(transfer);
+            const hasPastPayments = pairSettlements.length > 0;
             const paidAmount = pairSettlements.reduce((sum, s) => sum + s.amount, 0);
             const remaining = Math.max(0, transfer.amount - paidAmount);
 
@@ -272,7 +273,7 @@ export function BalancesSummary({
                       {isInvolved && (
                         <button
                           type="button"
-                          onClick={() => openPayment(transfer.from_member_id, transfer.to_member_id, transfer.amount)}
+                          onClick={() => openPayment(transfer)}
                           className={cn(
                             "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
                             isPaymentOpen
