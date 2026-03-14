@@ -13,7 +13,7 @@ interface DeleteItineraryParams {
 }
 
 interface UseDeleteItineraryReturn {
-  delete: (params: DeleteItineraryParams) => Promise<void>;
+  deleteItem: (params: DeleteItineraryParams) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -72,5 +72,5 @@ export function useDeleteItinerary(deps: UseDeleteItineraryDeps): UseDeleteItine
     }
   };
 
-  return { delete: deleteItem, isSubmitting };
+  return { deleteItem: deleteItinerary, isSubmitting };
 }

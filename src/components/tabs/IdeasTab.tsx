@@ -30,7 +30,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const { update: updateIdea } = useUpdateIdea({ enqueue, isOnline });
-  const { delete: deleteIdea } = useDeleteIdea({ enqueue, isOnline });
+  const { deleteItem: deleteIdea } = useDeleteIdea({ enqueue, isOnline });
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);

@@ -13,7 +13,7 @@ interface DeleteExpenseParams {
 }
 
 interface UseDeleteExpenseReturn {
-  delete: (params: DeleteExpenseParams) => Promise<void>;
+  deleteItem: (params: DeleteExpenseParams) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -72,5 +72,5 @@ export function useDeleteExpense(deps: UseDeleteExpenseDeps): UseDeleteExpenseRe
     }
   };
 
-  return { delete: deleteExpense, isSubmitting };
+  return { deleteItem: deleteExpense, isSubmitting };
 }

@@ -386,7 +386,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     enqueue,
     isOnline,
   });
-  const { delete: deleteItineraryItem, isSubmitting: isDeletingItinerary } = useDeleteItinerary({
+  const { deleteItem: deleteItineraryItem, isSubmitting: isDeletingItinerary } = useDeleteItinerary({
     enqueue,
     isOnline,
   });

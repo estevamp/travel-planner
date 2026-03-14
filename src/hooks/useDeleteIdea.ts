@@ -13,7 +13,7 @@ interface DeleteIdeaParams {
 }
 
 interface UseDeleteIdeaReturn {
-  delete: (params: DeleteIdeaParams) => Promise<void>;
+  deleteItem: (params: DeleteIdeaParams) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -72,5 +72,5 @@ export function useDeleteIdea(deps: UseDeleteIdeaDeps): UseDeleteIdeaReturn {
     }
   };
 
-  return { delete: deleteIdea, isSubmitting };
+  return { deleteItem: deleteIdea, isSubmitting };
 }

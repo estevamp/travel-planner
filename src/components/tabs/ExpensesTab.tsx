@@ -60,7 +60,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     isOnline,
     onSuccess: fetchBalanceData,
   });
-  const { delete: deleteExpenseItem, isSubmitting: isDeletingExpense } = useDeleteExpense({
+  const { deleteItem: deleteExpenseItem, isSubmitting: isDeletingExpense } = useDeleteExpense({
     enqueue,
     isOnline,
     onSuccess: fetchBalanceData,
