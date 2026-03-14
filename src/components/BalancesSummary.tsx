@@ -230,78 +230,62 @@ export function BalancesSummary({
 
             return (
               <div key={key} className={cn("rounded-xl border overflow-hidden", surfaceNeutral)}>
-                {/* Linha principal */}
-                <div className="px-4 py-3 flex items-center gap-3">
-                  {/* Avatar */}
-                  <div
-                    className={cn(
-                      "w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
-                      chipColor
-                    )}
-                  >
-                    {isFromCouple && !isCurrentUserDebtor
-                      ? transfer.from_display_name.charAt(0).toUpperCase()
-                      : fromInitial}
+
+
+                {/* Linha principal — 2 linhas: info em cima, ações embaixo */}
+                <div className="p-4">
+                  {/* Linha 1: avatar + texto (sem competição com botões) */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${chipColor}`}>
+                      {fromInitial}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
+                      <p className={`text-sm ${lineText(isCurrentUserCreditor)}`}>
+                        deve <strong>{formatCurrency(transfer.amount, currency)}</strong> para <strong>{toName}</strong>
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Texto */}
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-semibold leading-tight", textNeutralMain)}>
-                      <span className={lineText(!isCurrentUserDebtor)}>{fromName}</span>
-                      <span className={isDark ? " text-slate-400" : " text-slate-500"}> paga </span>
-                      <span className={lineText(isCurrentUserCreditor)}>{toName}</span>
-                    </p>
-                    <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                      {formatCurrency(transfer.amount, currency)}
-                      {paidAmount > 0 && (
-                        <span className="ml-1 text-emerald-500">
-                          · {formatCurrency(remaining, currency)} restante
-                        </span>
+                  {/* Linha 2: ações alinhadas à direita (não comprime o texto) */}
+                  {(hasPastPayments || isInvolved) && (
+                    <div className="flex items-center justify-end gap-2 mt-2">
+                      {hasPastPayments && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedHistoryKey(isHistoryOpen ? null : key);
+                            setOpenPaymentKey(null);
+                            setPaymentAmount("");
+                          }}
+                          title="Ver pagamentos registrados"
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-semibold transition-colors",
+                            isHistoryOpen
+                              ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                              : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                          )}
+                        >
+                          {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
+                        </button>
                       )}
-                      {(isFromCouple || isToCouple) && (
-                        <span className={cn("ml-1", isDark ? "text-slate-500" : "text-slate-400")}>
-                          · casal
-                        </span>
+                      {isInvolved && (
+                        <button
+                          type="button"
+                          onClick={() => openPayment(transfer.from_member_id, transfer.to_member_id, transfer.amount)}
+                          className={cn(
+                            "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
+                            isPaymentOpen
+                              ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                              : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                          )}
+                        >
+                          {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
+                        </button>
                       )}
-                    </p>
-                  </div>
-
-                  {/* Botões */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                    {pairSettlements.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedHistoryKey(isHistoryOpen ? null : key)
-                        }
-                        className={cn(
-                          "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
-                          isHistoryOpen
-                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
-                            : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
-                        )}
-                      >
-                        {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
-                      </button>
-                    )}
-
-                    {isInvolved && (
-                      <button
-                        type="button"
-                        onClick={() => openPayment(transfer)}
-                        className={cn(
-                          "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
-                          isPaymentOpen
-                            ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
-                            : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-                        )}
-                      >
-                        {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-
                 {/* Histórico de pagamentos */}
                 {isHistoryOpen && (
                   <div
