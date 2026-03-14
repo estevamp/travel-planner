@@ -10,6 +10,7 @@ interface DeleteIdeaParams {
   title: string;
   tripId: string;
   isDark?: boolean;
+  skipConfirm?: boolean;
 }
 
 interface UseDeleteIdeaReturn {
@@ -30,16 +31,18 @@ export function useDeleteIdea(deps: UseDeleteIdeaDeps): UseDeleteIdeaReturn {
   const { enqueue, isOnline, onSuccess } = deps;
 
   const deleteIdea = async (params: DeleteIdeaParams): Promise<void> => {
-    const { ideaId, title, tripId, isDark } = params;
+    const { ideaId, title, tripId, isDark, skipConfirm } = params;
 
-    const confirmed = await confirm({
-      title: "Remover ideia?",
-      message: `Remover a ideia "${title}"? Esta ação não pode ser desfeita.`,
-      variant: "danger",
-      isDark: isDark || false,
-    });
+    if (!skipConfirm) {
+      const confirmed = await confirm({
+        title: "Remover ideia?",
+        message: `Remover a ideia "${title}"? Esta ação não pode ser desfeita.`,
+        variant: "danger",
+        isDark: isDark || false,
+      });
 
-    if (!confirmed) return;
+      if (!confirmed) return;
+    }
 
     setIsSubmitting(true);
     try {

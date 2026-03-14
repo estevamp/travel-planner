@@ -462,19 +462,28 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   };
 
   const deleteExpenseHandler = async (expense: Expense) => {
-    // Optimistic update
+    const confirmed = await confirm({
+      title: "Remover despesa?",
+      message: `Remover a despesa "${expense.description}"? Esta ação não pode ser desfeita.`,
+      variant: "danger",
+      isDark: settings.dark_mode,
+    });
+    if (!confirmed) return;
+  
+    // Optimistic update — só executa após confirmação do usuário
     onTripUpdate((prev) => ({
       ...prev,
       expenses: prev.expenses.filter((exp) => exp.id !== expense.id),
     }));
-
+  
     await deleteExpenseItem({
       expenseId: expense.id,
       description: expense.description,
       tripId: tripId!,
       isDark: settings.dark_mode,
+      skipConfirm: true, // confirmação já foi feita acima
     });
-    
+  
     await fetchBalanceData();
   };
 

@@ -10,6 +10,7 @@ interface DeleteExpenseParams {
   description: string;
   tripId: string;
   isDark?: boolean;
+  skipConfirm?: boolean;
 }
 
 interface UseDeleteExpenseReturn {
@@ -30,16 +31,18 @@ export function useDeleteExpense(deps: UseDeleteExpenseDeps): UseDeleteExpenseRe
   const { enqueue, isOnline, onSuccess } = deps;
 
   const deleteExpense = async (params: DeleteExpenseParams): Promise<void> => {
-    const { expenseId,  description, tripId, isDark } = params;
+    const { expenseId, description, tripId, isDark, skipConfirm } = params;
 
-    const confirmed = await confirm({
-      title: "Remover despesa?",
-      message: `Remover a despesa "${description}"? Esta ação não pode ser desfeita.`,
-      variant: "danger",
-      isDark: isDark || false,
-    });
+    if (!skipConfirm) {
+      const confirmed = await confirm({
+        title: "Remover despesa?",
+        message: `Remover a despesa "${description}"? Esta ação não pode ser desfeita.`,
+        variant: "danger",
+        isDark: isDark || false,
+      });
 
-    if (!confirmed) return;
+      if (!confirmed) return;
+    }
 
     setIsSubmitting(true);
     try {

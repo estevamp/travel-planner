@@ -10,6 +10,7 @@ interface DeleteItineraryParams {
   title: string;
   tripId: string;
   isDark?: boolean;
+  skipConfirm?: boolean;
 }
 
 interface UseDeleteItineraryReturn {
@@ -30,16 +31,18 @@ export function useDeleteItinerary(deps: UseDeleteItineraryDeps): UseDeleteItine
   const { enqueue, isOnline, onSuccess } = deps;
 
   const deleteItem = async (params: DeleteItineraryParams): Promise<void> => {
-    const { itemId, title, tripId, isDark } = params;
+    const { itemId, title, tripId, isDark, skipConfirm } = params;
 
-    const confirmed = await confirm({
-      title: "Remover atividade?",
-      message: `Remover a atividade "${title}"? Esta ação não pode ser desfeita.`,
-      variant: "danger",
-      isDark: isDark || false,
-    });
+    if (!skipConfirm) {
+      const confirmed = await confirm({
+        title: "Remover atividade?",
+        message: `Remover a atividade "${title}"? Esta ação não pode ser desfeita.`,
+        variant: "danger",
+        isDark: isDark || false,
+      });
 
-    if (!confirmed) return;
+      if (!confirmed) return;
+    }
 
     setIsSubmitting(true);
     try {

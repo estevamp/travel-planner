@@ -144,18 +144,28 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   };
 
   const deleteIdeaHandler = async (idea: Idea) => {
-    // Optimistic update
+    const confirmed = await confirm({
+      title: "Remover ideia?",
+      message: `Remover a ideia "${idea.title}"? Esta ação não pode ser desfeita.`,
+      variant: "danger",
+      isDark: settings.dark_mode,
+    });
+    if (!confirmed) return;
+  
+    // Optimistic update — só executa após confirmação do usuário
     onTripUpdate((prev) => ({
       ...prev,
       ideas: prev.ideas.filter((i) => i.id !== idea.id),
       idea_links: (prev.idea_links || []).filter((l) => l.idea_id !== idea.id),
       idea_assets: (prev.idea_assets || []).filter((a) => a.idea_id !== idea.id),
     }));
+  
     await deleteIdea({
       ideaId: idea.id,
       title: idea.title,
       tripId: trip.id,
       isDark: settings.dark_mode,
+      skipConfirm: true, // confirmação já foi feita acima
     });
   };
 

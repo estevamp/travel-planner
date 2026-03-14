@@ -522,17 +522,26 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   };
 
   const deleteItineraryItemHandler = async (item: ItineraryItem) => {
-    // Optimistic update
+    const confirmed = await confirm({
+      title: "Remover atividade?",
+      message: `Remover a atividade "${item.title}"? Esta ação não pode ser desfeita.`,
+      variant: "danger",
+      isDark: settings.dark_mode,
+    });
+    if (!confirmed) return;
+  
+    // Optimistic update — só executa após confirmação do usuário
     onTripUpdate((prev) => ({
       ...prev,
       itinerary: prev.itinerary.filter((i) => i.id !== item.id),
     }));
-
+  
     await deleteItineraryItem({
       itemId: item.id,
       title: item.title,
       tripId: trip.id,
       isDark: settings.dark_mode,
+      skipConfirm: true, // confirmação já foi feita acima
     });
   };
 
