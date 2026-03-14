@@ -140,7 +140,7 @@ export function SplitSelector({
               ${
                 splitType === "equal"
                   ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300"
+                  : "bg-[var(--sidebar-hover)] text-zinc-900 dark:text-zinc-100"
               }
             `}
           >
@@ -154,7 +154,7 @@ export function SplitSelector({
               ${
                 splitType === "unequal"
                   ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300"
+                  : "bg-[var(--sidebar-hover)] text-zinc-900 dark:text-zinc-100"
               }
             `}
           >
@@ -229,20 +229,6 @@ export function SplitSelector({
         </div>
       )}
 
-      {selectedMembers.size > 0 && (
-        <div
-          className="p-3 rounded-lg border-2"
-          style={{
-            backgroundColor: 'var(--input-focus-ring)',
-            borderColor: 'var(--accent-color)'
-          }}
-        >
-          <p className="text-sm" style={{ color: 'var(--accent-color)' }}>
-            {selectedMembers.size} {selectedMembers.size === 1 ? "pessoa" : "pessoas"}{" "}
-            selecionada{selectedMembers.size === 1 ? "" : "s"}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
