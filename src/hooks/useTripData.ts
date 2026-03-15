@@ -85,15 +85,24 @@ export function useTripData(tripId: string | undefined, userId: string) {
       setSpouseByUserId(new Map());
     }
 
-    const me = nextMembers.find((member) => member.user_id === userId);
-    if (!me) {
+  const me = nextMembers.find((member) => member.user_id === userId);
+  if (!me) {
+    // Verificar se é superuser antes de bloquear
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("is_superuser")
+      .eq("user_id", userId)
+      .single();
+
+    if (!profileData?.is_superuser) {
       setNotAuthorized(true);
       setTrip(null);
       setInvites([]);
       setLoading(false);
       return;
     }
-    setNotAuthorized(false);
+  }
+  setNotAuthorized(false);
 
     if (me.role === "admin") {
       const { data, error } = await supabase.from("trip_invites").select("id,email,token,accepted_at,created_at").eq("trip_id", id).order("created_at", { ascending: false });
