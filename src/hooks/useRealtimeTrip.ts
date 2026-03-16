@@ -41,9 +41,6 @@ export function useRealtimeTrip(
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `trip_id=eq.${tripId}` }, () =>
         debounced("expenses", () => callbacksRef.current.onExpensesChange())
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "expense_splits" }, () =>
-        debounced("expenses", () => callbacksRef.current.onExpensesChange())
-      )
       .on("postgres_changes", { event: "*", schema: "public", table: "settlements", filter: `trip_id=eq.${tripId}` }, () =>
         debounced("expenses", () => callbacksRef.current.onExpensesChange())
       )
@@ -51,12 +48,6 @@ export function useRealtimeTrip(
         debounced("documents", () => callbacksRef.current.onDocumentsChange())
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "ideas", filter: `trip_id=eq.${tripId}` }, () =>
-        debounced("ideas", () => callbacksRef.current.onIdeasChange())
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "idea_links" }, () =>
-        debounced("ideas", () => callbacksRef.current.onIdeasChange())
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "idea_assets" }, () =>
         debounced("ideas", () => callbacksRef.current.onIdeasChange())
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${tripId}` }, () =>
@@ -67,12 +58,6 @@ export function useRealtimeTrip(
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_budgets", filter: `trip_id=eq.${tripId}` }, () =>
         debounced("budget", () => callbacksRef.current.onBudgetChange())
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () =>
-        debounced("global", () => callbacksRef.current.onGlobalCatalogChange())
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "itinerary_types" }, () =>
-        debounced("global", () => callbacksRef.current.onGlobalCatalogChange())
       )
       .subscribe();
 
