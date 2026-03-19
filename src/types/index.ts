@@ -17,7 +17,8 @@ export type ThemePalette =
   | "candy"
   | "galaxy"
   | "jade"
-  | "peach";
+  | "peach"
+  | "explorer";
 
 export interface UserSettings {
   theme_palette: ThemePalette;
@@ -121,11 +122,11 @@ export interface IdeaAsset {
 export interface TripMember {
   id: string;
   trip_id: string;
-  user_id: string | null;       // null para guests (sem conta)
+  user_id: string | null;
   role: "admin" | "member";
   display_name: string | null;
   spouse_member_id: string | null;
-  status?: string | null;       // "guest" | null
+  status?: string | null;
   guest_email?: string | null;
 }
 

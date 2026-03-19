@@ -266,6 +266,28 @@ export const THEME_PALETTES: Record<
     darkSidebarActiveBg: "#FB923C",
     darkSidebarActiveText: "#1C0A00",
   },
+
+  // Explorer 🧭 — Modern Explorer: Cobalt + Solar Orange editorial premium
+  explorer: {
+    lightBg: "#F5F7FA",
+    lightCard: "#FFFFFF",
+    lightAccent: "#2E5BFF",
+    lightSidebarBg: "#F2F4F7",
+    lightSidebarBorder: "#E8ECF4",
+    lightSidebarText: "#0040E0",
+    lightSidebarHover: "#EAF0FF",
+    lightSidebarActiveBg: "#2E5BFF",
+    lightSidebarActiveText: "#FFFFFF",
+    darkBg: "#0D1117",
+    darkCard: "#161B27",
+    darkAccent: "#5A82FF",
+    darkSidebarBg: "#0D1117",
+    darkSidebarBorder: "#1E2A42",
+    darkSidebarText: "#A0B4FF",
+    darkSidebarHover: "#161B27",
+    darkSidebarActiveBg: "#2E5BFF",
+    darkSidebarActiveText: "#FFFFFF",
+  },
 };
 
 export const ACTIVITY_ICONS = [

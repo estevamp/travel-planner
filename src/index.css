@@ -1,9 +1,30 @@
 @import "tailwindcss";
 
+/* ── Modern Explorer: Plus Jakarta Sans + Manrope ── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
 @layer base {
   :root {
     --bg-color: #F8F9FA;
     --accent-color: #0A2342;
+
+    /* Modern Explorer design tokens */
+    --me-cobalt: #2E5BFF;
+    --me-cobalt-deep: #0040E0;
+    --me-orange: #FF7A00;
+    --me-ice: #F5F7FA;
+    --me-surface: #f7f9fc;
+    --me-surface-low: #f2f4f7;
+    --me-surface-lowest: #ffffff;
+    --me-on-surface: #191c1e;
+
+    /* Explorer gradient - used on CTAs and FAB */
+    --me-gradient: linear-gradient(135deg, #2E5BFF 0%, #0040E0 100%);
+    --me-gradient-warning: linear-gradient(135deg, #FF7A00 0%, #E05500 100%);
+
+    /* Ambient shadow - cobalt-tinted */
+    --me-shadow-ambient: 0 12px 32px rgba(0, 64, 224, 0.08);
+    --me-shadow-float: 0 20px 60px rgba(0, 64, 224, 0.15);
   }
 
   html, body {
@@ -34,12 +55,12 @@
     opacity: 0.5;
   }
 
-  /* LAYOUT FIX: exceção para elementos animados — não interferir com Framer Motion */
+  /* LAYOUT FIX: exceção para elementos animados */
   [data-framer-component-type], [style*="transform"], button, a {
     transition-property: background-color, border-color, color, opacity, box-shadow;
   }
 
-/* Transição suave de tema, mas SEM afetar elementos animados */
+  /* Transição suave de tema */
   *:not([style*="opacity"]):not([style*="transform"]):not([style*="will-change"]),
   *::before,
   *::after {
@@ -67,11 +88,135 @@
 @layer components {
   .required-indicator::after {
     content: " *";
-    color: #ef4444; /* text-red-500 */
+    color: #ef4444;
     font-weight: bold;
+  }
+
+  /* ── Modern Explorer: Typography ── */
+  .me-display {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .me-headline {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  .me-body {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 400;
+  }
+
+  .me-label {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Modern Explorer: Surface tiers (No-Line Rule) ── */
+  .me-surface {
+    background-color: var(--me-surface);
+  }
+
+  .me-surface-low {
+    background-color: var(--me-surface-low);
+  }
+
+  .me-surface-lowest {
+    background-color: var(--me-surface-lowest);
+  }
+
+  /* ── Modern Explorer: Glassmorphism ── */
+  .me-glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(46, 91, 255, 0.15);
+  }
+
+  .me-glass-dark {
+    background: rgba(22, 27, 39, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(90, 130, 255, 0.15);
+  }
+
+  /* ── Modern Explorer: Gradient Button ── */
+  .me-btn-primary {
+    background: var(--me-gradient);
+    color: white;
+    border-radius: 9999px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    box-shadow: var(--me-shadow-ambient);
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+
+  .me-btn-primary:hover {
+    box-shadow: var(--me-shadow-float);
+    transform: translateY(-1px);
+  }
+
+  /* ── Modern Explorer: Ambient Card ── */
+  .me-card {
+    background: var(--me-surface-lowest);
+    border-radius: 2rem;
+    box-shadow: var(--me-shadow-ambient);
+    padding: 1.7rem;
+    /* No borders — surface tiers create depth */
+    border: none;
+  }
+
+  /* ── Modern Explorer: Progress Bar ── */
+  .me-progress-track {
+    height: 12px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: var(--me-surface-low);
+  }
+
+  .me-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: var(--me-gradient);
+    animation: me-progress-enter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .me-progress-fill-warning {
+    background: var(--me-gradient-warning);
+  }
+
+  /* ── Modern Explorer: FAB ── */
+  .me-fab {
+    background: var(--me-gradient);
+    border-radius: 9999px;
+    box-shadow: var(--me-shadow-float);
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+
+  .me-fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 24px 48px rgba(0, 64, 224, 0.25);
+  }
+
+  /* ── Explorer theme: apply fonts when explorer palette is active ── */
+  [data-theme="explorer"] {
+    font-family: 'Manrope', sans-serif;
+  }
+
+  [data-theme="explorer"] h1,
+  [data-theme="explorer"] h2,
+  [data-theme="explorer"] h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
+/* ── Animations ── */
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -81,6 +226,10 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+@keyframes me-progress-enter {
+  from { width: 0%; }
 }
 
 .animate-slide-up {
