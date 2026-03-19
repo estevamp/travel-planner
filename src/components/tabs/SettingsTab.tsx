@@ -303,7 +303,7 @@ export function SettingsTab() {
                   galaxy: "Galaxy",
                   jade: "Jade",
                   peach: "Peach",
-                  explorer: "Explorer 🧭",   // ← NOVO
+                  explorer: "Explorer",
                 };
                 
                 return (
