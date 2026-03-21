@@ -23,6 +23,7 @@ Copie `.env.example` para `.env.local` e preencha:
 ```bash
 VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 VITE_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 ```
 
 ## 3) Rodar localmente
@@ -38,6 +39,7 @@ npm run dev
 2. Em `Project Settings > Environment Variables`, adicione:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 3. Faça `Redeploy`.
 
 ## Fluxo implementado

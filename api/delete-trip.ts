@@ -36,8 +36,16 @@ function parseStoragePath(value: string | null | undefined): string | null {
   return null;
 }
 
+type StorageRemover = {
+  storage: {
+    from: (bucket: string) => {
+      remove: (paths: string[]) => Promise<{ error: { message?: string } | null }>;
+    };
+  };
+};
+
 async function removeStoragePaths(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: StorageRemover,
   paths: string[]
 ) {
   if (paths.length === 0) return;
@@ -58,10 +66,16 @@ export default async function handler(req: any, res: any) {
   }
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY;
   const authHeader = req.headers?.authorization || req.headers?.Authorization;
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("[delete-trip] Missing Supabase server env vars", {
+      hasSupabaseUrl: Boolean(supabaseUrl),
+      hasServiceRoleKey: Boolean(supabaseServiceRoleKey),
+    });
     return json(res, 500, {
       error: "Supabase env vars are missing. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
     });
@@ -97,6 +111,7 @@ export default async function handler(req: any, res: any) {
   } = await supabaseAdmin.auth.getUser(accessToken);
 
   if (userError || !user) {
+    console.error("[delete-trip] Invalid user token", userError);
     return json(res, 401, { error: "Invalid user token" });
   }
 
@@ -109,6 +124,7 @@ export default async function handler(req: any, res: any) {
     .maybeSingle();
 
   if (membershipError) {
+    console.error("[delete-trip] Failed to verify trip permissions", membershipError);
     return json(res, 500, { error: "Failed to verify trip permissions", details: membershipError.message });
   }
 
@@ -126,6 +142,11 @@ export default async function handler(req: any, res: any) {
   ]);
 
   if (documentsError || assetsError || itineraryError) {
+    console.error("[delete-trip] Failed to load trip files before deletion", {
+      documentsError,
+      assetsError,
+      itineraryError,
+    });
     return json(res, 500, {
       error: "Failed to load trip files before deletion",
       details: documentsError?.message || assetsError?.message || itineraryError?.message,
@@ -145,6 +166,7 @@ export default async function handler(req: any, res: any) {
   try {
     await removeStoragePaths(supabaseAdmin, storagePaths);
   } catch (storageError: any) {
+    console.error("[delete-trip] Failed to remove trip files from storage", storageError);
     return json(res, 500, {
       error: "Failed to remove trip files from storage",
       details: storageError?.message || String(storageError),
@@ -153,6 +175,7 @@ export default async function handler(req: any, res: any) {
 
   const { error: deleteError } = await supabaseAdmin.from("trips").delete().eq("id", tripId);
   if (deleteError) {
+    console.error("[delete-trip] Failed to delete trip row", deleteError);
     return json(res, 500, { error: "Failed to delete trip", details: deleteError.message });
   }
 
