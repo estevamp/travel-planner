@@ -9,6 +9,7 @@ import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
 import type { Trip, UserSettings } from "../../types";
 import { Card } from "../Card";
+import { Modal } from "../Modal";
 import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
 import { useOfflineQueue } from "../../hooks/useOfflineQueue";
 
@@ -37,6 +38,8 @@ export function SettingsTab() {
   const [savingType, setSavingType] = useState(false);
   const [savingBudget, setSavingBudget] = useState(false);
   const [budgetDraft, setBudgetDraft] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationValue, setDeleteConfirmationValue] = useState("");
   
   const settingsAutosaveReadyRef = useRef(false);
   const tripAutosaveReadyRef = useRef(false);
@@ -119,6 +122,20 @@ export function SettingsTab() {
       return;
     }
     await reloadTripOptions();
+  };
+
+  const expectedDeleteConfirmation = `delete ${trip.name}`;
+  const isDeleteConfirmationValid = deleteConfirmationValue.trim() === expectedDeleteConfirmation;
+
+  const handleDeleteTrip = async () => {
+    if (!isDeleteConfirmationValid || updatingTrip) return;
+
+    setUpdatingTrip(true);
+    const deleted = await deleteCurrentTrip();
+    setUpdatingTrip(false);
+    if (!deleted) return;
+    setIsDeleteModalOpen(false);
+    setDeleteConfirmationValue("");
   };
 
   return (
@@ -753,7 +770,7 @@ export function SettingsTab() {
             <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
-                onClick={deleteCurrentTrip}
+                onClick={() => setIsDeleteModalOpen(true)}
                 disabled={updatingTrip}
                 className={cn(
                   "px-4 py-3 rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
@@ -806,6 +823,70 @@ export function SettingsTab() {
           Sobre o Partiu!
         </button>
       </div>
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (updatingTrip) return;
+          setIsDeleteModalOpen(false);
+          setDeleteConfirmationValue("");
+        }}
+        title="Excluir viagem"
+        size="sm"
+        isDark={settings.dark_mode}
+      >
+        <div className="space-y-5">
+          <div className={cn(
+            "rounded-2xl border px-4 py-4",
+            settings.dark_mode ? "border-red-900/60 bg-red-950/20" : "border-red-200 bg-red-50"
+          )}>
+            <p className={cn("text-sm font-semibold", settings.dark_mode ? "text-red-300" : "text-red-700")}>
+              Todos os dados desta viagem serão excluídos.
+            </p>
+            <p className={cn("mt-2 text-sm", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+              Para confirmar, digite <span className="font-mono font-semibold">{expectedDeleteConfirmation}</span>.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold block">Confirmação</label>
+            <input
+              value={deleteConfirmationValue}
+              onChange={(e) => setDeleteConfirmationValue(e.target.value)}
+              placeholder={expectedDeleteConfirmation}
+              autoFocus
+              className={cn(
+                "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeleteConfirmationValue("");
+              }}
+              disabled={updatingTrip}
+              className={cn(
+                "px-4 py-2 rounded-xl font-medium transition-colors",
+                settings.dark_mode ? "bg-zinc-800 hover:bg-zinc-700 text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
+              )}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteTrip}
+              disabled={!isDeleteConfirmationValid || updatingTrip}
+              className="px-4 py-2 rounded-xl font-medium transition-colors shadow-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            >
+              {updatingTrip ? "Excluindo..." : "Excluir viagem"}
+            </button>
+          </div>
+        </div>
+      </Modal>
       {ConfirmDialogNode}
     </motion.div>
   );

@@ -6,8 +6,6 @@ import { useTripBudget } from '../hooks/useTripBudget';
 import { useTripList } from '../hooks/useTripList';
 import { useRealtimeTrip } from '../hooks/useRealtimeTrip';
 import { useToast } from '../hooks/useToast';
-import { useConfirm } from '../hooks/useConfirm';
-import { getErrorMessage } from '../utils';
 import { getThemeStyles } from '../utils/theme';
 import type {
   Trip, TripMember, TripInvite, ExpenseCategory,
@@ -52,7 +50,7 @@ export interface TripContextValue {
   onSettingsChange: (next: UserSettings) => void;
 
   // ── Ações com efeitos colaterais ──────────────────────────────
-  deleteCurrentTrip: () => Promise<void>;
+  deleteCurrentTrip: () => Promise<boolean>;
   navigateToAbout: () => void;
   reloadTripOptions: () => void;
 }
@@ -78,7 +76,6 @@ export function TripProvider({
 }: TripProviderProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { confirm, ConfirmDialogNode } = useConfirm();
 
   const {
     trip, setTrip, members, invites, categories, setCategories,
@@ -118,26 +115,42 @@ export function TripProvider({
   }, [notAuthorized, toast, onTripDeleted]);
 
   const deleteCurrentTrip = async () => {
-    if (!trip || !isAdmin) return;
-    
-    const confirmed = await confirm({
-      title: 'Excluir viagem?',
-      message: `Excluir a viagem "${trip.name}"? Esta ação não pode ser desfeita.`,
-      variant: 'danger',
-      isDark: settings.dark_mode
+    if (!trip || !isAdmin) return false;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      toast('Sua sessão expirou. Entre novamente para excluir a viagem.', 'error');
+      return false;
+    }
+
+    const response = await fetch('/api/delete-trip', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ tripId }),
     });
 
-    if (!confirmed) return;
-
-    const { error } = await supabase.from("trips").delete().eq("id", tripId);
-    if (error) {
-      toast(getErrorMessage(error), 'error');
-      return;
+    if (!response.ok) {
+      let errorMessage = 'Não foi possível excluir a viagem.';
+      try {
+        const payload = await response.json();
+        errorMessage = payload?.error || payload?.details || errorMessage;
+      } catch {
+        // Ignore JSON parsing errors and keep fallback message.
+      }
+      toast(errorMessage, 'error');
+      return false;
     }
 
     toast('Viagem excluída com sucesso.', 'success');
     reloadTripOptions();
     onTripDeleted();
+    return true;
   };
 
   const navigateToAbout = () => navigate('/about');
@@ -221,7 +234,6 @@ export function TripProvider({
   return (
     <TripContext.Provider value={value}>
       {children}
-      {ConfirmDialogNode}
     </TripContext.Provider>
   );
 }
