@@ -35,9 +35,6 @@ export function BalancesSummary({
   transfers: transfersProp,
 }: BalancesSummaryProps) {
   const currentMember = members.find((m) => m.user_id === currentUserId);
-  const currentMemberBalance = balances.find((b) => b.member_id === currentMember?.id);
-  const netBalance = currentMemberBalance?.net_balance ?? 0;
-
   const allTransfers: GroupedTransfer[] = useMemo(() => {
     const activeTransfers = transfersProp !== undefined
       ? transfersProp
@@ -168,54 +165,13 @@ export function BalancesSummary({
   const textNeutralMain = isDark ? "text-slate-100" : "text-slate-900";
   const textNeutralSub = isDark ? "text-slate-200" : "text-slate-700";
 
-  const statusBg = (pos: "pos" | "neg" | "neu") => {
-    if (isDark) {
-      if (pos === "pos") return "bg-green-950 border-green-700";
-      if (pos === "neg") return "bg-red-950 border-red-700";
-      return "bg-slate-900 border-slate-700";
-    }
-    if (pos === "pos") return "bg-white border-green-300";
-    if (pos === "neg") return "bg-white border-red-300";
-    return "bg-white border-slate-200";
-  };
-
-  const statusTextMain = (pos: "pos" | "neg" | "neu") =>
-    isDark
-      ? pos === "pos" ? "text-green-100" : pos === "neg" ? "text-red-100" : "text-slate-100"
-      : "text-slate-900";
-
-  const statusTextSub = (pos: "pos" | "neg" | "neu") =>
-    isDark
-      ? pos === "pos" ? "text-green-200" : pos === "neg" ? "text-red-200" : "text-slate-200"
-      : "text-slate-600";
-
   const lineText = (isCreditor: boolean) =>
     isDark
       ? isCreditor ? "text-green-200" : "text-red-200"
       : isCreditor ? "text-green-800" : "text-red-800";
 
-  const overallKind: "pos" | "neg" | "neu" =
-    netBalance > 0 ? "pos" : netBalance < 0 ? "neg" : "neu";
-
   return (
     <div className="space-y-4">
-      {/* Saldo geral do usuário atual (individual, não agrupado) */}
-      <div className={`p-6 rounded-xl border ${statusBg(overallKind)}`}>
-        <div className="text-center">
-          <p className={`text-sm mb-2 ${statusTextSub(overallKind)}`}>Seu saldo</p>
-          <p className={`text-3xl font-bold ${statusTextMain(overallKind)}`}>
-            {formatCurrency(Math.abs(netBalance), currency)}
-          </p>
-          <p className={`text-sm mt-1 ${statusTextSub(overallKind)}`}>
-            {netBalance > 0
-              ? "Você tem a receber"
-              : netBalance < 0
-              ? "Você deve"
-              : "Tudo acertado! 🎉"}
-          </p>
-        </div>
-      </div>
-
       {/* Detalhamento */}
       {hasBalances && (
         <div className="space-y-3">
