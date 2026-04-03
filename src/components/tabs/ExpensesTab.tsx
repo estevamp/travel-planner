@@ -814,7 +814,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           )}
 
-          {/* Resumo por participante */}
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════ */}
+      {/* ABA: PAGAMENTOS                                */}
+      {/* ══════════════════════════════════════════════ */}
+      {expenseSubTab === "pagamentos" && currentMember && (
+        <div className="space-y-6">
           <Card className="space-y-4">
             <h3 className="text-sm font-bold">Resumo por participante</h3>
             <div className="space-y-3">
@@ -858,31 +865,26 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               Saldos após netting bilateral · valores em {settings.default_currency}
             </p>
           </Card>
-        </>
-      )}
 
-      {/* ══════════════════════════════════════════════ */}
-      {/* ABA: PAGAMENTOS                                */}
-      {/* ══════════════════════════════════════════════ */}
-      {expenseSubTab === "pagamentos" && currentMember && (
-        <Card>
-          <BalancesSummary
-            balances={balances}
-            currentUserId={currentMember.user_id}
-            members={members}
-            currency={settings.default_currency}
-            isDark={Boolean(settings.dark_mode)}
-            settlements={settlements}
-            transfers={mergedTransfers}
-            onSettleClick={() => {
-              const simplified = simplifyDebts(rawBalances, settings.default_currency);
-              setTransfers(simplified);
-              setShowSettlement(true);
-            }}
-            onRegisterPayment={registerPayment}
-            onUndoPayment={undoPayment}
-          />
-        </Card>
+          <Card>
+            <BalancesSummary
+              balances={balances}
+              currentUserId={currentMember.user_id}
+              members={members}
+              currency={settings.default_currency}
+              isDark={Boolean(settings.dark_mode)}
+              settlements={settlements}
+              transfers={mergedTransfers}
+              onSettleClick={() => {
+                const simplified = simplifyDebts(rawBalances, settings.default_currency);
+                setTransfers(simplified);
+                setShowSettlement(true);
+              }}
+              onRegisterPayment={registerPayment}
+              onUndoPayment={undoPayment}
+            />
+          </Card>
+        </div>
       )}
 
       <FloatingActionButton onClick={onOpenModal} />
