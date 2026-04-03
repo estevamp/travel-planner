@@ -866,7 +866,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {/* ══════════════════════════════════════════════ */}
       {expenseSubTab === "pagamentos" && currentMember && (
         <Card>
-          <h3 className="font-bold mb-4">Detalhamento</h3>
           <BalancesSummary
             balances={balances}
             currentUserId={currentMember.user_id}
