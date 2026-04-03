@@ -132,7 +132,7 @@ export function BalancesSummary({
     const remaining = Math.max(0, t.amount - paidAmount);
     setOpenPaymentKey(key);
     setExpandedHistoryKey(null);
-    setPaymentAmount(maskCurrency(Math.round(remaining * 100).toFixed(0)));
+    setPaymentAmount(maskCurrency(Math.round(Math.max(remaining, 0) * 100).toFixed(0)));
   };
 
   const submitPayment = async (t: GroupedTransfer) => {
@@ -333,7 +333,7 @@ export function BalancesSummary({
                           {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
                         </button>
                       )}
-                      {canManagePayments && remaining > 0 && (
+                      {canManagePayments && (
                         <button
                           type="button"
                           onClick={() => openPayment(transfer)}

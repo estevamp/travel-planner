@@ -168,24 +168,43 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   );
 
   // Resumo a pagar / a receber por membro (para a aba Relatório)
-  // Usa os valores bilaterais individuais para manter precisão por pessoa
+  // Agrupa cônjuges em um único saldo líquido para o resumo.
   const memberPaymentSummary = useMemo(() => {
-    return members
-      .map((m) => {
-        const memberBalance = balances.find((balance) => balance.member_id === m.id);
-        const saldo = Math.round((memberBalance?.net_balance ?? 0) * 100) / 100;
-        const aReceber = saldo > 0 ? saldo : 0;
-        const aPagar = saldo < 0 ? Math.abs(saldo) : 0;
+    const grouped = new Map<string, { id: string; name: string; saldo: number }>();
+    const visited = new Set<string>();
 
-        return {
-          id: m.id,
-          name: m.display_name ?? "Membro",
-          aPagar,
-          aReceber,
-          saldo,
-        };
-      })
-      .filter((m) => Math.abs(m.saldo) > 0.01);
+    for (const member of members) {
+      if (visited.has(member.id)) continue;
+
+      const spouse = member.spouse_member_id
+        ? members.find((candidate) => candidate.id === member.spouse_member_id)
+        : null;
+
+      const groupMembers = spouse && !visited.has(spouse.id)
+        ? [member, spouse]
+        : [member];
+
+      groupMembers.forEach((entry) => visited.add(entry.id));
+
+      const saldo = Math.round(groupMembers.reduce((sum, entry) => {
+        const memberBalance = balances.find((balance) => balance.member_id === entry.id);
+        return sum + (memberBalance?.net_balance ?? 0);
+      }, 0) * 100) / 100;
+
+      grouped.set(member.id, {
+        id: member.id,
+        name: groupMembers.map((entry) => entry.display_name ?? "Membro").join("/"),
+        saldo,
+      });
+    }
+
+    return Array.from(grouped.values())
+      .map((group) => ({
+        ...group,
+        aReceber: group.saldo > 0 ? group.saldo : 0,
+        aPagar: group.saldo < 0 ? Math.abs(group.saldo) : 0,
+      }))
+      .filter((group) => Math.abs(group.saldo) > 0.01);
   }, [balances, members]);
 
   // Calcular saldos com conversão de moedas
@@ -280,21 +299,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       )
       .sort((a, b) => b.amount - a.amount);
 
-    const totalOutstanding = Math.round(
-      matchingTransfers.reduce((sum, transfer) => sum + transfer.amount, 0) * 100
-    ) / 100;
-
-    if (matchingTransfers.length === 0) {
-      toast("Nao foi possivel identificar o saldo correspondente para registrar esse pagamento.", "error");
-      return;
-    }
-
-    if (normalizedAmount > totalOutstanding + 0.009) {
-      toast("O valor informado e maior do que o saldo pendente desse pagamento.", "error");
-      return;
-    }
-
     let remaining = normalizedAmount;
+    const nowIso = new Date().toISOString();
     const rows: Array<{
       trip_id: string;
       from_member_id: string;
@@ -317,11 +323,23 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         to_member_id: transfer.to_member_id,
         amount: roundedChunk,
         currency: settings.default_currency,
-        date: new Date().toISOString(),
+        date: nowIso,
         is_confirmed: true,
       });
 
       remaining = Math.round((remaining - roundedChunk) * 100) / 100;
+    }
+
+    if (remaining > 0.009 && fromMemberIds.length > 0 && toMemberIds.length > 0) {
+      rows.push({
+        trip_id: tripId!,
+        from_member_id: fromMemberIds[0],
+        to_member_id: toMemberIds[0],
+        amount: remaining,
+        currency: settings.default_currency,
+        date: nowIso,
+        is_confirmed: true,
+      });
     }
 
     if (rows.length === 0) {
