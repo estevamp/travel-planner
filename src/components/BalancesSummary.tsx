@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { TripMember } from "../types";
 import { MemberBalance, Settlement } from "../types/splitting";
 import { formatCurrency, simplifyDebts, mergeSpouseTransfers, GroupedTransfer } from "../utils/splitting";
@@ -38,17 +38,77 @@ export function BalancesSummary({
   const currentMemberBalance = balances.find((b) => b.member_id === currentMember?.id);
   const netBalance = currentMemberBalance?.net_balance ?? 0;
 
-  // Se não receber transferências prontas, calcula via simplifyDebts e converte para GroupedTransfer
-  const allTransfers: GroupedTransfer[] = transfersProp !== undefined
-    ? transfersProp
-    : simplifyDebts(balances, currency).map((t) => ({
-        from_member_ids: [t.from_member_id],
-        to_member_ids: [t.to_member_id],
-        from_display_name: t.from_member_name,
-        to_display_name: t.to_member_name,
-        amount: t.amount,
-        currency: t.currency,
-      }));
+  const allTransfers: GroupedTransfer[] = useMemo(() => {
+    const activeTransfers = transfersProp !== undefined
+      ? transfersProp
+      : simplifyDebts(balances, currency).map((t) => ({
+          from_member_ids: [t.from_member_id],
+          to_member_ids: [t.to_member_id],
+          from_display_name: t.from_member_name,
+          to_display_name: t.to_member_name,
+          amount: t.amount,
+          currency: t.currency,
+        }));
+
+    const canonicalGroupMap = new Map<string, string>();
+    const groupMembers = new Map<string, TripMember[]>();
+    const visited = new Set<string>();
+
+    for (const member of members) {
+      if (visited.has(member.id)) continue;
+
+      const spouse = member.spouse_member_id
+        ? members.find((candidate) => candidate.id === member.spouse_member_id)
+        : null;
+
+      const groupId = member.id;
+
+      if (spouse && !visited.has(spouse.id)) {
+        canonicalGroupMap.set(member.id, groupId);
+        canonicalGroupMap.set(spouse.id, groupId);
+        groupMembers.set(groupId, [member, spouse]);
+        visited.add(member.id);
+        visited.add(spouse.id);
+      } else {
+        canonicalGroupMap.set(member.id, groupId);
+        groupMembers.set(groupId, [member]);
+        visited.add(member.id);
+      }
+    }
+
+    const transferMap = new Map<string, GroupedTransfer>();
+    const toKey = (fromIds: string[], toIds: string[]) => `${fromIds.join(",")}-${toIds.join(",")}`;
+
+    for (const transfer of activeTransfers) {
+      transferMap.set(toKey(transfer.from_member_ids, transfer.to_member_ids), transfer);
+    }
+
+    for (const settlement of settlements.filter((entry) => entry.is_confirmed)) {
+      const fromGroupId = canonicalGroupMap.get(settlement.from_member_id) ?? settlement.from_member_id;
+      const toGroupId = canonicalGroupMap.get(settlement.to_member_id) ?? settlement.to_member_id;
+
+      if (fromGroupId === toGroupId) continue;
+
+      const fromMembers = groupMembers.get(fromGroupId) ?? members.filter((member) => member.id === settlement.from_member_id);
+      const toMembers = groupMembers.get(toGroupId) ?? members.filter((member) => member.id === settlement.to_member_id);
+      const fromIds = fromMembers.map((member) => member.id);
+      const toIds = toMembers.map((member) => member.id);
+      const key = toKey(fromIds, toIds);
+
+      if (transferMap.has(key)) continue;
+
+      transferMap.set(key, {
+        from_member_ids: fromIds,
+        to_member_ids: toIds,
+        from_display_name: fromMembers.map((member) => member.display_name ?? "?").join("/"),
+        to_display_name: toMembers.map((member) => member.display_name ?? "?").join("/"),
+        amount: 0,
+        currency: settlement.currency || currency,
+      });
+    }
+
+    return Array.from(transferMap.values());
+  }, [balances, currency, members, settlements, transfersProp]);
 
   const hasBalances = allTransfers.length > 0;
 
@@ -68,9 +128,11 @@ export function BalancesSummary({
       setPaymentAmount("");
       return;
     }
+    const paidAmount = getSettlementsForTransfer(t).reduce((sum, settlement) => sum + settlement.amount, 0);
+    const remaining = Math.max(0, t.amount - paidAmount);
     setOpenPaymentKey(key);
     setExpandedHistoryKey(null);
-    setPaymentAmount(maskCurrency(Math.round(t.amount * 100).toFixed(0)));
+    setPaymentAmount(maskCurrency(Math.round(remaining * 100).toFixed(0)));
   };
 
   const submitPayment = async (t: GroupedTransfer) => {
@@ -242,7 +304,9 @@ export function BalancesSummary({
                     <div className="min-w-0 flex-1">
                       <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
                       <p className={`text-sm ${lineText(isCurrentUserCreditor)}`}>
-                        deve <strong>{formatCurrency(transfer.amount, currency)}</strong> para <strong>{toName}</strong>
+                        {remaining > 0
+                          ? <>deve <strong>{formatCurrency(remaining, currency)}</strong> para <strong>{toName}</strong></>
+                          : <>pagamento total de <strong>{formatCurrency(paidAmount, currency)}</strong> para <strong>{toName}</strong></>}
                       </p>
                     </div>
                   </div>
@@ -269,7 +333,7 @@ export function BalancesSummary({
                           {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
                         </button>
                       )}
-                      {canManagePayments && (
+                      {canManagePayments && remaining > 0 && (
                         <button
                           type="button"
                           onClick={() => openPayment(transfer)}
