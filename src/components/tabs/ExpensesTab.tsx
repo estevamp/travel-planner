@@ -268,16 +268,69 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     is_confirmed: false,
   });
 
-  const registerPayment = async (fromMemberId: string, toMemberId: string, amount: number) => {
-    const { error } = await supabase.from("settlements").insert({
-      trip_id: tripId,
-      from_member_id: fromMemberId,
-      to_member_id: toMemberId,
-      amount,
-      currency: settings.default_currency,
-      date: new Date().toISOString(),
-      is_confirmed: true,
-    });
+  const registerPayment = async (fromMemberIds: string[], toMemberIds: string[], amount: number) => {
+    const normalizedAmount = Math.round(amount * 100) / 100;
+    if (normalizedAmount <= 0) return;
+
+    const matchingTransfers = bilateralTransfers
+      .filter(
+        (transfer) =>
+          fromMemberIds.includes(transfer.from_member_id) &&
+          toMemberIds.includes(transfer.to_member_id) &&
+          transfer.amount > 0.01
+      )
+      .sort((a, b) => b.amount - a.amount);
+
+    const totalOutstanding = Math.round(
+      matchingTransfers.reduce((sum, transfer) => sum + transfer.amount, 0) * 100
+    ) / 100;
+
+    if (matchingTransfers.length === 0) {
+      toast("Nao foi possivel identificar o saldo correspondente para registrar esse pagamento.", "error");
+      return;
+    }
+
+    if (normalizedAmount > totalOutstanding + 0.009) {
+      toast("O valor informado e maior do que o saldo pendente desse pagamento.", "error");
+      return;
+    }
+
+    let remaining = normalizedAmount;
+    const rows: Array<{
+      trip_id: string;
+      from_member_id: string;
+      to_member_id: string;
+      amount: number;
+      currency: string;
+      date: string;
+      is_confirmed: boolean;
+    }> = [];
+
+    for (const transfer of matchingTransfers) {
+      if (remaining <= 0.009) break;
+      const chunk = Math.min(remaining, transfer.amount);
+      const roundedChunk = Math.round(chunk * 100) / 100;
+      if (roundedChunk <= 0) continue;
+
+      rows.push({
+        trip_id: tripId!,
+        from_member_id: transfer.from_member_id,
+        to_member_id: transfer.to_member_id,
+        amount: roundedChunk,
+        currency: settings.default_currency,
+        date: new Date().toISOString(),
+        is_confirmed: true,
+      });
+
+      remaining = Math.round((remaining - roundedChunk) * 100) / 100;
+    }
+
+    if (rows.length === 0) {
+      toast("Nao foi possivel registrar esse pagamento.", "error");
+      return;
+    }
+
+    const { error } = await supabase.from("settlements").insert(rows);
     if (error) { toast(getErrorMessage(error), "error"); return; }
     await fetchBalanceData();
     toast("Pagamento registrado!", "success");

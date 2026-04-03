@@ -12,7 +12,7 @@ interface BalancesSummaryProps {
   currency: string;
   settlements: Settlement[];
   onSettleClick: () => void;
-  onRegisterPayment: (fromMemberId: string, toMemberId: string, amount: number) => Promise<void>;
+  onRegisterPayment: (fromMemberIds: string[], toMemberIds: string[], amount: number) => Promise<void>;
   onUndoPayment: (settlementId: string) => Promise<void>;
   isDark?: boolean;
   /**
@@ -78,8 +78,7 @@ export function BalancesSummary({
     const amount = parseCurrencyToNumber(paymentAmount);
     if (amount <= 0) return;
     setSavingKey(key);
-    // Para casais, registra o pagamento usando o primeiro membro de cada grupo
-    await onRegisterPayment(t.from_member_ids[0], t.to_member_ids[0], amount);
+    await onRegisterPayment(t.from_member_ids, t.to_member_ids, amount);
     setSavingKey(null);
     setOpenPaymentKey(null);
     setPaymentAmount("");
