@@ -172,22 +172,21 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const memberPaymentSummary = useMemo(() => {
     return members
       .map((m) => {
-        const aPagar = bilateralTransfers
-          .filter((t) => t.from_member_id === m.id)
-          .reduce((sum, t) => sum + t.amount, 0);
-        const aReceber = bilateralTransfers
-          .filter((t) => t.to_member_id === m.id)
-          .reduce((sum, t) => sum + t.amount, 0);
+        const memberBalance = balances.find((balance) => balance.member_id === m.id);
+        const saldo = Math.round((memberBalance?.net_balance ?? 0) * 100) / 100;
+        const aReceber = saldo > 0 ? saldo : 0;
+        const aPagar = saldo < 0 ? Math.abs(saldo) : 0;
+
         return {
           id: m.id,
           name: m.display_name ?? "Membro",
           aPagar,
           aReceber,
-          saldo: aReceber - aPagar,
+          saldo,
         };
       })
-      .filter((m) => m.aPagar > 0.01 || m.aReceber > 0.01);
-  }, [bilateralTransfers, members]);
+      .filter((m) => Math.abs(m.saldo) > 0.01);
+  }, [balances, members]);
 
   // Calcular saldos com conversão de moedas
   useEffect(() => {
