@@ -234,9 +234,9 @@ export function computeBilateralTransfers(
       Number(settlement.amount) || 0,
       settlement.currency || targetCurrency
     );
-    if (rawDebt[f]?.[t] !== undefined) {
-      rawDebt[f][t] = Math.max(0, rawDebt[f][t] - paid);
-    }
+    // Model settlements as flow in the opposite direction so pairwise netting
+    // still works even when a payment exceeds the current debt.
+    addDebt(t, f, paid);
   }
 
   const memberIds = members.map((m) => m.id);
