@@ -203,8 +203,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         ...group,
         aReceber: group.saldo > 0 ? group.saldo : 0,
         aPagar: group.saldo < 0 ? Math.abs(group.saldo) : 0,
-      }))
-      .filter((group) => Math.abs(group.saldo) > 0.01);
+      }));
   }, [balances, members]);
 
   // Calcular saldos com conversão de moedas
@@ -816,51 +815,49 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           )}
 
           {/* Resumo por participante */}
-          {memberPaymentSummary.length > 0 && (
-            <Card className="space-y-4">
-              <h3 className="text-sm font-bold">Resumo por participante</h3>
-              <div className="space-y-3">
-                {memberPaymentSummary.map((m) => {
-                  const isCredit = m.saldo > 0.01;
-                  const isDebt = m.saldo < -0.01;
-                  return (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        "p-3 rounded-xl border",
-                        isCredit
-                          ? settings.dark_mode ? "bg-emerald-950/30 border-emerald-800/50" : "bg-emerald-50 border-emerald-200"
-                          : isDebt
-                          ? settings.dark_mode ? "bg-red-950/30 border-red-800/50" : "bg-red-50 border-red-200"
-                          : settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
-                      )}
-                    >
-                      <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <div>
-                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A receber</p>
-                          <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
-                        </div>
-                        <div>
-                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A pagar</p>
-                          <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
-                        </div>
-                        <div className="ml-auto text-right">
-                          <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Saldo</p>
-                          <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : isDebt ? "text-red-500" : settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                            {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
-                          </p>
-                        </div>
+          <Card className="space-y-4">
+            <h3 className="text-sm font-bold">Resumo por participante</h3>
+            <div className="space-y-3">
+              {memberPaymentSummary.map((m) => {
+                const isCredit = m.saldo > 0.01;
+                const isDebt = m.saldo < -0.01;
+                return (
+                  <div
+                    key={m.id}
+                    className={cn(
+                      "p-3 rounded-xl border",
+                      isCredit
+                        ? settings.dark_mode ? "bg-emerald-950/30 border-emerald-800/50" : "bg-emerald-50 border-emerald-200"
+                        : isDebt
+                        ? settings.dark_mode ? "bg-red-950/30 border-red-800/50" : "bg-red-50 border-red-200"
+                        : settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
+                    )}
+                  >
+                    <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
+                    <div className="flex flex-wrap gap-3">
+                      <div>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A receber</p>
+                        <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
+                      </div>
+                      <div>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A pagar</p>
+                        <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
+                      </div>
+                      <div className="ml-auto text-right">
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Saldo</p>
+                        <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : isDebt ? "text-red-500" : settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                          {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-              <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-                Saldos após netting bilateral · valores em {settings.default_currency}
-              </p>
-            </Card>
-          )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+              Saldos após netting bilateral · valores em {settings.default_currency}
+            </p>
+          </Card>
         </>
       )}
 
