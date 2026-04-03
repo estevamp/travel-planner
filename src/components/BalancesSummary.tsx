@@ -174,7 +174,7 @@ export function BalancesSummary({
               transfer.to_member_ids.includes(myId) ||
               (spouseId ? transfer.to_member_ids.includes(spouseId) : false);
 
-            const isInvolved = isCurrentUserDebtor || isCurrentUserCreditor;
+            const canManagePayments = Boolean(currentMember);
 
             // Nome do grupo "de"
             const buildFromName = () => {
@@ -249,7 +249,7 @@ export function BalancesSummary({
                   </div>
 
                   {/* Linha 2: ações alinhadas à direita (não comprime o texto) */}
-                  {(hasPastPayments || isInvolved) && (
+                  {(hasPastPayments || canManagePayments) && (
                     <div className="flex items-center justify-end gap-2 mt-2">
                       {hasPastPayments && (
                         <button
@@ -270,7 +270,7 @@ export function BalancesSummary({
                           {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
                         </button>
                       )}
-                      {isInvolved && (
+                      {canManagePayments && (
                         <button
                           type="button"
                           onClick={() => openPayment(transfer)}
