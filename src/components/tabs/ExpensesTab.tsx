@@ -167,10 +167,16 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     [bilateralTransfers, members, settings.default_currency]
   );
 
-  // Resumo a pagar / a receber por membro (para a aba Relatório)
-  // Agrupa cônjuges em um único saldo líquido para o resumo.
+  // Resumo de pagamentos por participante/casal na aba Pagamentos.
   const memberPaymentSummary = useMemo(() => {
-    const grouped = new Map<string, { id: string; name: string; saldo: number }>();
+    const grouped = new Map<string, {
+      id: string;
+      memberIds: string[];
+      name: string;
+      recebido: number;
+      pago: number;
+      saldo: number;
+    }>();
     const visited = new Set<string>();
 
     for (const member of members) {
@@ -186,25 +192,33 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
       groupMembers.forEach((entry) => visited.add(entry.id));
 
-      const saldo = Math.round(groupMembers.reduce((sum, entry) => {
-        const memberBalance = balances.find((balance) => balance.member_id === entry.id);
-        return sum + (memberBalance?.net_balance ?? 0);
-      }, 0) * 100) / 100;
+      const memberIds = groupMembers.map((entry) => entry.id);
+      const recebido = Math.round(
+        settlements
+          .filter((settlement) => settlement.is_confirmed && memberIds.includes(settlement.to_member_id))
+          .reduce((sum, settlement) => sum + (Number(settlement.amount) || 0), 0) * 100
+      ) / 100;
+
+      const pago = Math.round(
+        settlements
+          .filter((settlement) => settlement.is_confirmed && memberIds.includes(settlement.from_member_id))
+          .reduce((sum, settlement) => sum + (Number(settlement.amount) || 0), 0) * 100
+      ) / 100;
+
+      const saldo = Math.round((recebido - pago) * 100) / 100;
 
       grouped.set(member.id, {
         id: member.id,
+        memberIds,
         name: groupMembers.map((entry) => entry.display_name ?? "Membro").join("/"),
+        recebido,
+        pago,
         saldo,
       });
     }
 
-    return Array.from(grouped.values())
-      .map((group) => ({
-        ...group,
-        aReceber: group.saldo > 0 ? group.saldo : 0,
-        aPagar: group.saldo < 0 ? Math.abs(group.saldo) : 0,
-      }));
-  }, [balances, members]);
+    return Array.from(grouped.values());
+  }, [members, settlements]);
 
   // Calcular saldos com conversão de moedas
   useEffect(() => {
@@ -843,12 +857,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                     <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
                     <div className="flex flex-wrap gap-3">
                       <div>
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A receber</p>
-                        <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Recebido</p>
+                        <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.recebido, settings.default_currency)}</p>
                       </div>
                       <div>
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A pagar</p>
-                        <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Pago</p>
+                        <p className="text-sm font-semibold text-red-500">{formatCurrency(m.pago, settings.default_currency)}</p>
                       </div>
                       <div className="ml-auto text-right">
                         <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Saldo</p>
@@ -862,7 +876,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               })}
             </div>
             <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-              Saldos após netting bilateral · valores em {settings.default_currency}
+              Historico de pagamentos registrados · valores em {settings.default_currency}
             </p>
           </Card>
 
