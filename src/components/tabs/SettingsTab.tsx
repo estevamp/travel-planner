@@ -22,7 +22,7 @@ export function SettingsTab() {
   const { isOnline } = useOfflineQueue();
   const { t, language } = useI18n();
   const {
-    trip, tripId, currentMember, isAdmin, settings, onSettingsChange,
+    trip, tripId, currentMember, isAdmin, isSuperuser, settings, onSettingsChange,
     members, categories, setCategories, itineraryTypes, setItineraryTypes,
     tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency,
     userId, deleteCurrentTrip, navigateToAbout, reloadTripOptions, setTrip
@@ -45,6 +45,7 @@ export function SettingsTab() {
   
   const settingsAutosaveReadyRef = useRef(false);
   const tripAutosaveReadyRef = useRef(false);
+  const canManageTrip = isAdmin || isSuperuser;
 
   // Sync settings draft when settings change
   useEffect(() => {
@@ -99,7 +100,7 @@ export function SettingsTab() {
 
   // Manual save trip name and destination
   const handleSaveTripInfo = async () => {
-    if (!tripId || !trip || !isAdmin || updatingTrip) return;
+    if (!tripId || !trip || !canManageTrip || updatingTrip) return;
 
     const name = editTripName.trim();
     const destination = editTripDestination.trim();
@@ -113,14 +114,36 @@ export function SettingsTab() {
     // Optimistic update
     setTrip({ ...trip, name, destination });
 
-    const { error } = await supabase.from("trips").update({
-      name,
-      destination,
-    }).eq("id", tripId);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      setUpdatingTrip(false);
+      toast(t("trip.sessionExpiredDelete"), 'error');
+      setTrip(trip);
+      return;
+    }
+
+    const response = await fetch('/api/update-trip', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ tripId, name, destination }),
+    });
     
     setUpdatingTrip(false);
-    if (error) {
-      toast(getErrorMessage(error), 'error');
+    if (!response.ok) {
+      let errorMessage = t("common.unexpectedError");
+      try {
+        const payload = await response.json();
+        errorMessage = payload?.error || payload?.details || errorMessage;
+      } catch {
+        // Keep fallback.
+      }
+      toast(errorMessage, 'error');
       // Rollback
       setTrip(trip);
       return;
@@ -767,7 +790,7 @@ export function SettingsTab() {
       )}
 
       {/* ── 4. GERENCIAR VIAGEM ── */}
-      {isAdmin && trip && (
+      {canManageTrip && trip && (
         <Card className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">

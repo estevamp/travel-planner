@@ -43,6 +43,7 @@ export interface TripContextValue {
   // ── Derivados ─────────────────────────────────────────────────
   currentMember: TripMember | null;
   isAdmin: boolean;
+  isSuperuser: boolean;
   tripId: string;
   userId: string;
 
@@ -82,7 +83,7 @@ export function TripProvider({
   const {
     trip, setTrip, members, invites, categories, setCategories,
     itineraryTypes, setItineraryTypes, loading, loadError, notAuthorized,
-    spouseByUserId, setSpouseByUserId, reloadTrip,
+    spouseByUserId, setSpouseByUserId, reloadTrip, isSuperuser,
     reloadItinerary, reloadExpenses, reloadDocuments, reloadIdeas, reloadMembers,
   } = useTripData(tripId, userId);
 
@@ -108,6 +109,7 @@ export function TripProvider({
   );
 
   const isAdmin = currentMember?.role === "admin";
+  const canManageTrip = isAdmin || isSuperuser;
 
   useEffect(() => {
     if (notAuthorized) {
@@ -117,7 +119,7 @@ export function TripProvider({
   }, [notAuthorized, toast, onTripDeleted, t]);
 
   const deleteCurrentTrip = async () => {
-    if (!trip || !isAdmin) return false;
+    if (!trip || !canManageTrip) return false;
 
     const {
       data: { session },
@@ -224,6 +226,7 @@ export function TripProvider({
     reloadBudget,
     currentMember,
     isAdmin,
+    isSuperuser,
     tripId,
     userId,
     settings,

@@ -115,21 +115,29 @@ export default async function handler(req: any, res: any) {
     return json(res, 401, { error: "Invalid user token" });
   }
 
-  const { data: membership, error: membershipError } = await supabaseAdmin
-    .from("trip_members")
-    .select("id")
-    .eq("trip_id", tripId)
-    .eq("user_id", user.id)
-    .eq("role", "admin")
-    .maybeSingle();
+  const [{ data: membership, error: membershipError }, { data: profile, error: profileError }] = await Promise.all([
+    supabaseAdmin
+      .from("trip_members")
+      .select("id")
+      .eq("trip_id", tripId)
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle(),
+    supabaseAdmin
+      .from("profiles")
+      .select("is_superuser")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
 
-  if (membershipError) {
-    console.error("[delete-trip] Failed to verify trip permissions", membershipError);
-    return json(res, 500, { error: "Failed to verify trip permissions", details: membershipError.message });
+  if (membershipError || profileError) {
+    console.error("[delete-trip] Failed to verify trip permissions", membershipError || profileError);
+    return json(res, 500, { error: "Failed to verify trip permissions", details: membershipError?.message || profileError?.message });
   }
 
-  if (!membership) {
-    return json(res, 403, { error: "Only trip admins can delete a trip" });
+  const isSuperuser = profile?.is_superuser === true;
+  if (!membership && !isSuperuser) {
+    return json(res, 403, { error: "Only trip admins or superusers can delete a trip" });
   }
 
   const [{ data: documents, error: documentsError }, { data: ideaAssets, error: assetsError }, { data: itinerary, error: itineraryError }] = await Promise.all([

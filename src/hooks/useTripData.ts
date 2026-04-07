@@ -37,6 +37,7 @@ export function useTripData(tripId: string | undefined, userId: string) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notAuthorized, setNotAuthorized] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
   const [spouseByUserId, setSpouseByUserId] = useState<Map<string, string | null>>(new Map());
 
   const { toast } = useToast();
@@ -347,6 +348,16 @@ export function useTripData(tripId: string | undefined, userId: string) {
     void loadTrip(tripId);
   }, [tripId, loadTrip]);
 
+  useEffect(() => {
+    let alive = true;
+    void checkIsSuperuser(userId).then((value) => {
+      if (alive) setIsSuperuser(value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
   return {
     trip,
     setTrip,
@@ -359,6 +370,7 @@ export function useTripData(tripId: string | undefined, userId: string) {
     loading,
     loadError,
     notAuthorized,
+    isSuperuser,
     spouseByUserId,
     setSpouseByUserId,
     reloadTrip:      tripId ? () => loadTrip(tripId)      : () => {},
