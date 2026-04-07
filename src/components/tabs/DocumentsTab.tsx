@@ -14,6 +14,7 @@ import { Modal } from "../Modal";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
+import { useI18n } from "../../i18n/I18nProvider";
 
 interface DocumentsTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -23,6 +24,7 @@ interface DocumentsTabProps {
 export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
   const { trip, currentMember, tripId, settings } = useTripContext();
   const isDark = settings.dark_mode;
+  const { t } = useI18n();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,8 +48,8 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
     if (!docToDelete) return;
 
     const confirmed = await confirm({
-      title: 'Excluir documento?',
-      message: `Deseja realmente excluir o documento "${docName}"?`,
+      title: t("documents.deleteTitle"),
+      message: t("documents.deleteMessage", { name: docName }),
       variant: 'danger',
       isDark
     });
@@ -115,7 +117,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
       setPendingFile(null);
       setDescription("");
       setVisibility("private");
-      toast("Documento adicionado com sucesso!", "success");
+      toast(t("documents.addedSuccess"), "success");
     } catch (error) {
       toast(getErrorMessage(error), "error");
     } finally {
@@ -147,7 +149,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
       setEditingDoc(null);
       setDescription("");
       setVisibility("private");
-      toast("Documento atualizado!", "success");
+      toast(t("documents.updatedSuccess"), "success");
     } catch (error) {
       toast(getErrorMessage(error), "error");
     } finally {
@@ -159,8 +161,8 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
     <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <Card className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-200 bg-transparent cursor-pointer" onClick={() => documentInputRef.current?.click()}>
         <Plus className="text-zinc-300 mb-2" size={32} />
-        <p className="text-sm font-medium text-zinc-400">Adicionar Documento</p>
-        <p className="text-xs text-zinc-300 mt-1">Privado</p>
+        <p className="text-sm font-medium text-zinc-400">{t("documents.addDocument")}</p>
+        <p className="text-xs text-zinc-300 mt-1">{t("common.private")}</p>
       </Card>
       <input
         ref={documentInputRef}
@@ -218,9 +220,9 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 )}
               >
                 {doc.visibility === 'public' ? (
-                  <><Users size={10} /> Público</>
+                  <><Users size={10} /> {t("common.public")}</>
                 ) : (
-                  <><Lock size={10} /> Privado</>
+                  <><Lock size={10} /> {t("common.private")}</>
                 )}
               </button>
             </div>
@@ -243,7 +245,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1"
               >
                 <Eye size={12} />
-                Visualizar
+                {t("documents.view")}
               </button>
               <button
                 type="button"
@@ -259,7 +261,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 }}
                 className="text-xs text-zinc-500 hover:underline"
               >
-                Abrir original
+                {t("documents.openOriginal")}
               </button>
             </div>
           </div>
@@ -273,7 +275,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 setIsEditModalOpen(true);
               }}
               className="text-zinc-300 hover:text-blue-500 transition-colors p-1.5"
-              title="Editar descrição"
+              title={t("documents.editDescription")}
             >
               <Pencil size={14} />
             </button>
@@ -281,7 +283,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
               type="button"
               onClick={() => void deleteDocument(doc.id, doc.url, doc.name)}
               className="text-zinc-300 hover:text-red-500 transition-colors p-1.5"
-              title="Excluir documento"
+              title={t("documents.deleteDocument")}
             >
               <Trash2 size={14} />
             </button>
@@ -308,16 +310,16 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
           setPendingFile(null);
           setEditingDoc(null);
         }}
-        title={isUploadModalOpen ? "Detalhes do Documento" : "Editar Documento"}
+        title={isUploadModalOpen ? t("documents.modalDetailsTitle") : t("documents.modalEditTitle")}
         isDark={isDark}
       >
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Descrição (opcional)</label>
+            <label className="block text-sm font-medium mb-2">{t("documents.descriptionOptional")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Passaporte de João, válido até 2030"
+              placeholder={t("documents.descriptionPlaceholder")}
               className={cn(
                 "w-full px-4 py-3 rounded-xl border text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none h-24",
                 isDark ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200 text-zinc-900"
@@ -326,7 +328,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Visibilidade</label>
+            <label className="block text-sm font-medium mb-2">{t("documents.visibility")}</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setVisibility("private")}
@@ -338,7 +340,7 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 )}
               >
                 <Lock size={18} />
-                Privado 🔒
+                {t("documents.visibilityPrivate")}
               </button>
               <button
                 onClick={() => setVisibility("public")}
@@ -350,13 +352,13 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
                 )}
               >
                 <Users size={18} />
-                Público 👥
+                {t("documents.visibilityPublic")}
               </button>
             </div>
             <p className="text-xs text-zinc-400 mt-2">
               {visibility === "private"
-                ? "Privado = só você e cônjuge."
-                : "Público = todos da viagem."}
+                ? t("documents.visibilityPrivateHint")
+                : t("documents.visibilityPublicHint")}
             </p>
           </div>
           <button
@@ -366,13 +368,13 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
           >
             {!isOnline && (
             <p className="text-xs text-amber-600 mt-1">
-              📶 Upload de documentos indisponível offline.
+              📶 {t("documents.offlineUploadUnavailable")}
             </p>
             )}
             {isSaving ? (
               <Loader2 className="animate-spin" size={20} />
             ) : (
-              isUploadModalOpen ? "Salvar Documento" : "Atualizar Documento"
+              isUploadModalOpen ? t("documents.saveDocument") : t("documents.updateDocument")
             )}
           </button>
         </div>

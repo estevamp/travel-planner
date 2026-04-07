@@ -8,6 +8,7 @@ import { supabase } from "../../supabase";
 import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
 import { Card } from "../Card";
+import { useI18n } from "../../i18n/I18nProvider";
 
 interface PeopleTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -19,6 +20,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     tripId, members, invites, currentMember, isAdmin,
     settings, reloadTrip, reloadMembers,
   } = useTripContext();
+  const { t } = useI18n();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
 
@@ -53,7 +55,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     const link = `${window.location.origin}/invite/${inviteToken}`;
     setGeneratedLink(link);
     setInviteEmail("");
-    setTimeout(async () => { if (await copyToClipboard(link)) toast("Link copiado!", "success"); }, 100);
+    setTimeout(async () => { if (await copyToClipboard(link)) toast(t("people.copyLinkSuccess"), "success"); }, 100);
     reloadTrip();
   };
 
@@ -65,8 +67,8 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
 
   const handleSaveName = async (member: any) => {
     const trimmedName = nameValue.trim();
-    if (!trimmedName) { toast("O apelido não pode ficar em branco", "error"); return; }
-    if (trimmedName.length > 50) { toast("O apelido deve ter no máximo 50 caracteres", "error"); return; }
+    if (!trimmedName) { toast(t("people.nicknameBlank"), "error"); return; }
+    if (trimmedName.length > 50) { toast(t("people.nicknameMaxLength"), "error"); return; }
     const { error } = await supabase.rpc("update_member_display_name", {
       p_trip_id: tripId,
       p_display_name: trimmedName,
@@ -75,7 +77,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     if (error) { toast(getErrorMessage(error), "error"); return; }
     setEditingMemberId(null);
     await reload();
-    toast("Apelido atualizado!", "success");
+    toast(t("people.nicknameUpdated"), "success");
   };
 
   const saveSpouse = async (targetMemberId: string, spouseMemberId: string | null) => {
@@ -88,7 +90,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     setEditingSpouseMemberId(null);
     setSpouseSelectValue("");
     await reload();
-    toast("Cônjuge atualizado!", "success");
+    toast(t("people.spouseUpdated"), "success");
   };
 
   const addGuest = async () => {
@@ -100,13 +102,13 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     if (error) { toast(getErrorMessage(error), "error"); return; }
     setGuestName("");
     await reload();
-    toast(`${name} adicionado!`, "success");
+    toast(t("people.guestAdded", { name }), "success");
   };
 
   const removeGuest = async (memberId: string, memberName: string) => {
     const confirmed = await confirm({
-      title: "Remover guest?",
-      message: `"${memberName}" será removido. Isso só é possível se ele não tiver despesas vinculadas.`,
+      title: t("people.removeGuestTitle"),
+      message: t("people.removeGuestMessage", { name: memberName }),
       variant: "danger",
       isDark: settings.dark_mode,
     });
@@ -114,7 +116,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     const { error } = await supabase.rpc("remove_guest_member", { p_trip_id: tripId, p_member_id: memberId });
     if (error) { toast(getErrorMessage(error), "error"); return; }
     await reload();
-    toast("Guest removido.", "success");
+    toast(t("people.guestRemoved"), "success");
   };
 
   const sendGuestInvite = async (memberId: string) => {
@@ -126,7 +128,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     if (error || !token) { toast(getErrorMessage(error), "error"); return; }
     const link = `${window.location.origin}/invite/${token}`;
     await copyToClipboard(link);
-    toast("Link de convite copiado!", "success");
+    toast(t("people.inviteLinkCopied"), "success");
     setInvitingGuestId(null);
     setGuestInviteEmail("");
     await reloadTrip();
@@ -150,7 +152,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
       {!isOnline && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
           <span>📶</span>
-          <p>Você está offline. O gerenciamento de amigos requer conexão com a internet.</p>
+          <p>{t("people.offlineNotice")}</p>
         </div>
       )}
 
@@ -159,9 +161,9 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-[var(--sidebar-hover)]">
-              <th className="px-4 py-3 uppercase tracking-wide">Pessoa</th>
-              <th className="px-4 py-3 uppercase tracking-wide">Cônjuge</th>
-              {isAdmin && <th className="px-4 py-3 uppercase tracking-wide text-right">Ações</th>}
+              <th className="px-4 py-3 uppercase tracking-wide">{t("people.table.person")}</th>
+              <th className="px-4 py-3 uppercase tracking-wide">{t("people.table.spouse")}</th>
+              {isAdmin && <th className="px-4 py-3 uppercase tracking-wide text-right">{t("people.table.actions")}</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--sidebar-border)]">
@@ -200,22 +202,22 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                           <span
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase"
                             style={{ backgroundColor: "rgba(161,161,170,0.15)", color: "var(--text-muted,#71717a)" }}
-                            title="Sem conta no app"
+                            title={t("people.badges.noAccount")}
                           >
-                            <UserX size={9} /> guest
+                            <UserX size={9} /> {t("people.badges.guest")}
                           </span>
                         )}
                         {!isGuest && member.user_id && (
-                          <BadgeCheck size={14} className="text-blue-400 shrink-0" title="Conta vinculada" />
+                          <BadgeCheck size={14} className="text-blue-400 shrink-0" title={t("people.badges.linkedAccount")} />
                         )}
                         {member.role === "admin" && (
-                          <Crown size={14} className="text-amber-400 opacity-80" title="Administrador da viagem" />
+                          <Crown size={14} className="text-amber-400 opacity-80" title={t("people.badges.tripAdmin")} />
                         )}
                         {(member.id === currentMember?.id || isAdmin) && (
                           <button
                             onClick={() => { setNameValue(member.display_name || ""); setEditingMemberId(member.id); }}
                             className="text-zinc-400 hover:text-zinc-600"
-                            title="Editar nome"
+                            title={t("people.actions.editName")}
                           >
                             <Pencil size={13} />
                           </button>
@@ -234,7 +236,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                           className={inputCls}
                           autoFocus
                         >
-                          <option value="">Sem cônjuge</option>
+                          <option value="">{t("people.noSpouse")}</option>
                           {members
                             .filter((m) => {
                               if (m.id === member.id) return false; // não listar si mesmo
@@ -246,15 +248,15 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                             })
                             .map((m) => (
                               <option key={m.id} value={m.id}>
-                                {m.display_name || m.user_id || "Guest"}
-                                {m.status === "guest" ? " (guest)" : ""}
+                                {m.display_name || m.user_id || t("people.guestFallback")}
+                                {m.status === "guest" ? ` (${t("people.badges.guest")})` : ""}
                               </option>
                             ))}
                         </select>
-                        <button onClick={() => saveSpouse(member.id, spouseSelectValue || null)} className="text-emerald-500 hover:text-emerald-600" title="Salvar">
+                        <button onClick={() => saveSpouse(member.id, spouseSelectValue || null)} className="text-emerald-500 hover:text-emerald-600" title={t("common.confirm")}>
                           <Check size={14} />
                         </button>
-                        <button onClick={() => { setEditingSpouseMemberId(null); setSpouseSelectValue(""); }} className="text-zinc-400 hover:text-zinc-600" title="Cancelar">
+                        <button onClick={() => { setEditingSpouseMemberId(null); setSpouseSelectValue(""); }} className="text-zinc-400 hover:text-zinc-600" title={t("common.cancel")}>
                           <X size={14} />
                         </button>
                       </div>
@@ -267,7 +269,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                           <button
                             onClick={() => { setEditingSpouseMemberId(member.id); setSpouseSelectValue(spouseMemberId || ""); }}
                             className="text-zinc-400 hover:text-pink-500 transition-colors"
-                            title={spouse ? "Editar cônjuge" : "Definir cônjuge"}
+                            title={spouse ? t("people.actions.editSpouse") : t("people.actions.defineSpouse")}
                           >
                             <Heart size={13} className={spouse ? "text-pink-400" : ""} />
                           </button>
@@ -285,15 +287,15 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                             type="button"
                             onClick={() => { setInvitingGuestId(invitingGuestId === member.id ? null : member.id); setGuestInviteEmail(""); }}
                             className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                            title="Convidar para o app"
+                            title={t("people.actions.inviteToApp")}
                           >
                             <Mail size={14} />
                           </button>
                           <button
                             type="button"
-                            onClick={() => removeGuest(member.id, member.display_name || "Guest")}
+                            onClick={() => removeGuest(member.id, member.display_name || t("people.guestFallback"))}
                             className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                            title="Remover guest"
+                            title={t("people.actions.removeGuest")}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -311,12 +313,12 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
         {invitingGuestId && (
           <div className="px-4 py-3 border-t border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]">
             <p className="text-xs text-zinc-500 mb-2">
-              Envie o link para o guest assumir o slot no app:
+              {t("people.guestInvitePrompt")}
             </p>
             <div className="flex gap-2">
               <input
                 type="email"
-                placeholder="email@exemplo.com"
+                placeholder={t("people.emailPlaceholder")}
                 value={guestInviteEmail}
                 onChange={(e) => setGuestInviteEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendGuestInvite(invitingGuestId)}
@@ -327,13 +329,13 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                 onClick={() => sendGuestInvite(invitingGuestId)}
                 className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-3 py-1.5 rounded-lg text-xs font-bold"
               >
-                Copiar link
+                {t("people.copyLink")}
               </button>
               <button
                 onClick={() => { setInvitingGuestId(null); setGuestInviteEmail(""); }}
                 className="px-2 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-600"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -343,15 +345,14 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
       {/* Adicionar guest */}
       {isAdmin && (
         <Card>
-          <h3 className="font-bold mb-1">Adicionar sem conta</h3>
+          <h3 className="font-bold mb-1">{t("people.addWithoutAccountTitle")}</h3>
           <p className="text-xs text-zinc-500 mb-4">
-            Adicione amigos que não usam o app — eles já aparecem no rateio de despesas.
-            Quando quiserem entrar, envie um convite para assumirem o slot.
+            {t("people.addWithoutAccountDescription")}
           </p>
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Nome do amigo"
+              placeholder={t("people.friendNamePlaceholder")}
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addGuest()}
@@ -365,7 +366,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
               disabled={addingGuest || !guestName.trim()}
               className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {addingGuest ? "..." : "Adicionar"}
+              {addingGuest ? "..." : t("common.add")}
             </button>
           </div>
         </Card>
@@ -374,14 +375,14 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
       {/* Convidar por e-mail */}
       {isAdmin && (
         <Card>
-          <h3 className="font-bold mb-1">Convidar por e-mail</h3>
+          <h3 className="font-bold mb-1">{t("people.inviteByEmailTitle")}</h3>
           <p className="text-xs text-zinc-500 mb-4">
-            Gere um link de convite para uma pessoa entrar nesta viagem.
+            {t("people.inviteByEmailDescription")}
           </p>
           <div className="flex gap-2">
             <input
               type="email"
-              placeholder="email@exemplo.com"
+              placeholder={t("people.emailPlaceholder")}
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && createInvite()}
@@ -395,7 +396,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
               disabled={!inviteEmail.trim()}
               className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
             >
-              Gerar link
+              {t("people.generateLink")}
             </button>
           </div>
           {generatedLink && (
@@ -409,9 +410,9 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                 )}
               />
               <button
-                onClick={() => copyToClipboard(generatedLink).then(() => toast("Link copiado!", "success"))}
+                onClick={() => copyToClipboard(generatedLink).then(() => toast(t("people.copyLinkSuccess"), "success"))}
                 className="p-2 rounded-xl border border-[var(--sidebar-border)] text-zinc-400 hover:text-zinc-700 transition-colors"
-                title="Copiar link"
+                title={t("people.copyLink")}
               >
                 <Copy size={14} />
               </button>
@@ -423,7 +424,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
       {/* Convites pendentes */}
       {isAdmin && invites.filter((i) => !i.accepted_at).length > 0 && (
         <Card>
-          <h3 className="font-bold mb-3">Convites pendentes</h3>
+          <h3 className="font-bold mb-3">{t("people.pendingInvitesTitle")}</h3>
           <div className="space-y-2">
             {invites
               .filter((i) => !i.accepted_at)
@@ -434,7 +435,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                     onClick={() => cancelInvite(invite.id)}
                     className="text-xs text-red-400 hover:text-red-600 transition-colors shrink-0"
                   >
-                    Cancelar
+                    {t("common.cancel")}
                   </button>
                 </div>
               ))}
