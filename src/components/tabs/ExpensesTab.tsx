@@ -29,6 +29,7 @@ import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 import { useUpdateExpense } from "../../hooks/useUpdateExpense";
 import { useDeleteExpense } from "../../hooks/useDeleteExpense";
 import { ExpenseListItem } from "../ExpenseListItem";
+import { useI18n } from "../../i18n/I18nProvider";
 
 // Tipo da resposta bruta do Supabase para a query "*, expense_splits(*)"
 type ExpenseRowFromSupabase = Omit<ExpenseWithSplits, 'splits'> & {
@@ -47,6 +48,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const { t } = useI18n();
   const { toggleVisibility: toggleExpenseVisibility } = useOptimisticVisibility<Expense>(
     "expenses",
     "expenses",
@@ -192,7 +194,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
       grouped.set(member.id, {
         id: member.id,
-        name: groupMembers.map((entry) => entry.display_name ?? "Membro").join("/"),
+        name: groupMembers.map((entry) => entry.display_name ?? t("expenses.memberFallback")).join("/"),
         saldo,
       });
     }
@@ -260,13 +262,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     });
     return members
       .map(m => ({
-        name: m.display_name || "Membro",
+        name: m.display_name || t("expenses.memberFallback"),
         amount: totals[m.id] || 0,
         confirmedAmount: confirmedTotals[m.id] || 0,
       }))
       .filter(m => m.amount > 0)
       .sort((a, b) => b.amount - a.amount);
-  }, [expensesWithSplits, members, convert, settings.default_currency]);
+  }, [expensesWithSplits, members, convert, settings.default_currency, t]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -341,21 +343,21 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     }
 
     if (rows.length === 0) {
-      toast("Nao foi possivel registrar esse pagamento.", "error");
+      toast(t("expenses.registerPaymentError"), "error");
       return;
     }
 
     const { error } = await supabase.from("settlements").insert(rows);
     if (error) { toast(getErrorMessage(error), "error"); return; }
     await fetchBalanceData();
-    toast("Pagamento registrado!", "success");
+    toast(t("expenses.paymentRegistered"), "success");
   };
 
   const undoPayment = async (settlementId: string) => {
     const { error } = await supabase.from("settlements").delete().eq("id", settlementId);
     if (error) { toast(getErrorMessage(error), "error"); return; }
     await fetchBalanceData();
-    toast("Pagamento desfeito.", "success");
+    toast(t("expenses.paymentUndone"), "success");
   };
 
   // Estados para modal de edição completo (com splits)
@@ -379,7 +381,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     const expWithSplits = expensesWithSplits.find((entry) => entry.id === exp.id);
     const hasSplits = Boolean(expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0);
     if (hasSplits) {
-      toast("Despesas com rateio devem ser públicas", "error");
+      toast(t("expenses.splitMustBePublic"), "error");
       return;
     }
     setVisibilitySheet({
@@ -476,7 +478,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     const visibility = editExpenseSplits.length > 0
       ? "public"
       : ((form.get("visibility") as string) === "private" ? "private" : "public");
-    const description = (form.get("description") as string) || "Despesa";
+    const description = (form.get("description") as string) || t("expenses.defaultDescription");
     const category_id = (form.get("category_id") as string) || null;
     const is_confirmed = form.get("is_confirmed") === "on";
 
@@ -521,8 +523,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
   const deleteExpenseHandler = async (expense: Expense) => {
     const confirmed = await confirm({
-      title: "Remover despesa?",
-      message: `Remover a despesa "${expense.description}"? Esta ação não pode ser desfeita.`,
+      title: t("expenses.deleteTitle"),
+      message: t("expenses.deleteMessage", { description: expense.description }),
       variant: "danger",
       isDark: settings.dark_mode,
     });
@@ -579,7 +581,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 : "text-zinc-500 hover:text-zinc-700"
             )}
           >
-            {tab === "relatorio" ? "Relatório" : "Pagamentos"}
+            {tab === "relatorio" ? t("expenses.subtab.report") : t("expenses.subtab.payments")}
           </button>
         ))}
       </div>
@@ -600,23 +602,23 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
                   <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                    Orçamento da Viagem
+                    {t("expenses.budgetCardTitle")}
                   </h3>
                   <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
                     {budgetLimit > 0
-                      ? `Limite: ${formatCurrency(budgetLimit, settings.default_currency)}`
-                      : "Nenhum orçamento definido"}
+                      ? t("expenses.limitLabel", { amount: formatCurrency(budgetLimit, settings.default_currency) })
+                      : t("expenses.noBudgetDefined")}
                   </p>
                 </div>
                 <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
                   <div>
-                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Confirmado</p>
+                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>{t("expenses.confirmed")}</p>
                     <p className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">
                       {formatCurrency(confirmedTotal, settings.default_currency)}
                     </p>
                   </div>
                   <div>
-                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>Total Previsto</p>
+                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>{t("expenses.totalPredicted")}</p>
                     <p className={cn("text-base sm:text-lg font-bold tabular-nums", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>
                       {formatCurrency(predictedTotal, settings.default_currency)}
                     </p>
@@ -650,11 +652,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>Progresso</span>
+                      <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>{t("expenses.progress")}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-emerald-600">Confirmado: {confirmedProgress.toFixed(1)}%</span>
+                        <span className="text-emerald-600">{t("expenses.confirmed")}: {confirmedProgress.toFixed(1)}%</span>
                         <span className={cn("font-bold", isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600"))}>
-                          Previsto: {predictedProgress.toFixed(1)}%
+                          {t("expenses.predicted")}: {predictedProgress.toFixed(1)}%
                         </span>
                       </div>
                     </div>
@@ -678,7 +680,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                   )}>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
-                        {isOverBudget ? "Acima do orçamento" : "Restante"}
+                        {isOverBudget ? t("expenses.overBudget") : t("expenses.remaining")}
                       </span>
                       <span className={cn("text-lg sm:text-xl font-bold tabular-nums", isOverBudget ? "text-red-600" : "text-emerald-600")}>
                         {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
@@ -691,10 +693,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               {budgetLimit === 0 && (
                 <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                   <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
-                    💡 Defina um orçamento nas <button
+                    💡 {t("expenses.configureBudgetPrefix")} <button
                       onClick={() => onSetActiveTab("settings")}
                       className={cn("font-semibold hover:underline", settings.dark_mode ? "text-blue-400" : "text-blue-600")}
-                    >Configurações</button> para acompanhar seus gastos
+                    >{t("expenses.configureBudgetLink")}</button> {t("expenses.configureBudgetSuffix")}
                   </p>
                 </div>
               )}
@@ -706,10 +708,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className={settings.dark_mode ? "bg-zinc-800/50" : "bg-zinc-50"}>
-                  <th className="px-4 py-3 text-xs uppercase">Descricao</th>
-                  <th className="px-4 py-3 text-xs uppercase">Categoria</th>
-                  <th className="px-4 py-3 text-xs uppercase">Valor</th>
-                  <th className="px-4 py-3 text-xs uppercase text-right">Acao</th>
+                  <th className="px-4 py-3 text-xs uppercase">{t("expenses.table.description")}</th>
+                  <th className="px-4 py-3 text-xs uppercase">{t("expenses.table.category")}</th>
+                  <th className="px-4 py-3 text-xs uppercase">{t("expenses.table.amount")}</th>
+                  <th className="px-4 py-3 text-xs uppercase text-right">{t("expenses.table.action")}</th>
                 </tr>
               </thead>
               <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
@@ -743,7 +745,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           <div className="space-y-3 md:hidden">
             {trip.expenses.length === 0 && (
               <Card>
-                <p className="text-sm text-zinc-500 text-center">Nenhuma despesa cadastrada.</p>
+                <p className="text-sm text-zinc-500 text-center">{t("expenses.empty")}</p>
               </Card>
             )}
             {trip.expenses.map((exp) => (
@@ -773,15 +775,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           {/* Quem pagou */}
           {payerTotals.length > 0 && (
             <Card className="space-y-4">
-              <h3 className="text-sm font-bold">Quem pagou nas despesas rateadas</h3>
+              <h3 className="text-sm font-bold">{t("expenses.whoPaidTitle")}</h3>
               <div className="flex items-center gap-4 text-[10px]">
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Confirmado</span>
+                  <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.confirmed")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-blue-400 opacity-50" />
-                  <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Previsto</span>
+                  <span className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.predicted")}</span>
                 </div>
               </div>
               <div className="space-y-3">
@@ -808,7 +810,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 })}
               </div>
               <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-                Somente despesas com rateio entre membros · valores em {settings.default_currency}
+                {t("expenses.whoPaidFootnote", { currency: settings.default_currency })}
               </p>
             </Card>
           )}
@@ -822,7 +824,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {expenseSubTab === "pagamentos" && currentMember && (
         <div className="space-y-6">
           <Card className="space-y-4">
-            <h3 className="text-sm font-bold">Resumo por participante</h3>
+            <h3 className="text-sm font-bold">{t("expenses.summaryByParticipant")}</h3>
             <div className="space-y-3">
               {memberPaymentSummary.map((m) => {
                 const isCredit = m.saldo > 0.01;
@@ -842,15 +844,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                     <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
                     <div className="flex flex-wrap gap-3">
                       <div>
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A receber</p>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.toReceive")}</p>
                         <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
                       </div>
                       <div>
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>A pagar</p>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.toPay")}</p>
                         <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
                       </div>
                       <div className="ml-auto text-right">
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>Saldo</p>
+                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.balance")}</p>
                         <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : isDebt ? "text-red-500" : settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
                           {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
                         </p>
@@ -861,7 +863,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               })}
             </div>
             <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-              Saldos após netting bilateral · valores em {settings.default_currency}
+              {t("expenses.bilateralNettingFootnote", { currency: settings.default_currency })}
             </p>
           </Card>
 
@@ -934,7 +936,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             if (error) toast(getErrorMessage(error), 'error');
             else {
               setShowSettlement(false);
-              toast("Viagem quitada com sucesso!", "success");
+              toast(t("expenses.tripSettledSuccess"), "success");
             }
           }}
         />
@@ -944,7 +946,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       <Modal
         isOpen={showEditExpenseModal}
         onClose={closeEditExpenseModal}
-        title="Editar Despesa"
+        title={t("expenses.editTitle")}
         size="lg"
         isDark={settings.dark_mode}
       >
@@ -956,13 +958,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           }}
         >
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Descrição</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.description")}</label>
             <input
               name="description"
               defaultValue={editingExpense?.description}
               disabled={isSubmittingExpense}
               required
-              placeholder="Ex: Almoço"
+              placeholder={t("dashboard.descriptionPlaceholderExpense")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -979,7 +981,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           >
-            <option value="">Sem categoria</option>
+            <option value="">{t("dashboard.noCategory")}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
@@ -987,14 +989,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Valor</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.amount")}</label>
               <input
                 name="amount"
                 disabled={isSubmittingExpense}
                 required
                 placeholder="0,00"
                 value={editExpenseAmount}
-                onChange={(e) => setEditExpenseAmount(maskCurrency(e.target.value))}
+                onChange={(e) => setEditExpenseAmount(maskCurrency(e.target.value, settings.language_code))}
                 className={cn(
                   "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -1002,7 +1004,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Moeda</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.currency")}</label>
               <CurrencySelector value={editExpenseCurrency} onChange={setEditExpenseCurrency} isDark={settings.dark_mode} />
             </div>
           </div>
@@ -1015,7 +1017,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 defaultChecked={editingExpense?.is_confirmed}
                 className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)]"
               />
-              <span>Despesa confirmada</span>
+              <span>{t("expenses.confirmedExpense")}</span>
             </label>
 
             <label className={cn("flex items-center gap-2 text-sm cursor-pointer", editExpenseSplits.length > 0 && "opacity-50 pointer-events-none")}>
@@ -1029,13 +1031,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               />
               <div className={cn("flex items-center gap-1.5 text-zinc-600", editExpenseSplits.length > 0 && "opacity-50")}>
                 {editExpenseSplits.length > 0 ? <Unlock size={14} /> : <Lock size={14} />}
-                <span>{editExpenseSplits.length > 0 ? "Público (obrigatório para rateio)" : "Privado (apenas eu e cônjuge)"}</span>
+                <span>{editExpenseSplits.length > 0 ? t("dashboard.publicRequiredForSplit") : t("dashboard.privateWithSpouse")}</span>
               </div>
             </label>
           </div>
 
           <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
-            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.split")}</h3>
             <PayerSelector
               members={members}
               selectedPayerId={editExpensePayerId}
@@ -1060,7 +1062,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50">
                   <Unlock size={14} className="text-blue-800 dark:text-blue-400 flex-shrink-0" />
                   <p className="text-[10px] font-bold text-[var(--sidebar-active-text)] dark:text-blue-300">
-                    Despesas com rateio são obrigatoriamente públicas.
+                    {t("dashboard.splitPublicNotice")}
                   </p>
                 </div>
               )}
@@ -1071,7 +1073,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             disabled={isSubmittingExpense || !isEditExpenseSplitValid}
             className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmittingExpense ? "Salvando..." : "Salvar Alterações"}
+            {isSubmittingExpense ? t("common.saving") : t("expenses.saveChanges")}
           </button>
         </form>
       </Modal>
