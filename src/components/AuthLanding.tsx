@@ -3,10 +3,14 @@ import { Card } from "./Card";
 import { getErrorMessage } from "../utils";
 import { supabase } from "../supabase";
 import { useToast } from "../hooks/useToast";
+import { useI18n, usePageTitle } from "../i18n/I18nProvider";
 
 export function AuthLanding() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { t } = useI18n();
+
+  usePageTitle(t("app.name"));
 
   async function signInWithGoogle(redirectTo?: string) {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -26,7 +30,7 @@ export function AuthLanding() {
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-zinc-900">Partiu!</h1>
-          <p className="text-zinc-500">E aí? Vamos começar a planejar sua viagem?</p>
+          <p className="text-zinc-500">{t("auth.tagline")}</p>
         </div>
         <button
           disabled={loading}
@@ -42,7 +46,7 @@ export function AuthLanding() {
           }}
           className="w-full bg-[#0A2342] hover:bg-[#0D2D54] text-white py-4 rounded-xl font-semibold transition-colors shadow-md shadow-blue-900/10"
         >
-          {loading ? "Redirecionando..." : "Entrar com Google"}
+          {loading ? t("auth.redirecting") : t("auth.signInGoogle")}
         </button>
       </Card>
     </div>

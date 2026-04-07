@@ -2,11 +2,15 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, Info, ShieldCheck, Coffee, Scale } from "lucide-react";
 import { UserSettings } from "../types";
 import { getThemeStyles } from "../utils/theme";
+import { useI18n, usePageTitle } from "../i18n/I18nProvider";
 
 export function AboutPage({ settings }: { settings?: UserSettings }) {
   const navigate = useNavigate();
   const version = import.meta.env.VITE_APP_VERSION || "1.0.0";
   const build = import.meta.env.VITE_APP_BUILD || "20260227.1";
+  const { t } = useI18n();
+
+  usePageTitle(`${t("about.title")} | ${t("app.name")}`);
 
   const themedStyles = settings ? getThemeStyles(settings) : {};
 
@@ -17,12 +21,12 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
           <button
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
-            aria-label="Voltar"
+            aria-label={t("common.back")}
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
           <img src="/favicon.svg" alt="Partiu!" className="w-8 h-8" />
-          <h1 className="text-xl font-bold">Sobre o Partiu!</h1>
+          <h1 className="text-xl font-bold">{t("about.title")}</h1>
         </div>
       </header>
 
@@ -30,77 +34,77 @@ export function AboutPage({ settings }: { settings?: UserSettings }) {
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <Info className="w-6 h-6" />
-            <h2 className="text-lg font-semibold">O Partiu!</h2>
+            <h2 className="text-lg font-semibold">{t("about.aboutHeading")}</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            Partiu! é o seu planejador de viagens colaborativo. Organize roteiros, despesas, voos e documentos em um só lugar, facilitando a coordenação com seus amigos e familiares.
+            {t("about.aboutText")}
           </p>
         </section>
 
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <Mail className="w-6 h-6" />
-            <h2 className="text-lg font-semibold">Suporte Técnico</h2>
+            <h2 className="text-lg font-semibold">{t("about.supportHeading")}</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 mb-4">
-            Encontrou algum problema ou tem alguma sugestão? Entre em contato...
+            {t("about.supportText")}
           </p>
           <a
             href="mailto:estevamp@gmail.com"
             className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)] hover:opacity-90 text-white rounded-lg transition-colors font-medium"
           >
-            Enviar mensagem para estevamp@gmail.com
+            {t("about.supportCta")}
           </a>
         </section>
 
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-amber-600 dark:text-amber-400">
             <Coffee className="w-6 h-6" />
-            <h2 className="text-lg font-semibold">Contribua</h2>
+            <h2 className="text-lg font-semibold">{t("about.contributeHeading")}</h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            Esse app é distribuído sem custo. Mas, se quiser me pagar um cafezinho, pode fazer um pix para <b>estevamp@gmail.com</b>.
+            {t("about.contributeText")}
           </p>
         </section>
 
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
             <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
               <Scale className="w-6 h-6" />
-              <h2 className="text-lg font-semibold">Termos de Uso</h2>
+              <h2 className="text-lg font-semibold">{t("about.termsHeading")}</h2>
             </div>
             <p className="text-slate-600 dark:text-slate-400 mb-4">
-              Leia os nossos Termos de Uso para entender como o Partiu! funciona, quais dados coletamos e seus direitos.
+              {t("about.termsText")}
             </p>
             <a
-              href="/terms.html"
+              href="/terms"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)] hover:opacity-90 text-white rounded-lg transition-colors font-medium"
             >
               <Scale className="w-4 h-4" />
-              Ver Termos de Uso
+              {t("common.viewTerms")}
             </a>
           </section>
 
         <section className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--card-shadow)] border border-[var(--card-border)]">
           <div className="flex items-center gap-3 mb-4 text-[var(--accent-color)]">
             <ShieldCheck className="w-6 h-6" />
-            <h2 className="text-lg font-semibold">Informações do Sistema</h2>
+            <h2 className="text-lg font-semibold">{t("about.systemHeading")}</h2>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-[var(--bg-color)] rounded-xl">
-              <p className="text-xs text-slate-500 uppercase font-bold mb-1">Versão</p>
+              <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t("about.version")}</p>
               <p className="font-mono">{version}</p>
             </div>
             <div className="p-3 bg-[var(--bg-color)] rounded-xl">
-              <p className="text-xs text-slate-500 uppercase font-bold mb-1">Build</p>
+              <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t("about.build")}</p>
               <p className="font-mono">{build}</p>
             </div>
           </div>
         </section>
 
         <footer className="text-center text-slate-500 text-sm pt-4">
-          &copy; {new Date().getFullYear()} Partiu!. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Partiu!. {t("about.rights")}
         </footer>
       </main>
     </div>

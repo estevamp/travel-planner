@@ -3,6 +3,7 @@ import { TripMember } from "../types";
 import { MemberBalance, Settlement } from "../types/splitting";
 import { formatCurrency, simplifyDebts, mergeSpouseTransfers, GroupedTransfer } from "../utils/splitting";
 import { maskCurrency, parseCurrencyToNumber, cn } from "../utils";
+import { useI18n } from "../i18n/I18nProvider";
 
 
 interface BalancesSummaryProps {
@@ -34,6 +35,7 @@ export function BalancesSummary({
   isDark = false,
   transfers: transfersProp,
 }: BalancesSummaryProps) {
+  const { language } = useI18n();
   const currentMember = members.find((m) => m.user_id === currentUserId);
   const allTransfers: GroupedTransfer[] = useMemo(() => {
     const activeTransfers = transfersProp !== undefined
@@ -129,7 +131,7 @@ export function BalancesSummary({
     const remaining = Math.max(0, t.amount - paidAmount);
     setOpenPaymentKey(key);
     setExpandedHistoryKey(null);
-    setPaymentAmount(maskCurrency(Math.round(Math.max(remaining, 0) * 100).toFixed(0)));
+    setPaymentAmount(maskCurrency(Math.round(Math.max(remaining, 0) * 100).toFixed(0), language));
   };
 
   const submitPayment = async (t: GroupedTransfer) => {
@@ -333,7 +335,7 @@ export function BalancesSummary({
                             </span>
                           </span>
                           <span className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-400")}>
-                            {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                            {new Date(s.date).toLocaleDateString(language, { day: "2-digit", month: "short" })}
                           </span>
                           <button
                             type="button"
@@ -370,7 +372,7 @@ export function BalancesSummary({
                         type="text"
                         inputMode="numeric"
                         value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(maskCurrency(e.target.value))}
+                        onChange={(e) => setPaymentAmount(maskCurrency(e.target.value, language))}
                         placeholder="0,00"
                         className={cn(
                           "flex-1 px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2",

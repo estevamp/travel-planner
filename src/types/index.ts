@@ -6,6 +6,7 @@ export interface ItineraryType {
 }
 
 export type Visibility = "public" | "private";
+export type LanguageCode = "pt-BR" | "en";
 export type ThemePalette =
   | "default"
   | "ocean"
@@ -24,6 +25,7 @@ export interface UserSettings {
   theme_palette: ThemePalette;
   dark_mode: boolean;
   default_currency: string;
+  language_code: LanguageCode;
   spouse_user_id: string | null;
   budget_limit_masked?: string;
 }

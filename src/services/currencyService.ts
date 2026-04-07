@@ -190,9 +190,9 @@ class CurrencyService {
   /**
    * Format currency value
    */
-  formatCurrency(amount: number, currency: string): string {
+  formatCurrency(amount: number, currency: string, locale = "pt-BR"): string {
     try {
-      return new Intl.NumberFormat('pt-BR', {
+      return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: currency.toUpperCase(),
       }).format(amount);

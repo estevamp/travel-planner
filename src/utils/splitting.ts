@@ -462,8 +462,8 @@ export function canRemoveMember(
 /**
  * Format currency amount for display
  */
-export function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("pt-BR", {
+export function formatCurrency(amount: number, currency: string, locale = "pt-BR"): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency || "BRL",
   }).format(amount);

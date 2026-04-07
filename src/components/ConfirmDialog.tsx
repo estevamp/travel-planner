@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
 import { cn } from '../utils';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -18,13 +19,14 @@ export function ConfirmDialog({
   isOpen,
   title,
   message,
-  confirmLabel = "Confirmar",
-  cancelLabel = "Cancelar",
+  confirmLabel,
+  cancelLabel,
   variant = 'default',
   isDark = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   return (
     <Modal
       isOpen={isOpen}
@@ -58,7 +60,7 @@ export function ConfirmDialog({
                 : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
             )}
           >
-            {cancelLabel}
+            {cancelLabel || t("common.cancel")}
           </button>
           <button
             onClick={onConfirm}
@@ -69,7 +71,7 @@ export function ConfirmDialog({
                 : "bg-zinc-900 hover:bg-black text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900"
             )}
           >
-            {confirmLabel}
+            {confirmLabel || t("common.confirm")}
           </button>
         </div>
       </div>

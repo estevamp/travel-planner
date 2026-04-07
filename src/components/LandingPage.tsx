@@ -8,6 +8,7 @@ import { UserSettings, TripSummary } from "../types";
 import { getThemeStyles } from "../utils/theme";
 import { getErrorMessage } from "../utils";
 import { useToast } from "../hooks/useToast";
+import { useI18n, usePageTitle } from "../i18n/I18nProvider";
 
 export function LandingPage({ session, settings }: { session: Session; settings: UserSettings }) {
   // A LandingPage sempre usa o tema padrão claro, independente das preferências do usuário
@@ -17,9 +18,12 @@ export function LandingPage({ session, settings }: { session: Session; settings:
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
   const { toast } = useToast();
+  const { t } = useI18n();
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [creating, setCreating] = useState(false);
+
+  usePageTitle(t("app.name"));
 
   const loadTrips = async () => {
     setLoadingTrips(true);
@@ -49,7 +53,7 @@ export function LandingPage({ session, settings }: { session: Session; settings:
     });
     setCreating(false);
     if (error || !data) {
-      toast(getErrorMessage(error) || 'Não foi possível criar a viagem.', 'error');
+      toast(getErrorMessage(error) || t("landing.createTripError"), 'error');
       return;
     }
     navigate(`/trip/${data}`);
@@ -71,39 +75,39 @@ export function LandingPage({ session, settings }: { session: Session; settings:
           </div>
           <div className="flex items-center gap-2">
             <a
-              href="/help.html"
+              href="/help"
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors"
             >
               <HelpCircle size={16} />
-              <span className="hidden sm:inline">Ajuda</span>
+              <span className="hidden sm:inline">{t("landing.help")}</span>
             </a>
             <a
-                href="/terms.html"
+                href="/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors"
               >
                 <FileText size={16} />
-                <span className="hidden sm:inline">Termos</span>
+                <span className="hidden sm:inline">{t("landing.terms")}</span>
               </a>            
             <button
               onClick={() => void supabase.auth.signOut()}
               className="px-4 py-2 rounded-xl border border-[var(--card-border)] text-[var(--accent-color)] flex items-center gap-2 hover:bg-[var(--accent-color)]/5 transition-colors"
             >
               <LogOut size={16} />
-              Sair
+              {t("common.signOut")}
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <h2 className="font-bold mb-4 text-[var(--accent-color)]">Minhas viagens</h2>
+            <h2 className="font-bold mb-4 text-[var(--accent-color)]">{t("landing.myTrips")}</h2>
             <div className="space-y-2 max-h-[420px] overflow-auto">
-              {loadingTrips && <p className="text-sm opacity-70">Carregando...</p>}
-              {!loadingTrips && trips.length === 0 && <p className="text-sm opacity-70">Nenhuma viagem.</p>}
+              {loadingTrips && <p className="text-sm opacity-70">{t("common.loading")}</p>}
+              {!loadingTrips && trips.length === 0 && <p className="text-sm opacity-70">{t("landing.noTrips")}</p>}
               {trips.map((trip) => {
                 // Cada card de viagem usa o TEMA DA VIAGEM, mas sempre em modo claro
                 const tripTheme = getThemeStyles({ ...landingSettings, theme_palette: trip.theme_palette || 'default' });
@@ -118,7 +122,7 @@ export function LandingPage({ session, settings }: { session: Session; settings:
                     }}
                   >
                     <p className="font-semibold" style={{ color: tripTheme['--accent-color'] as string }}>{trip.name}</p>
-                    <p className="text-sm opacity-70" style={{ color: tripTheme['--accent-color'] as string }}>{trip.destination || "Sem destino"}</p>
+                    <p className="text-sm opacity-70" style={{ color: tripTheme['--accent-color'] as string }}>{trip.destination || t("common.destinationMissing")}</p>
                   </button>
                 );
               })}
@@ -126,25 +130,25 @@ export function LandingPage({ session, settings }: { session: Session; settings:
           </Card>
 
           <Card>
-            <h2 className="font-bold mb-4 text-[var(--accent-color)]">Criar viagem</h2>
+            <h2 className="font-bold mb-4 text-[var(--accent-color)]">{t("landing.createTrip")}</h2>
             <form onSubmit={createTrip} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">Nome da viagem</label>
+                <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">{t("landing.tripName")}</label>
                 <input
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Férias de Verão"
+                  placeholder={t("landing.tripNamePlaceholder")}
                   className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">Destino</label>
+                <label className="text-sm font-medium required-indicator text-[var(--accent-color)]">{t("landing.destination")}</label>
                 <input
                   required
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Ex: Paris, França"
+                  placeholder={t("landing.destinationPlaceholder")}
                   className="w-full px-4 py-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none"
                 />
               </div>
@@ -152,7 +156,7 @@ export function LandingPage({ session, settings }: { session: Session; settings:
                 disabled={creating}
                 className="w-full bg-[var(--accent-color)] text-white py-2 rounded-xl font-semibold mt-2 hover:opacity-90 transition-colors disabled:opacity-50"
               >
-                {creating ? "Criando..." : "Criar"}
+                {creating ? t("landing.creating") : t("common.create")}
               </button>
             </form>
           </Card>

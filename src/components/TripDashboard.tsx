@@ -38,6 +38,7 @@ import { CurrencySelector } from "./CurrencySelector";
 import { PayerSelector } from "./PayerSelector";
 import { SplitSelector } from "./SplitSelector";
 import { CreateTripModal } from "./CreateTripModal";
+import { useI18n } from "../i18n/I18nProvider";
 
 interface TripDashboardProps {
   session: Session;
@@ -80,6 +81,7 @@ interface TripDashboardContentProps {
 
 function TripDashboardContent({ session }: TripDashboardContentProps) {
   const navigate = useNavigate();
+  const { t, language } = useI18n();
   
   // Get data from context
   const {
@@ -253,15 +255,15 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <span className="font-bold text-xl">Partiu!</span>
         </button>
         <nav className="space-y-2">
-          <SidebarItem id="tour-tab-itinerary" icon={LayoutDashboard} label="Atividades" active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
-          <SidebarItem id="tour-tab-ideas" icon={Lightbulb} label="Ideias" active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
-          <SidebarItem id="tour-tab-expenses" icon={DollarSign} label="Despesas" active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
-          <SidebarItem id="tour-tab-documents" icon={FileText} label="Documentos" active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
-          <SidebarItem id="tour-tab-people" icon={Users} label="Amigos" active={activeTab === "people"} onClick={() => setActiveTab("people")} />
-          <SidebarItem icon={Settings} label="Configurações" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
+          <SidebarItem id="tour-tab-itinerary" icon={LayoutDashboard} label={t("common.itinerary")} active={activeTab === "itinerary"} onClick={() => setActiveTab("itinerary")} />
+          <SidebarItem id="tour-tab-ideas" icon={Lightbulb} label={t("common.ideas")} active={activeTab === "ideas"} onClick={() => setActiveTab("ideas")} />
+          <SidebarItem id="tour-tab-expenses" icon={DollarSign} label={t("common.expenses")} active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} />
+          <SidebarItem id="tour-tab-documents" icon={FileText} label={t("common.documents")} active={activeTab === "documents"} onClick={() => setActiveTab("documents")} />
+          <SidebarItem id="tour-tab-people" icon={Users} label={t("common.people")} active={activeTab === "people"} onClick={() => setActiveTab("people")} />
+          <SidebarItem icon={Settings} label={t("common.settings")} active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
         <div className="flex-1 flex flex-col min-h-0">
-          <p className="text-xs uppercase font-bold opacity-70 mb-2 px-1">Minhas viagens</p>
+          <p className="text-xs uppercase font-bold opacity-70 mb-2 px-1">{t("dashboard.myTrips")}</p>
           <div className="space-y-2 overflow-y-auto pr-1">
             {tripOptions.map((option) => (
               <button
@@ -276,10 +278,10 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 )}
               >
                 <p className="text-sm font-semibold truncate">{option.name}</p>
-                <p className="text-xs opacity-80 truncate">{option.destination || "Sem destino"}</p>
+                <p className="text-xs opacity-80 truncate">{option.destination || t("common.destinationMissing")}</p>
               </button>
             ))}
-            {tripOptions.length === 0 && <p className="text-xs opacity-70 px-1">Nenhuma viagem.</p>}
+            {tripOptions.length === 0 && <p className="text-xs opacity-70 px-1">{t("landing.noTrips")}</p>}
           </div>
           <button
             type="button"
@@ -288,11 +290,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             className="mt-3 w-full px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center justify-center gap-2 text-sm hover:bg-[var(--sidebar-hover)] disabled:opacity-60"
           >
             <Plus size={14} />
-            {creatingTripFromSidebar ? "Criando..." : "Adicionar viagem"}
+            {creatingTripFromSidebar ? t("landing.creating") : t("dashboard.addTrip")}
           </button>
         </div>
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center gap-2 justify-center hover:bg-[var(--sidebar-hover)]">
-          <LogOut size={16} />Sair
+          <LogOut size={16} />{t("common.signOut")}
         </button>
       </aside>
 
@@ -311,22 +313,22 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
                 {trip.name} {isAdmin && (
-                  <Crown size={14} className="md:hidden text-amber-400 opacity-80" title="Administrador da viagem" />
+                  <Crown size={14} className="md:hidden text-amber-400 opacity-80" title={t("dashboard.admin")} />
                 )} 
               </h2>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowMobileTripSelector(true)}
                   className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
-                  aria-label="Trocar viagem"
+                  aria-label={t("dashboard.switchTrip")}
                 >
                   <Briefcase size={20} />
                 </button>
                 <button
                   onClick={startTour}
                   className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
-                  title="Ver tour do app"
-                  aria-label="Tour do app"
+                  title={t("dashboard.appTour")}
+                  aria-label={t("dashboard.appTour")}
                 >
                   <HelpCircle size={18} />
                 </button>
@@ -338,7 +340,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                       ? "text-[var(--sidebar-active-bg)] bg-[var(--sidebar-active-bg)]/10"
                       : "text-zinc-500 hover:bg-zinc-100"
                   )}
-                  aria-label="Configurações"
+                  aria-label={t("common.settings")}
                 >
                   <Settings size={20} />
                 </button>
@@ -350,7 +352,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0 hover:scale-110 transition-transform cursor-pointer"
-                title="Ver no Google Maps"
+                title={t("dashboard.viewMaps")}
               >
                 <MapPin size={14} className="text-white" />
               </a>
@@ -358,27 +360,27 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             </div>
             <div className="mt-4 md:mt-6">
               <h3 className="text-lg md:text-xl font-bold text-zinc-800">
-                {activeTab === "itinerary" && "Atividades"}
-                {activeTab === "expenses" && "Despesas"}
-                {activeTab === "ideas" && "Ideias"}
-                {activeTab === "documents" && "Documentos"}
-                {activeTab === "people" && "Amigos"}
-                {activeTab === "settings" && "Configurações"}
+                {activeTab === "itinerary" && t("common.itinerary")}
+                {activeTab === "expenses" && t("common.expenses")}
+                {activeTab === "ideas" && t("common.ideas")}
+                {activeTab === "documents" && t("common.documents")}
+                {activeTab === "people" && t("common.people")}
+                {activeTab === "settings" && t("common.settings")}
               </h3>
                 {activeTab !== "settings" && (
                   <p className="text-xs text-zinc-400 mt-0.5">
-                    {activeTab === "itinerary" && "Seu roteiro e as atividades planejadas para essa viagem"}
-                    {activeTab === "ideas" && "Guarde ideias soltas e transforme as melhores em atividades com um toque"}
-                    {activeTab === "expenses" && "Lance gastos, divida com amigos e não deixe o orçamento fugir do controle"}
-                    {activeTab === "documents" && "Guarde aqui seus documentos, vouchers e reservas"}
-                    {activeTab === "people" && "Convide amigos e planejem essa viagem juntos"}
+                    {activeTab === "itinerary" && t("dashboard.tab.itinerary.description")}
+                    {activeTab === "ideas" && t("dashboard.tab.ideas.description")}
+                    {activeTab === "expenses" && t("dashboard.tab.expenses.description")}
+                    {activeTab === "documents" && t("dashboard.tab.documents.description")}
+                    {activeTab === "people" && t("dashboard.tab.people.description")}
                   </p>
                 )}
             </div>
           </div>
           <div className="hidden md:flex items-center gap-2">
             {isAdmin && (
-              <Crown size={14} className="text-amber-400 opacity-80" title="Administrador da viagem" />
+              <Crown size={14} className="text-amber-400 opacity-80" title={t("dashboard.admin")} />
             )}
           </div>
         </header>
@@ -396,7 +398,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               >
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold">Minhas Viagens</h3>
+                    <h3 className="text-xl font-bold">{t("dashboard.myTrips")}</h3>
                     <button
                       onClick={() => setShowMobileTripSelector(false)}
                       className="p-2 rounded-full transition-colors"
@@ -427,10 +429,10 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                         } : undefined}
                       >
                         <p className="font-bold truncate">{option.name}</p>
-                        <p className="text-sm opacity-80 truncate">{option.destination || "Sem destino"}</p>
+                        <p className="text-sm opacity-80 truncate">{option.destination || t("common.destinationMissing")}</p>
                       </button>
                     ))}
-                    {tripOptions.length === 0 && <p className="text-center py-8 text-zinc-500">Nenhuma viagem encontrada.</p>}
+                    {tripOptions.length === 0 && <p className="text-center py-8 text-zinc-500">{t("dashboard.noTripsFound")}</p>}
                   </div>
                   <button
                     type="button"
@@ -441,7 +443,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                     className="w-full py-4 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
                   >
                     <Plus size={18} />
-                    Nova Viagem
+                    {t("common.newTrip")}
                   </button>
                 </div>
               </motion.div>
@@ -471,7 +473,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       <Modal
         isOpen={showAddModal && modalType === 'itinerary'}
         onClose={closeModal}
-        title="Nova Atividade"
+        title={t("dashboard.newActivity")}
         size="md"
         isDark={settings.dark_mode}
       >
@@ -491,7 +493,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           >
-            <option value="">Sem tipo</option>
+            <option value="">{t("dashboard.noType")}</option>
             {itineraryTypes.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
             ))}
@@ -508,18 +510,18 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               />
               <div className="flex items-center gap-1.5 text-zinc-600">
                 <Lock size={14} />
-                <span>Privado (apenas eu e cônjuge)</span>
+                <span>{t("dashboard.privateWithSpouse")}</span>
               </div>
             </label>
           </div>
           
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Título</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("dashboard.title")}</label>
             <input
               name="title"
               disabled={isSubmittingItinerary}
               required
-              placeholder="Ex: Jantar no restaurante"
+              placeholder={t("dashboard.titlePlaceholder")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -527,11 +529,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Local</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.location")}</label>
             <input
               name="location"
               disabled={isSubmittingItinerary}
-              placeholder="Ex: Rua Augusta, 123"
+              placeholder={t("dashboard.locationPlaceholder")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -546,12 +548,12 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               checked={itineraryAllDay}
               onChange={(e) => setItineraryAllDay(e.target.checked)}
             />
-            Dia todo
+            {t("dashboard.allDay")}
           </label>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Início</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.start")}</label>
               {itineraryAllDay ? (
                 <input 
                   type="date" 
@@ -575,7 +577,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               )}
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Fim</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.end")}</label>
               {itineraryAllDay ? (
                 <input
                   type="date"
@@ -603,7 +605,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <textarea
             name="description"
             disabled={isSubmittingItinerary}
-            placeholder="Notas"
+            placeholder={t("dashboard.notes")}
             className={cn(
               "w-full px-3 py-2 rounded-xl border text-base sm:text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -611,7 +613,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           />
           
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Foto</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.photo")}</label>
             <label className={cn(
               "flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all w-fit",
               isSubmittingItinerary ? "opacity-50 cursor-not-allowed pointer-events-none" : "",
@@ -626,8 +628,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 <ImagePlus size={17} className={settings.dark_mode ? "text-zinc-300" : "text-zinc-500"} />
               </span>
               <div className="flex flex-col leading-tight">
-                <span className="text-xs font-semibold">Adicionar foto</span>
-                <span className="text-[10px] opacity-60">JPG, PNG ou HEIC</span>
+                <span className="text-xs font-semibold">{t("dashboard.addPhoto")}</span>
+                <span className="text-[10px] opacity-60">{t("dashboard.photoFormats")}</span>
               </div>
               <input
                 type="file"
@@ -640,7 +642,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           </div>
           
           <button disabled={isSubmittingItinerary} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
-            {isSubmittingItinerary ? "Salvando..." : "Adicionar"}
+            {isSubmittingItinerary ? t("common.saving") : t("common.add")}
           </button>
         </form>
       </Modal>
@@ -648,7 +650,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       <Modal
         isOpen={showAddModal && modalType === 'expense'}
         onClose={closeModal}
-        title="Nova Despesa"
+        title={t("dashboard.newExpense")}
         size="lg"
         isDark={settings.dark_mode}
       >
@@ -661,12 +663,12 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           }}
         >
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Descrição</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("dashboard.description")}</label>
             <input
               name="description"
               disabled={isSubmittingExpense}
               required
-              placeholder="Ex: Almoço"
+              placeholder={t("dashboard.descriptionPlaceholderExpense")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -682,7 +684,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
             )}
           >
-            <option value="">Sem categoria</option>
+            <option value="">{t("dashboard.noCategory")}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
@@ -690,7 +692,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Valor</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("dashboard.amount")}</label>
               <input
                 name="amount"
                 disabled={isSubmittingExpense}
@@ -702,14 +704,14 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
                 )}
                 onChange={(e) => {
-                  const masked = maskCurrency(e.target.value);
+                  const masked = maskCurrency(e.target.value, settings.language_code);
                   setExpenseAmount(masked);
                   e.target.value = masked;
                 }}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Moeda</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.currency")}</label>
               <CurrencySelector
                 value={expenseCurrency}
                 onChange={setExpenseCurrency}
@@ -721,7 +723,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <div className="flex flex-col sm:flex-row gap-4">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="is_confirmed" disabled={isSubmittingExpense} />
-              Marcar como confirmada
+              {t("dashboard.markConfirmed")}
             </label>
 
             <div className="flex items-center gap-2">
@@ -736,7 +738,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 />
                 <div className={cn("flex items-center gap-1.5 text-zinc-600", expenseSplits.length > 0 && "opacity-50")}>
                   {expenseSplits.length > 0 ? <Unlock size={14} /> : <Lock size={14} />}
-                  <span>{expenseSplits.length > 0 ? "Público (obrigatório para rateio)" : "Privado (apenas eu e cônjuge)"}</span>
+                  <span>{expenseSplits.length > 0 ? t("dashboard.publicRequiredForSplit") : t("dashboard.privateWithSpouse")}</span>
                 </div>
               </label>
             </div>
@@ -744,7 +746,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           
           {/* Seção de Rateio */}
           <div className="border-t pt-4 space-y-4" style={{ borderColor: 'var(--card-border)' }}>
-            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">Rateio</h3>
+            <h3 className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.split")}</h3>
             
             <PayerSelector
               members={members}
@@ -771,7 +773,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50">
                 <Unlock size={14} className="text-blue-800 dark:text-blue-400 flex-shrink-0" />
                 <p className="text-[10px] font-bold text-white dark:text-blue-300">
-                  Despesas com rateio são obrigatoriamente públicas.
+                  {t("dashboard.splitPublicNotice")}
                 </p>
                 </div>
             )}
@@ -850,7 +852,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               />
               <div className="flex items-center gap-1.5 text-zinc-600">
                 <Lock size={14} />
-                <span>Privado (apenas eu e cônjuge)</span>
+                <span>{t("dashboard.privateWithSpouse")}</span>
               </div>
             </label>
           </div>
@@ -858,7 +860,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           <p className="text-[10px] text-zinc-400 px-1 italic">Dica: Você poderá adicionar fotos, anexos e links extras após salvar a ideia, editando-a.</p>
           
           <button disabled={isSubmittingIdea} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
-            {isSubmittingIdea ? "Salvando..." : "Salvar Ideia"}
+            {isSubmittingIdea ? t("common.saving") : (language === "en" ? "Save idea" : "Salvar Ideia")}
           </button>
         </form>
       </Modal>
@@ -867,11 +869,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md text-[var(--sidebar-text)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="grid grid-cols-5 h-16">
           {([
-            { tab: "itinerary",  icon: LayoutDashboard, label: "Atividades"   },
-            { tab: "ideas",      icon: Lightbulb,        label: "Ideias"    },
-            { tab: "expenses",   icon: DollarSign,       label: "Despesas"  },
-            { tab: "documents",  icon: FileText,          label: "Docs"      },
-            { tab: "people",     icon: Users,             label: "Amigos"   },
+            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary") },
+            { tab: "ideas",      icon: Lightbulb, label: t("common.ideas") },
+            { tab: "expenses",   icon: DollarSign, label: t("common.expenses") },
+            { tab: "documents",  icon: FileText, label: language === "en" ? "Docs" : "Docs" },
+            { tab: "people",     icon: Users, label: t("common.people") },
           ] as const).map(({ tab, icon: Icon, label }) => {
             const isActive = activeTab === tab;
             return (
