@@ -349,16 +349,16 @@ export function SettingsTab() {
                 const themeNames: Record<string, string> = {
                   default: t("settings.theme.default"),
                   ocean: t("settings.theme.ocean"),
-                  coastal: "Coastal",
+                  coastal: t("settings.theme.coastal"),
                   sunset: t("settings.theme.sunset"),
                   lavender: t("settings.theme.lavender"),
                   rose: t("settings.theme.rose"),
                   tropic: t("settings.theme.tropic"),
-                  candy: "Candy",
-                  galaxy: "Galaxy",
-                  jade: "Jade",
-                  peach: "Peach",
-                  explorer: "Explorer",
+                  candy: t("settings.theme.candy"),
+                  galaxy: t("settings.theme.galaxy"),
+                  jade: t("settings.theme.jade"),
+                  peach: t("settings.theme.peach"),
+                  explorer: t("settings.theme.explorer"),
                 };
                 
                 return (
@@ -457,11 +457,11 @@ export function SettingsTab() {
             }}
           >
             <div className="flex-1 space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Nome da Categoria</label>
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("settings.categoryName")}</label>
               <input
                 name="name"
                 required
-                placeholder="Ex: Alimentação"
+                placeholder={t("settings.categoryPlaceholder")}
                 className={cn(
                   "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -471,7 +471,7 @@ export function SettingsTab() {
             <div className="flex items-end">
               <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
                 <Plus size={16} />
-                Adicionar
+                {t("common.add")}
               </button>
             </div>
           </form>
@@ -489,8 +489,8 @@ export function SettingsTab() {
                 <button
                   onClick={async () => {
                     const confirmed = await confirm({
-                      title: 'Excluir categoria?',
-                      message: `Excluir categoria "${cat.name}"?`,
+                      title: t("settings.deleteCategoryTitle"),
+                      message: t("settings.deleteCategoryMessage", { name: cat.name }),
                       variant: 'danger',
                       isDark: settings.dark_mode
                     });
