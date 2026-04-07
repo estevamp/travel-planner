@@ -16,6 +16,7 @@ import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 import { useUpdateIdea } from "../../hooks/useUpdateIdea";
 import { useDeleteIdea } from "../../hooks/useDeleteIdea";
+import { useI18n } from "../../i18n/I18nProvider";
 
 interface IdeasTabProps {
   onOpenModal: () => void;
@@ -27,6 +28,7 @@ interface IdeasTabProps {
 
 export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: IdeasTabProps) {
   const { trip, currentMember, isAdmin, settings, members } = useTripContext();
+  const { t } = useI18n();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const { update: updateIdea } = useUpdateIdea({ enqueue, isOnline, onSuccess: undefined });
@@ -57,7 +59,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   }>({ open: false, itemId: null, currentVisibility: 'public', onConfirm: null });
   const getCreatorName = (memberId: string) => {
     const member = members.find(m => m.id === memberId);
-    return member?.display_name || "Desconhecido";
+    return member?.display_name || t("ideas.unknownCreator");
   };
 
   const ideaLinksByIdeaId = useMemo(() => {
@@ -145,8 +147,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
   const deleteIdeaHandler = async (idea: Idea) => {
     const confirmed = await confirm({
-      title: "Remover ideia?",
-      message: `Remover a ideia "${idea.title}"? Esta ação não pode ser desfeita.`,
+      title: t("ideas.deleteTitle"),
+      message: t("ideas.deleteMessage", { title: idea.title }),
       variant: "danger",
       isDark: settings.dark_mode,
     });
@@ -173,8 +175,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     if (!trip.id || !currentMember || copyingIdeaId || idea.is_converted) return;
 
     const confirmed = await confirm({
-      title: 'Adicionar ao roteiro?',
-      message: `Deseja transformar "${idea.title}" em uma atividade? A ideia será removida desta lista.`,
+      title: t("ideas.convertTitle"),
+      message: t("ideas.convertMessage", { title: idea.title }),
       variant: 'primary',
       isDark: settings.dark_mode
     });
@@ -188,13 +190,13 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     // Build description from notes and maps URL
     let description = idea.notes || "";
     if (idea.maps_url) {
-      description += (description ? "\n\n" : "") + `Google Maps: ${idea.maps_url}`;
+      description += (description ? "\n\n" : "") + `${t("ideas.googleMapsLabel")}: ${idea.maps_url}`;
     }
 
     // Add links to description
     const links = ideaLinksByIdeaId.get(idea.id) || [];
     if (links.length > 0) {
-      description += (description ? "\n\n" : "") + "Links:\n";
+      description += (description ? "\n\n" : "") + `${t("ideas.linksSection")}:\n`;
       links.forEach(link => {
         description += `- ${link.label || link.url}: ${link.url}\n`;
       });
@@ -251,7 +253,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
     setCopyingIdeaId(null);
     onSetActiveTab("itinerary");
-    toast("Ideia convertida em atividade!", "success");
+    toast(t("ideas.convertedSuccess"), "success");
   };
 
   const handleFileUpload = async (ideaId: string, e: React.ChangeEvent<HTMLInputElement>, type: "photo" | "attachment") => {
@@ -346,8 +348,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
   const handleDeleteLink = async (linkId: string) => {
     const confirmed = await confirm({
-      title: 'Excluir link?',
-      message: 'Deseja realmente excluir este link?',
+      title: t("ideas.deleteLinkTitle"),
+      message: t("ideas.deleteLinkMessage"),
       variant: 'danger',
       isDark: settings.dark_mode
     });
@@ -375,8 +377,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
   const handleDeleteAsset = async (asset: IdeaAsset) => {
     const confirmed = await confirm({
-      title: 'Excluir arquivo?',
-      message: `Deseja realmente excluir o arquivo "${asset.name}"?`,
+      title: t("ideas.deleteAssetTitle"),
+      message: t("ideas.deleteAssetMessage", { name: asset.name }),
       variant: 'danger',
       isDark: settings.dark_mode
     });
@@ -413,7 +415,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {trip.ideas.length === 0 && (
           <Card className="sm:col-span-2">
-            <p className="text-sm text-zinc-500 text-center py-4">Nenhuma ideia cadastrada.</p>
+            <p className="text-sm text-zinc-500 text-center py-4">{t("ideas.empty")}</p>
           </Card>
         )}
         {trip.ideas.map((idea) => {
@@ -431,19 +433,19 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                     <input
                       value={ideaDraft.title}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
-                      placeholder="Titulo"
+                      placeholder={t("ideas.titlePlaceholder")}
                       className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
                     />
                     <textarea
                       value={ideaDraft.notes}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, notes: e.target.value }))}
-                      placeholder="Notas"
+                      placeholder={t("dashboard.notes")}
                       className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all h-16"
                     />
                     <input
                       value={ideaDraft.maps_url}
                       onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))}
-                      placeholder="URL do Google Maps"
+                      placeholder={t("ideas.googleMapsPlaceholder")}
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
                     />
                     
@@ -453,13 +455,13 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                           <input
                             value={newLink.label}
                             onChange={(e) => setNewLink(prev => ({ ...prev, label: e.target.value }))}
-                            placeholder="Nome do link (ex: Site oficial)"
+                            placeholder={t("ideas.linkNamePlaceholder")}
                             className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs"
                           />
                           <input
                             value={newLink.url}
                             onChange={(e) => setNewLink(prev => ({ ...prev, url: e.target.value }))}
-                            placeholder="URL (https://...)"
+                            placeholder={t("ideas.linkUrlPlaceholder")}
                             className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs"
                           />
                           <div className="flex gap-2">
@@ -468,14 +470,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                               onClick={() => void handleAddLink(idea.id)}
                               className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--accent-color)] text-white text-xs font-bold"
                             >
-                              Adicionar
+                              {t("common.add")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setShowLinkForm(null)}
                               className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold"
                             >
-                              Cancelar
+                              {t("common.cancel")}
                             </button>
                           </div>
                         </div>
@@ -486,17 +488,17 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors"
                         >
                           <LinkIcon size={14} />
-                          Link
+                          {t("ideas.link")}
                         </button>
                       )}
                       <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
                         <ImagePlus size={14} />
-                        Foto
+                        {t("ideas.photo")}
                         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
                       </label>
                       <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
                         <Paperclip size={14} />
-                        Anexo
+                        {t("ideas.attachment")}
                         <input type="file" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
                       </label>
                     </div>
@@ -508,14 +510,14 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                       onClick={() => void saveIdeaEdit(idea.id)}
                       className="flex-1 px-4 py-1.5 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all"
                     >
-                      Salvar
+                      {t("expenses.saveChanges")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingIdeaId(null)}
                       className="flex-1 px-4 py-1.5 rounded-xl border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50 transition-all"
                     >
-                      Cancelar
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </div>
@@ -542,9 +544,9 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                           )}
                         >
                           {idea.visibility === 'public' ? (
-                            <><Users size={10} /> Público</>
+                            <><Users size={10} /> {t("common.public")}</>
                           ) : (
-                            <><Lock size={10} /> Privado</>
+                            <><Lock size={10} /> {t("common.private")}</>
                           )}
                         </button>
                       </div>
@@ -561,7 +563,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                       {idea.notes && <p className="text-xs text-zinc-600 mt-0.5 whitespace-pre-wrap line-clamp-2">{idea.notes}</p>}
                       {idea.maps_url && (
                         <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 inline-flex items-center gap-1 mt-1 hover:underline">
-                          <MapPin size={10} />Google Maps
+                          <MapPin size={10} />{t("ideas.googleMapsLabel")}
                         </a>
                       )}
                     </div>
@@ -571,8 +573,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                         onClick={() => void convertIdeaToActivity(idea)}
                         disabled={copyingIdeaId === idea.id}
                         className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
-                        aria-label="Transformar em atividade"
-                        title="Transformar em atividade"
+                        aria-label={t("ideas.convertAction")}
+                        title={t("ideas.convertAction")}
                       >
                         {copyingIdeaId === idea.id ? (
                           <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
@@ -587,7 +589,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                               type="button"
                               onClick={() => startEditIdea(idea)}
                               className="p-1.5 text-zinc-400 hover:text-zinc-700"
-                              aria-label="Editar ideia"
+                              aria-label={t("ideas.editIdea")}
                             >
                               <FilePenLine size={14} />
                             </button>
@@ -596,7 +598,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                             type="button"
                             onClick={() => void deleteIdeaHandler(idea)}
                             className="p-1.5 text-zinc-400 hover:text-red-500"
-                            aria-label="Excluir ideia"
+                            aria-label={t("ideas.deleteIdea")}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -608,7 +610,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                   {/* Photo Gallery */}
                   {photos.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">Fotos</p>
+                      <p className="text-xs uppercase font-semibold text-zinc-500">{t("ideas.photosSection")}</p>
                       <div className="grid grid-cols-3 gap-2">
                         {photos.map((asset) => (
                           <div key={asset.id} className="relative aspect-square">
@@ -645,7 +647,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                   {/* Links */}
                   {links.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">Links</p>
+                      <p className="text-xs uppercase font-semibold text-zinc-500">{t("ideas.linksSection")}</p>
                       <div className="space-y-1">
                         {links.map((link) => (
                           <div key={link.id} className="flex items-center justify-between gap-2">
@@ -678,7 +680,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                   {/* Attachments */}
                   {attachments.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">Anexos</p>
+                      <p className="text-xs uppercase font-semibold text-zinc-500">{t("ideas.attachmentsSection")}</p>
                       <div className="flex flex-wrap gap-2">
                         {attachments.map((asset) => (
                           <div key={asset.id} className="relative group/asset">
@@ -729,7 +731,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
           </button>
           <img
             src={viewingPhotoUrl}
-            alt="Foto da ideia"
+            alt={t("ideas.photoAlt")}
             className="max-w-full max-h-full rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
@@ -750,6 +752,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
 // Component to display photo thumbnail
 function PhotoThumbnail({ asset, signedUrl, onUrlLoad }: { asset: IdeaAsset; signedUrl: string | null; onUrlLoad: (url: string) => void }) {
+  const { t } = useI18n();
   const [loading, setLoading] = React.useState(!signedUrl);
 
   React.useEffect(() => {
@@ -777,7 +780,7 @@ function PhotoThumbnail({ asset, signedUrl, onUrlLoad }: { asset: IdeaAsset; sig
 
   if (!signedUrl) {
     return <div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400 text-xs">
-      Erro
+      {t("common.unexpectedError")}
     </div>;
   }
 

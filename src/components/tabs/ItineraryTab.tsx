@@ -86,7 +86,7 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
   if (keys.length === 0) {
     return (
       <div className={cn("text-center py-16 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
-        Nenhuma atividade planejada ainda.
+        {language === "en" ? "No activities planned yet." : "Nenhuma atividade planejada ainda."}
       </div>
     );
   }
@@ -115,7 +115,9 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
                   {label}
                 </p>
                 <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                  {dayItems.length} atividade{dayItems.length !== 1 ? "s" : ""}
+                  {language === "en"
+                    ? `${dayItems.length} activit${dayItems.length !== 1 ? "ies" : "y"}`
+                    : `${dayItems.length} atividade${dayItems.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
             </div>
@@ -167,7 +169,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
   if (keys.length === 0) {
     return (
       <div className={cn("text-center py-16 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
-        Nenhuma atividade planejada ainda.
+        {language === "en" ? "No activities planned yet." : "Nenhuma atividade planejada ainda."}
       </div>
     );
   }
@@ -198,7 +200,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
           const isActive = key === activeKey;
           const label =
             key === "sem-data"
-              ? "Sem data"
+              ? (language === "en" ? "No date" : "Sem data")
               : new Date(key + "T00:00:00").toLocaleDateString(language, {
                   day: "2-digit",
                   month: "2-digit",
@@ -239,7 +241,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
       {allDayItems.length > 0 && (
         <div className="mb-4 space-y-2">
           <p className={cn("text-xs font-bold uppercase tracking-wide", isDark ? "text-zinc-500" : "text-zinc-400")}>
-            Dia todo
+            {language === "en" ? "All day" : "Dia todo"}
           </p>
           {allDayItems.map((item) => renderItem(item))}
         </div>
@@ -248,7 +250,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
       {/* Hourly grid */}
       {timedItems.length === 0 && allDayItems.length === 0 ? (
         <div className={cn("text-center py-12 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
-          Nenhuma atividade neste dia.
+          {language === "en" ? "No activities on this day." : "Nenhuma atividade neste dia."}
         </div>
       ) : (
         <div className="flex gap-0 relative" style={{ height: totalHeight }}>
@@ -376,6 +378,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: ItineraryTabProps) {
   const { trip, tripId, currentMember, settings, itineraryTypes, members } = useTripContext();
+  const { t } = useI18n();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const { toggleVisibility } = useOptimisticVisibility<ItineraryItem>(
@@ -435,7 +438,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   const getCreatorName = (memberId: string) => {
     const member = members.find((m) => m.id === memberId);
-    return member?.display_name || "Desconhecido";
+    return member?.display_name || t("ideas.unknownCreator");
   };
 
   const startEditItinerary = (item: ItineraryItem) => {
@@ -526,8 +529,8 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   const deleteItineraryItemHandler = async (item: ItineraryItem) => {
     const confirmed = await confirm({
-      title: "Remover atividade?",
-      message: `Remover a atividade "${item.title}"? Esta ação não pode ser desfeita.`,
+      title: t("itinerary.deleteTitle"),
+      message: t("itinerary.deleteMessage", { title: item.title }),
       variant: "danger",
       isDark: settings.dark_mode,
     });
@@ -799,9 +802,9 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   )}
                 >
                   {item.visibility === "public" ? (
-                    <><Users size={10} /> Público</>
+                    <><Users size={10} /> {t("common.public")}</>
                   ) : (
-                    <><Lock size={10} /> Privado</>
+                    <><Lock size={10} /> {t("common.private")}</>
                   )}
                 </button>
               </div>
@@ -976,7 +979,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               )}
             >
               {showCompleted ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              Concluídas ({completedActivities.length})
+              {t("itinerary.completed")} ({completedActivities.length})
             </button>
             <AnimatePresence>
               {showCompleted && (

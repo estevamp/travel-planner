@@ -16,6 +16,7 @@ import type {
   UserSettings,
 } from "../types";
 import type { ExpenseWithSplits } from "../types/splitting";
+import { useI18n } from "../i18n/I18nProvider";
 
 export interface ExpenseDraft {
   description: string;
@@ -64,23 +65,24 @@ export function ExpenseListItem({
   onDelete,
   onDraftChange,
 }: ExpenseListItemProps) {
+  const { t } = useI18n();
   const isEditing = editingExpenseId === exp.id;
   const expWithSplits = expensesWithSplits.find((entry) => entry.id === exp.id);
   const hasSplits = Boolean(expWithSplits?.splits?.length);
   const visibilityTitle = hasSplits
-    ? "Despesas com rateio devem ser públicas"
+    ? t("expenses.splitMustBePublic")
     : exp.visibility === "private"
-    ? "Privado (você e cônjuge)"
-    : "Público (todos os membros)";
+    ? t("expenses.visibilityPrivateTitle")
+    : t("expenses.visibilityPublicTitle");
 
   const splitSummary =
     expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0 ? (
       <div className="mt-1 space-y-0.5">
         <p className="text-[10px] text-zinc-400 leading-tight">
-          Pago por{" "}
+          {t("expenses.paidBy")}{" "}
           <span className="font-medium text-zinc-500">
             {members.find((m) => m.id === expWithSplits.paid_by_member_id)
-              ?.display_name || "Desconhecido"}
+              ?.display_name || t("ideas.unknownCreator")}
           </span>
         </p>
         <p className="text-[10px] text-zinc-400 leading-tight">
@@ -112,11 +114,11 @@ export function ExpenseListItem({
     >
       {exp.visibility === "public" ? (
         <>
-          <Users size={10} /> Público
+          <Users size={10} /> {t("common.public")}
         </>
       ) : (
         <>
-          <Lock size={10} /> Privado
+          <Lock size={10} /> {t("common.private")}
         </>
       )}
     </button>
@@ -132,7 +134,7 @@ export function ExpenseListItem({
                 <input
                   value={expenseDraft.description}
                   onChange={(e) => onDraftChange({ description: e.target.value })}
-                  placeholder="Descricao"
+                  placeholder={t("expenses.table.description")}
                   className={cn(
                     "flex-1 px-3 py-2 rounded-xl border text-sm",
                     settings.dark_mode
@@ -140,7 +142,7 @@ export function ExpenseListItem({
                       : "bg-white border-zinc-200"
                   )}
                 />
-                <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title="Confirmada">
+                <label className="flex items-center gap-1 text-xs uppercase cursor-pointer" title={t("expenses.confirmed")}>
                   <input
                     type="checkbox"
                     className="hidden"
@@ -167,7 +169,7 @@ export function ExpenseListItem({
                     : "bg-white border-zinc-200"
                 )}
               >
-                <option value="">Sem categoria</option>
+                  <option value="">{t("dashboard.noCategory")}</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
@@ -179,7 +181,7 @@ export function ExpenseListItem({
               <input
                 value={expenseDraft.amount}
                 onChange={(e) => onDraftChange({ amount: maskCurrency(e.target.value) })}
-                placeholder="Valor"
+                placeholder={t("dashboard.amount")}
                 className={cn(
                   "w-full px-3 py-2 rounded-xl border text-sm",
                   settings.dark_mode
@@ -196,7 +198,7 @@ export function ExpenseListItem({
                   onClick={() => onSave(exp.id)}
                   className="px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-xs font-bold"
                 >
-                  {savingExpense ? "Salvando..." : "Salvar"}
+                  {savingExpense ? t("common.saving") : t("expenses.saveChanges")}
                 </button>
                 <button
                   type="button"
@@ -209,7 +211,7 @@ export function ExpenseListItem({
                       : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
                   )}
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
               </div>
             </td>
@@ -220,9 +222,9 @@ export function ExpenseListItem({
               <div className="flex items-center gap-2">
                 <p className="font-medium">{exp.description}</p>
                 {exp.is_confirmed ? (
-                  <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
+                  <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title={t("expenses.confirmed")} />
                 ) : (
-                  <Circle size={14} className="text-zinc-400 flex-shrink-0" title="Prevista" />
+                  <Circle size={14} className="text-zinc-400 flex-shrink-0" title={t("expenses.predicted")} />
                 )}
               </div>
               <p className="text-xs text-zinc-400">{exp.date}</p>
@@ -236,7 +238,7 @@ export function ExpenseListItem({
                   {exp.category.name}
                 </span>
               ) : (
-                <span className="text-zinc-400">Geral</span>
+                <span className="text-zinc-400">{t("expenses.generalCategory")}</span>
               )}
             </td>
             <td className="px-4 py-3">
@@ -288,7 +290,7 @@ export function ExpenseListItem({
             <input
               value={expenseDraft.description}
               onChange={(e) => onDraftChange({ description: e.target.value })}
-              placeholder="Descricao"
+              placeholder={t("expenses.table.description")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-sm",
                 settings.dark_mode
@@ -306,7 +308,7 @@ export function ExpenseListItem({
                   : "bg-white border-zinc-200"
               )}
             >
-              <option value="">Sem categoria</option>
+              <option value="">{t("dashboard.noCategory")}</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -316,7 +318,7 @@ export function ExpenseListItem({
             <input
               value={expenseDraft.amount}
               onChange={(e) => onDraftChange({ amount: maskCurrency(e.target.value) })}
-              placeholder="Valor"
+              placeholder={t("dashboard.amount")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-sm",
                 settings.dark_mode
@@ -331,7 +333,7 @@ export function ExpenseListItem({
                   checked={expenseDraft.is_confirmed}
                   onChange={(e) => onDraftChange({ is_confirmed: e.target.checked })}
                 />
-                Marcar como confirmada
+                {t("dashboard.markConfirmed")}
               </label>
             </div>
           </div>
@@ -342,7 +344,7 @@ export function ExpenseListItem({
               onClick={() => onSave(exp.id)}
               className="flex-1 px-3 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold"
             >
-              {savingExpense ? "Salvando..." : "Salvar"}
+              {savingExpense ? t("common.saving") : t("expenses.saveChanges")}
             </button>
             <button
               type="button"
@@ -355,7 +357,7 @@ export function ExpenseListItem({
                   : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
               )}
             >
-              Cancelar
+              {t("common.cancel")}
             </button>
           </div>
         </>
@@ -365,9 +367,9 @@ export function ExpenseListItem({
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-bold truncate">{exp.description}</h4>
               {exp.is_confirmed ? (
-                <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title="Confirmada" />
+                <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title={t("expenses.confirmed")} />
               ) : (
-                <Circle size={14} className="text-zinc-400 flex-shrink-0" title="Prevista" />
+                <Circle size={14} className="text-zinc-400 flex-shrink-0" title={t("expenses.predicted")} />
               )}
             </div>
             <p className="text-xs text-zinc-400 mb-2">{exp.date}</p>
@@ -380,7 +382,7 @@ export function ExpenseListItem({
                   {exp.category.name}
                 </span>
               ) : (
-                <span className="text-xs uppercase text-zinc-400">Geral</span>
+                <span className="text-xs uppercase text-zinc-400">{t("expenses.generalCategory")}</span>
               )}
               <div className="flex flex-col">
                 <span className="font-bold text-base">

@@ -169,7 +169,7 @@ export function SettingsTab() {
               type="button"
               onClick={() => setSettingsDraft((current) => ({ ...current, language_code: locale }))}
               className={cn(
-                "px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 hover:scale-105",
+                "min-h-12 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center",
                 settingsDraft.language_code === locale
                   ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
                   : cn(

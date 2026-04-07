@@ -637,7 +637,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                   )}
                 >
                   <span className="text-[10px] font-bold uppercase tracking-wider">
-                    {isBudgetExpanded ? "Recolher Detalhes" : "Ver Detalhes do Orçamento"}
+                    {isBudgetExpanded ? t("expenses.collapseDetails") : t("expenses.viewBudgetDetails")}
                   </span>
                   {isBudgetExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
