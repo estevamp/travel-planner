@@ -1,4 +1,5 @@
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
+import { useI18n } from "../i18n/I18nProvider";
 
 /**
  * Banner "Adicionar à tela de início" para Android e iOS.
@@ -7,8 +8,35 @@ import { useInstallPrompt } from "../hooks/useInstallPrompt";
 export function InstallBanner() {
   const { showBanner, isIOS, canInstallNatively, install, dismiss } =
     useInstallPrompt();
+  const { language } = useI18n();
 
   if (!showBanner) return null;
+
+  const copy = language === "en"
+    ? {
+        title: "Add to home screen",
+        subtitle: "Use Partiu! like an app",
+        close: "Close",
+        install: "Install app",
+        installHint: "Works offline and stays on your home screen",
+        iosIntro: "Follow the steps below in Safari to add it to your home screen:",
+        step1: "Tap the Share icon in Safari",
+        step2: "Choose \"Add to Home Screen\"",
+        step3: "Confirm by tapping \"Add\"",
+        notNow: "Not now",
+      }
+    : {
+        title: "Adicionar à tela de início",
+        subtitle: "Acesse o Partiu! como um app",
+        close: "Fechar",
+        install: "Instalar aplicativo",
+        installHint: "Funciona offline e fica na sua tela inicial",
+        iosIntro: "Siga os passos abaixo no Safari para adicionar à tela de início:",
+        step1: "Toque no ícone de Compartilhar na barra do Safari",
+        step2: "Selecione \"Adicionar à Tela de Início\"",
+        step3: "Confirme tocando em \"Adicionar\"",
+        notNow: "Agora não",
+      };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-slide-up">
@@ -17,13 +45,13 @@ export function InstallBanner() {
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <img src="/favicon.svg" alt="Partiu!" className="w-10 h-10 rounded-xl" />
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-zinc-900 text-sm">Adicionar à tela de início</p>
-            <p className="text-xs text-zinc-500 truncate">Acesse o Partiu! como um app</p>
+            <p className="font-bold text-zinc-900 text-sm">{copy.title}</p>
+            <p className="text-xs text-zinc-500 truncate">{copy.subtitle}</p>
           </div>
           <button
             onClick={dismiss}
             className="text-zinc-400 hover:text-zinc-600 transition-colors p-1"
-            aria-label="Fechar"
+            aria-label={copy.close}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -38,10 +66,10 @@ export function InstallBanner() {
               onClick={install}
               className="w-full bg-[#0A2342] text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
             >
-              ✦ Instalar aplicativo
+              ✦ {copy.install}
             </button>
             <p className="text-center text-xs text-zinc-400 mt-2">
-              Funciona offline e fica na sua tela inicial
+              {copy.installHint}
             </p>
           </div>
         )}
@@ -50,7 +78,7 @@ export function InstallBanner() {
         {isIOS && !canInstallNatively && (
           <div className="px-4 pb-4 space-y-3">
             <p className="text-xs text-zinc-600">
-              Siga os passos abaixo no <strong>Safari</strong> para adicionar à tela de início:
+              {copy.iosIntro}
             </p>
             <ol className="space-y-2">
               {[
@@ -63,7 +91,7 @@ export function InstallBanner() {
                       <line x1="12" y1="2" x2="12" y2="15" />
                     </svg>
                   ),
-                  text: <>Toque no ícone de <strong>Compartilhar</strong> (⬆) na barra do Safari</>,
+                  text: copy.step1,
                 },
                 {
                   icon: (
@@ -74,7 +102,7 @@ export function InstallBanner() {
                       <path d="M14 14h.01M14 19h.01M19 14h.01M19 19h.01" />
                     </svg>
                   ),
-                  text: <>Selecione <strong>"Adicionar à Tela de Início"</strong></>,
+                  text: copy.step2,
                 },
                 {
                   icon: (
@@ -82,7 +110,7 @@ export function InstallBanner() {
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   ),
-                  text: <>Confirme tocando em <strong>"Adicionar"</strong></>,
+                  text: copy.step3,
                 },
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-3">
@@ -97,7 +125,7 @@ export function InstallBanner() {
               onClick={dismiss}
               className="w-full border border-zinc-200 text-zinc-600 py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-50 transition-colors"
             >
-              Agora não
+              {copy.notNow}
             </button>
           </div>
         )}

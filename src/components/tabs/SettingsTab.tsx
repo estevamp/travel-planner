@@ -12,6 +12,7 @@ import { Card } from "../Card";
 import { Modal } from "../Modal";
 import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
 import { useOfflineQueue } from "../../hooks/useOfflineQueue";
+import { useI18n } from "../../i18n/I18nProvider";
 
 interface SettingsTabProps {
   // Nenhuma prop necessária — tudo vem do contexto
@@ -19,6 +20,7 @@ interface SettingsTabProps {
 
 export function SettingsTab() {
   const { isOnline } = useOfflineQueue();
+  const { t, language } = useI18n();
   const {
     trip, tripId, currentMember, isAdmin, settings, onSettingsChange,
     members, categories, setCategories, itineraryTypes, setItineraryTypes,
@@ -64,7 +66,8 @@ export function SettingsTab() {
     }
     const hasChanges =
       settingsDraft.dark_mode !== settings.dark_mode ||
-      settingsDraft.default_currency !== settings.default_currency;
+      settingsDraft.default_currency !== settings.default_currency ||
+      settingsDraft.language_code !== settings.language_code;
     if (!hasChanges) return;
 
     const timeout = setTimeout(async () => {
@@ -79,6 +82,7 @@ export function SettingsTab() {
         .update({
           dark_mode: settingsDraft.dark_mode,
           default_currency: settingsDraft.default_currency,
+          language_code: settingsDraft.language_code,
         })
         .eq("user_id", userId);
       setSavingSettings(false);
@@ -144,9 +148,43 @@ export function SettingsTab() {
       {!isOnline && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
           <span>📶</span>
-          <p>Você está offline. As alterações nas configurações não serão salvas.</p>
+          <p>{t("settings.offlineNotice")}</p>
         </div>
       )}
+
+      <Card className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center">
+            <Briefcase size={20} className="text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">{t("settings.language")}</h3>
+            <p className="text-sm text-zinc-500">{t("settings.languageDescription")}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {(["pt-BR", "en"] as const).map((locale) => (
+            <button
+              key={locale}
+              type="button"
+              onClick={() => setSettingsDraft((current) => ({ ...current, language_code: locale }))}
+              className={cn(
+                "px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 hover:scale-105",
+                settingsDraft.language_code === locale
+                  ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
+                  : cn(
+                      "shadow-sm",
+                      settings.dark_mode
+                        ? "border-zinc-700 text-zinc-300 hover:border-zinc-600"
+                        : "border-zinc-200 hover:border-zinc-300"
+                    )
+              )}
+            >
+              {t(`settings.language.${locale}` as "settings.language.pt-BR" | "settings.language.en")}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       {/* ── 1. FINANCEIRO & ORÇAMENTO (unified card) ── */}
       <Card className="space-y-6">
@@ -195,9 +233,9 @@ export function SettingsTab() {
           <label className="text-sm font-semibold block">Limite de Orçamento</label>
           <div className="flex gap-3">
             <input
-              value={maskCurrency(String(Math.round((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100)))}
+              value={maskCurrency(String(Math.round((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100)), settingsDraft.language_code)}
               onChange={(e) => {
-                const masked = maskCurrency(e.target.value);
+                const masked = maskCurrency(e.target.value, settingsDraft.language_code);
                 const nextLimit = parseCurrencyToNumber(masked);
                 setBudgetDraft(nextLimit);
               }}
@@ -243,7 +281,7 @@ export function SettingsTab() {
               disabled={budgetDraft === null || savingBudget}
               className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
             >
-              {savingBudget ? "Salvando..." : "Salvar"}
+              {savingBudget ? t("common.saving") : t("common.confirm")}
             </button>
           </div>
           <div className="px-4 py-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
@@ -800,19 +838,19 @@ export function SettingsTab() {
           "px-4 py-3 rounded-xl border",
           settings.dark_mode ? "bg-emerald-950/20 border-emerald-900/50" : "bg-green-50 border-green-200"
         )}>
-          <p className={cn("text-sm font-medium", settings.dark_mode ? "text-emerald-400" : "text-green-700")}>✅ Salvando configurações automaticamente...</p>
+          <p className={cn("text-sm font-medium", settings.dark_mode ? "text-emerald-400" : "text-green-700")}>✅ {t("settings.autoSaving")}</p>
         </div>
       )}
 
       <div className="pt-4 space-y-3">
         <a
-          href="/help.html"
+          href="/help"
           target="_blank"
           rel="noopener noreferrer"
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <HelpCircle size={18} />
-          Como usar o Partiu!
+          {language === "en" ? "How to use Partiu!" : "Como usar o Partiu!"}
         </a>
 
         <button
@@ -820,7 +858,7 @@ export function SettingsTab() {
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <Info size={18} />
-          Sobre o Partiu!
+          {t("about.title")}
         </button>
       </div>
       <Modal

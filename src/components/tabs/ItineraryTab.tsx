@@ -20,6 +20,7 @@ import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 import { useUpdateItinerary } from "../../hooks/useUpdateItinerary";
 import { useDeleteItinerary } from "../../hooks/useDeleteItinerary";
+import { useI18n } from "../../i18n/I18nProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,9 +57,9 @@ function sortedDateKeys(grouped: Record<string, ItineraryItem[]>): string[] {
   });
 }
 
-function formatDateKey(dateKey: string): string {
-  if (dateKey === "sem-data") return "Sem data definida";
-  return new Date(dateKey + "T00:00:00").toLocaleDateString("pt-BR", {
+function formatDateKey(dateKey: string, locale: string): string {
+  if (dateKey === "sem-data") return locale === "en" ? "No date set" : "Sem data definida";
+  return new Date(dateKey + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -78,6 +79,7 @@ interface AgendaViewProps {
 }
 
 function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
+  const { language } = useI18n();
   const grouped = groupByDate(items);
   const keys = sortedDateKeys(grouped);
 
@@ -95,7 +97,7 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
         const dayItems = [...(grouped[dateKey] ?? [])].sort((a, b) =>
           (a.start_time ?? "").localeCompare(b.start_time ?? "")
         );
-        const label = formatDateKey(dateKey);
+        const label = formatDateKey(dateKey, language);
         const dayNum = dateKey !== "sem-data" ? dateKey.slice(8, 10) : "?";
 
         return (
@@ -157,6 +159,7 @@ const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06h–23h
 const PX_PER_MIN = 1.2; // pixels per minute
 
 function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
+  const { language } = useI18n();
   const grouped = groupByDate(items);
   const keys = sortedDateKeys(grouped);
   const [activeKey, setActiveKey] = useState<string>(keys[0] ?? "sem-data");
@@ -196,7 +199,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
           const label =
             key === "sem-data"
               ? "Sem data"
-              : new Date(key + "T00:00:00").toLocaleDateString("pt-BR", {
+              : new Date(key + "T00:00:00").toLocaleDateString(language, {
                   day: "2-digit",
                   month: "2-digit",
                 });

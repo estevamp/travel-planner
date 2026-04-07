@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../supabase";
 import { Card } from "./Card";
 import { getErrorMessage } from "../utils";
+import { useI18n, usePageTitle } from "../i18n/I18nProvider";
 
 function isInAppBrowser(): boolean {
   const ua = navigator.userAgent || "";
@@ -35,6 +36,9 @@ export function InvitePage({ session }: { session: Session | null }) {
   const [error, setError] = useState<string | null>(null);
   const [tripId, setTripId] = useState<string | null>(null);
   const [attempted, setAttempted] = useState(false);
+  const { t } = useI18n();
+
+  usePageTitle(`${t("invite.title")} | ${t("app.name")}`);
 
   async function signInWithGoogle(redirectTo?: string) {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -75,7 +79,7 @@ export function InvitePage({ session }: { session: Session | null }) {
   if (!token)
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Convite inválido.
+        {t("invite.invalid")}
       </div>
     );
 
@@ -87,7 +91,7 @@ export function InvitePage({ session }: { session: Session | null }) {
     const handleCopy = async () => {
       try {
         await navigator.clipboard.writeText(currentUrl);
-        alert("Link copiado! Agora cole no Chrome ou Safari.");
+        alert(t("invite.copyLinkSuccess"));
       } catch {
         // fallback silencioso
       }
@@ -97,34 +101,32 @@ export function InvitePage({ session }: { session: Session | null }) {
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
         <Card className="max-w-md w-full text-center space-y-4">
           <div className="text-4xl">⚠️</div>
-          <h1 className="text-xl font-bold">Abrir no navegador</h1>
+          <h1 className="text-xl font-bold">{t("invite.openInBrowser")}</h1>
           <p className="text-sm text-zinc-600">
-            Você está abrindo este link dentro do <strong>{appName}</strong>.
-            Para aceitar o convite corretamente, abra no{" "}
-            <strong>Chrome</strong> ou <strong>Safari</strong>.
+            {t("invite.inAppBrowserMessage", { appName })}
           </p>
 
           <div className="bg-zinc-100 rounded-xl p-3 text-xs text-zinc-500 text-left space-y-2">
             {isAndroid() && (
               <div>
-                <p className="font-semibold text-zinc-700 mb-1">Como abrir no Chrome (Android):</p>
+                <p className="font-semibold text-zinc-700 mb-1">{t("invite.androidHowTo")}</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Toque nos <strong>3 pontinhos (⋮)</strong> no canto superior direito</li>
-                  <li>Toque em <strong>"Abrir no Chrome"</strong> ou <strong>"Abrir no navegador"</strong></li>
+                  <li>{t("invite.androidStep1")}</li>
+                  <li>{t("invite.androidStep2")}</li>
                 </ol>
               </div>
             )}
             {isIOS() && (
               <div>
-                <p className="font-semibold text-zinc-700 mb-1">Como abrir no Safari (iPhone):</p>
+                <p className="font-semibold text-zinc-700 mb-1">{t("invite.iosHowTo")}</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Toque no ícone de <strong>compartilhar</strong> ou nos <strong>3 pontinhos</strong></li>
-                  <li>Escolha <strong>"Abrir no Safari"</strong> ou <strong>"Abrir no navegador"</strong></li>
+                  <li>{t("invite.iosStep1")}</li>
+                  <li>{t("invite.iosStep2")}</li>
                 </ol>
               </div>
             )}
             {!isAndroid() && !isIOS() && (
-              <p>Copie o link abaixo e abra no Chrome ou Safari.</p>
+              <p>{t("invite.desktopHelp")}</p>
             )}
           </div>
 
@@ -132,11 +134,11 @@ export function InvitePage({ session }: { session: Session | null }) {
             onClick={handleCopy}
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold"
           >
-            📋 Copiar link
+            📋 {t("invite.copyLink")}
           </button>
 
           <p className="text-xs text-zinc-400">
-            Após abrir no navegador, o convite será aceito automaticamente.
+            {t("invite.afterOpenBrowser")}
           </p>
         </Card>
       </div>
@@ -148,13 +150,13 @@ export function InvitePage({ session }: { session: Session | null }) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
         <Card className="max-w-md w-full text-center space-y-4">
-          <h1 className="text-xl font-bold">Aceitar convite</h1>
-          <p className="text-sm text-zinc-500">Faça login com Google.</p>
+          <h1 className="text-xl font-bold">{t("invite.title")}</h1>
+          <p className="text-sm text-zinc-500">{t("invite.signInPrompt")}</p>
           <button
             onClick={() => void signInWithGoogle(window.location.href)}
             className="w-full bg-black text-white py-3 rounded-xl font-semibold"
           >
-            Entrar com Google
+            {t("auth.signInGoogle")}
           </button>
         </Card>
       </div>
@@ -162,19 +164,19 @@ export function InvitePage({ session }: { session: Session | null }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
       <Card className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-xl font-bold">Aceitar convite</h1>
-        {loading && <p className="text-sm text-zinc-500">Processando...</p>}
+        <h1 className="text-xl font-bold">{t("invite.title")}</h1>
+        {loading && <p className="text-sm text-zinc-500">{t("invite.processing")}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {tripId && <p className="text-sm text-emerald-600">Convite aceito.</p>}
+        {tripId && <p className="text-sm text-emerald-600">{t("invite.accepted")}</p>}
         <div>
           {tripId && (
             <button
               onClick={() => navigate(`/trip/${tripId}`)}
               className="w-full bg-black text-white py-2 rounded-xl font-semibold"
             >
-              Ir para viagem
+              {t("invite.goToTrip")}
             </button>
           )}
         </div>

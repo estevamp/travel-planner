@@ -7,6 +7,7 @@ import { useTripList } from '../hooks/useTripList';
 import { useRealtimeTrip } from '../hooks/useRealtimeTrip';
 import { useToast } from '../hooks/useToast';
 import { getThemeStyles } from '../utils/theme';
+import { useI18n } from '../i18n/I18nProvider';
 import type {
   Trip, TripMember, TripInvite, ExpenseCategory,
   ItineraryType, TripBudget, UserSettings
@@ -76,6 +77,7 @@ export function TripProvider({
 }: TripProviderProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useI18n();
 
   const {
     trip, setTrip, members, invites, categories, setCategories,
@@ -109,10 +111,10 @@ export function TripProvider({
 
   useEffect(() => {
     if (notAuthorized) {
-      toast('Você não tem acesso a esta viagem.', 'error');
+      toast(t("trip.noAccess"), 'error');
       onTripDeleted();
     }
-  }, [notAuthorized, toast, onTripDeleted]);
+  }, [notAuthorized, toast, onTripDeleted, t]);
 
   const deleteCurrentTrip = async () => {
     if (!trip || !isAdmin) return false;
@@ -122,7 +124,7 @@ export function TripProvider({
     } = await supabase.auth.getSession();
 
     if (!session?.access_token) {
-      toast('Sua sessão expirou. Entre novamente para excluir a viagem.', 'error');
+      toast(t("trip.sessionExpiredDelete"), 'error');
       return false;
     }
 
@@ -136,7 +138,7 @@ export function TripProvider({
     });
 
     if (!response.ok) {
-      let errorMessage = 'Não foi possível excluir a viagem.';
+      let errorMessage = t("trip.deleteError");
       try {
         const payload = await response.json();
         errorMessage = payload?.error || payload?.details || errorMessage;
@@ -147,7 +149,7 @@ export function TripProvider({
       return false;
     }
 
-    toast('Viagem excluída com sucesso.', 'success');
+    toast(t("trip.deletedSuccess"), 'success');
     reloadTripOptions();
     onTripDeleted();
     return true;
@@ -168,7 +170,7 @@ export function TripProvider({
         <div className="flex flex-col items-center gap-3 text-[var(--accent-color)]">
           <div className="h-10 w-10 rounded-full border-4 border-current border-t-transparent animate-spin" />
           <p className="text-sm font-medium tracking-wide">
-            Carregando viagem<span className="animate-pulse">...</span>
+            {t("common.loading")}
           </p>
         </div>
       </div>
@@ -183,13 +185,13 @@ export function TripProvider({
           onClick={() => reloadTrip()}
           className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-bold hover:bg-zinc-700 transition-colors"
         >
-          Tentar novamente
+          {t("common.retry")}
         </button>
         <button
           onClick={() => onTripDeleted()}
           className="text-sm text-zinc-500 hover:underline"
         >
-          Voltar para minhas viagens
+          {t("trip.backToTrips")}
         </button>
       </div>
     );

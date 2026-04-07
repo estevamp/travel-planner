@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { LanguageCode } from "../types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -10,11 +11,11 @@ export function getErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error && typeof (error as { message: unknown }).message === "string") {
     return (error as { message: string }).message;
   }
-  return "Erro inesperado";
+  return "Unexpected error";
 }
 
-export function formatCurrency(value: number, currency = "BRL") {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
+export function formatCurrency(value: number, currency = "BRL", locale: LanguageCode = "pt-BR") {
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(value);
 }
 
 export const fileToDataUrl = (file: File) =>
@@ -61,10 +62,10 @@ export const resizeImage = (file: File, maxWidth = 1200, maxHeight = 1200, quali
   });
 };
 
-export function maskCurrency(value: string) {
+export function maskCurrency(value: string, locale: LanguageCode = "pt-BR") {
   const cleanValue = value.replace(/\D/g, "");
   const numberValue = Number(cleanValue) / 100;
-  return new Intl.NumberFormat("pt-BR", {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numberValue);

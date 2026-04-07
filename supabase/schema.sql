@@ -135,6 +135,7 @@ alter table public.trips add column if not exists created_by_user_id uuid refere
 alter table public.profiles add column if not exists theme_palette text not null default 'default';
 alter table public.profiles add column if not exists dark_mode boolean not null default false;
 alter table public.profiles add column if not exists default_currency text not null default 'BRL';
+alter table public.profiles add column if not exists language_code text not null default 'pt-BR';
 alter table public.profiles add column if not exists budget_limit numeric(12,2) not null default 0;
 alter table public.profiles add column if not exists spouse_user_id uuid references auth.users(id) on delete set null;
 alter table public.itinerary add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
@@ -166,6 +167,20 @@ begin
     alter table public.profiles
       add constraint profiles_default_currency_len_chk
       check (char_length(default_currency) = 3);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_language_code_chk'
+  ) then
+    alter table public.profiles
+      add constraint profiles_language_code_chk
+      check (language_code in ('pt-BR', 'en'));
   end if;
 end
 $$;
