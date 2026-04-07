@@ -193,14 +193,14 @@ export function SettingsTab() {
             <DollarSign size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Financeiro & Orçamento</h3>
-            <p className="text-sm text-zinc-500">Moeda padrão e limite de gastos da viagem</p>
+            <h3 className="font-bold text-lg">{t("settings.financeTitle")}</h3>
+            <p className="text-sm text-zinc-500">{t("settings.financeDescription")}</p>
           </div>
         </div>
 
         {/* Moeda Padrão */}
         <div className="space-y-3">
-          <label className="text-sm font-semibold block">Moeda Padrão</label>
+          <label className="text-sm font-semibold block">{t("settings.defaultCurrency")}</label>
           <div className="grid grid-cols-3 gap-3">
             {["BRL", "USD", "EUR"].map((currency) => (
               <button
@@ -230,7 +230,7 @@ export function SettingsTab() {
 
         {/* Orçamento da Viagem */}
         <div className="space-y-4">
-          <label className="text-sm font-semibold block">Limite de Orçamento</label>
+          <label className="text-sm font-semibold block">{t("settings.budgetLimit")}</label>
           <div className="flex gap-3">
             <input
               value={maskCurrency(String(Math.round((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100)), settingsDraft.language_code)}
@@ -287,8 +287,8 @@ export function SettingsTab() {
           <div className="px-4 py-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <p className={cn("text-xs", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
               {budgetOwnerUserId === userId
-                ? "💡 Orçamento individual nesta viagem"
-                : "👥 Orçamento compartilhado com cônjuge nesta viagem"}
+                ? t("settings.budgetOwnershipIndividual")
+                : t("settings.budgetOwnershipShared")}
             </p>
           </div>
         </div>
@@ -302,14 +302,14 @@ export function SettingsTab() {
               <Palette size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">Aparência</h3>
-              <p className="text-sm text-zinc-500">Modo de exibição e tema da viagem</p>
+              <h3 className="font-bold text-lg">{t("settings.appearanceTitle")}</h3>
+              <p className="text-sm text-zinc-500">{t("settings.appearanceDescription")}</p>
             </div>
           </div>
 
           {/* Dark Mode */}
           <div>
-            <label className="text-sm font-semibold mb-3 block">Modo de Exibição</label>
+            <label className="text-sm font-semibold mb-3 block">{t("settings.displayMode")}</label>
             <button
               type="button"
               onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
@@ -325,13 +325,13 @@ export function SettingsTab() {
             >
               <div className="flex items-center gap-3">
                 {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
-                <span className="text-base">{settingsDraft.dark_mode ? "Modo Escuro" : "Modo Claro"}</span>
+                <span className="text-base">{settingsDraft.dark_mode ? t("settings.darkMode") : t("settings.lightMode")}</span>
               </div>
               <div className={cn(
                 "px-3 py-1 rounded-full text-xs font-bold",
                 settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
               )}>
-                {settingsDraft.dark_mode ? "Ativado" : "Desativado"}
+                {settingsDraft.dark_mode ? t("settings.enabled") : t("settings.disabled")}
               </div>
             </button>
           </div>
@@ -341,19 +341,19 @@ export function SettingsTab() {
 
           {/* Tema da Viagem */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold block">Tema da Viagem</label>
+            <label className="text-sm font-semibold block">{t("settings.tripTheme")}</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
               {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach", "explorer"] as const).map((theme) => {
                 const palette = THEME_PALETTES[theme];
                 const isActive = (trip?.theme_palette || 'default') === theme;
                 const themeNames: Record<string, string> = {
-                  default: "Padrão",
-                  ocean: "Oceano",
+                  default: t("settings.theme.default"),
+                  ocean: t("settings.theme.ocean"),
                   coastal: "Coastal",
-                  sunset: "Pôr do Sol",
-                  lavender: "Lavanda",
-                  rose: "Rosa",
-                  tropic: "Tropical",
+                  sunset: t("settings.theme.sunset"),
+                  lavender: t("settings.theme.lavender"),
+                  rose: t("settings.theme.rose"),
+                  tropic: t("settings.theme.tropic"),
                   candy: "Candy",
                   galaxy: "Galaxy",
                   jade: "Jade",
@@ -435,8 +435,8 @@ export function SettingsTab() {
             <FileText size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Categorias de Despesas</h3>
-            <p className="text-sm text-zinc-500">Organize suas despesas por categoria</p>
+            <h3 className="font-bold text-lg">{t("settings.expenseCategoriesTitle")}</h3>
+            <p className="text-sm text-zinc-500">{t("settings.expenseCategoriesDescription")}</p>
           </div>
         </div>
         <div className="space-y-4">
@@ -520,8 +520,8 @@ export function SettingsTab() {
                 "sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed",
                 settings.dark_mode ? "border-zinc-800" : "border-zinc-200"
               )}>
-                <p className="text-sm text-zinc-500">Nenhuma categoria configurada ainda.</p>
-                <p className="text-xs text-zinc-400 mt-1">Adicione sua primeira categoria acima!</p>
+                <p className="text-sm text-zinc-500">{t("settings.noExpenseCategories")}</p>
+                <p className="text-xs text-zinc-400 mt-1">{t("settings.addFirstExpenseCategory")}</p>
               </div>
             )}
           </div>
@@ -537,8 +537,8 @@ export function SettingsTab() {
             <Plus size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Tipos de Atividade</h3>
-            <p className="text-sm text-zinc-500">Gerencie os tipos de atividades disponíveis</p>
+            <h3 className="font-bold text-lg">{t("settings.activityTypesTitle")}</h3>
+            <p className="text-sm text-zinc-500">{t("settings.activityTypesDescription")}</p>
           </div>
         </div>
         <div className="space-y-4">
@@ -561,11 +561,11 @@ export function SettingsTab() {
           >
             <div className="flex gap-3">
               <div className="flex-1 space-y-1">
-                <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Nome do Tipo</label>
+                <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("settings.activityTypeName")}</label>
                 <input
                   name="name"
                   required
-                  placeholder="Ex: Voo"
+                  placeholder={t("settings.activityTypePlaceholder")}
                   className={cn(
                     "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                     settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -574,11 +574,11 @@ export function SettingsTab() {
               </div>
               <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2 self-end">
                 <Plus size={16} />
-                Adicionar
+                {t("common.add")}
               </button>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-zinc-400 px-1">Ícone</label>
+              <label className="text-xs font-bold uppercase text-zinc-400 px-1">{t("settings.icon")}</label>
               <div className={cn(
                 "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
                 settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
@@ -614,7 +614,7 @@ export function SettingsTab() {
                   >
                     <div className="flex gap-3">
                       <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Nome do Tipo</label>
+                        <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("settings.activityTypeName")}</label>
                         <input
                           value={editTypeName}
                           onChange={(e) => setEditTypeName(e.target.value)}
@@ -626,7 +626,7 @@ export function SettingsTab() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Ícone</label>
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("settings.icon")}</label>
                       <div className={cn(
                         "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
                         settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
@@ -660,7 +660,7 @@ export function SettingsTab() {
                           settings.dark_mode ? "border-zinc-700 text-zinc-300" : "border-zinc-200 text-zinc-600"
                         )}
                       >
-                        Cancelar
+                        {t("common.cancel")}
                       </button>
                       <button
                         type="button"
@@ -689,7 +689,7 @@ export function SettingsTab() {
                         }}
                         className="px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold disabled:opacity-50"
                       >
-                        {savingType ? "Salvando..." : "Salvar Alterações"}
+                        {savingType ? t("common.saving") : t("expenses.saveChanges")}
                       </button>
                     </div>
                   </div>
@@ -725,8 +725,8 @@ export function SettingsTab() {
                     <button
                       onClick={async () => {
                         const confirmed = await confirm({
-                          title: 'Excluir tipo?',
-                          message: `Excluir tipo de atividade "${type.name}"?`,
+                          title: t("settings.deleteActivityTypeTitle"),
+                          message: t("settings.deleteActivityTypeMessage", { name: type.name }),
                           variant: 'danger',
                           isDark: settings.dark_mode
                         });
@@ -758,7 +758,7 @@ export function SettingsTab() {
                 "sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed",
                 settings.dark_mode ? "border-zinc-800" : "border-zinc-200"
               )}>
-                <p className="text-sm text-zinc-500">Nenhum tipo de atividade configurado ainda.</p>
+                <p className="text-sm text-zinc-500">{t("settings.noActivityTypes")}</p>
               </div>
             )}
           </div>
@@ -774,17 +774,17 @@ export function SettingsTab() {
               <Settings size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">Gerenciar Viagem</h3>
-              <p className="text-sm text-zinc-500">Edite ou exclua esta viagem</p>
+              <h3 className="font-bold text-lg">{t("settings.manageTripTitle")}</h3>
+              <p className="text-sm text-zinc-500">{t("settings.manageTripDescription")}</p>
             </div>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-semibold block required-indicator">Nome da Viagem</label>
+              <label className="text-sm font-semibold block required-indicator">{t("landing.tripName")}</label>
               <input
                 value={editTripName}
                 onChange={(e) => setEditTripName(e.target.value)}
-                placeholder="Nome da viagem"
+                placeholder={t("landing.tripName")}
                 className={cn(
                   "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -793,11 +793,11 @@ export function SettingsTab() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold block required-indicator">Destino</label>
+              <label className="text-sm font-semibold block required-indicator">{t("landing.destination")}</label>
               <input
                 value={editTripDestination}
                 onChange={(e) => setEditTripDestination(e.target.value)}
-                placeholder="Destino"
+                placeholder={t("landing.destination")}
                 className={cn(
                   "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                   settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -818,7 +818,7 @@ export function SettingsTab() {
                 )}
               >
                 <Trash2 size={16} />
-                Excluir Viagem
+                {t("settings.deleteTrip")}
               </button>
               <button
                 type="button"
@@ -826,7 +826,7 @@ export function SettingsTab() {
                 disabled={updatingTrip}
                 className="px-6 py-3 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {updatingTrip ? "Salvando..." : "Salvar Alterações"}
+                {updatingTrip ? t("common.saving") : t("expenses.saveChanges")}
               </button>
             </div>
           </div>
@@ -850,7 +850,7 @@ export function SettingsTab() {
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <HelpCircle size={18} />
-          {language === "en" ? "How to use Partiu!" : "Como usar o Partiu!"}
+          {t("settings.howToUse")}
         </a>
 
         <button
@@ -868,7 +868,7 @@ export function SettingsTab() {
           setIsDeleteModalOpen(false);
           setDeleteConfirmationValue("");
         }}
-        title="Excluir viagem"
+        title={t("settings.deleteTrip")}
         size="sm"
         isDark={settings.dark_mode}
       >
@@ -878,15 +878,15 @@ export function SettingsTab() {
             settings.dark_mode ? "border-red-900/60 bg-red-950/20" : "border-red-200 bg-red-50"
           )}>
             <p className={cn("text-sm font-semibold", settings.dark_mode ? "text-red-300" : "text-red-700")}>
-              Todos os dados desta viagem serão excluídos.
+              {t("settings.deleteTripWarning")}
             </p>
             <p className={cn("mt-2 text-sm", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-              Para confirmar, digite <span className="font-mono font-semibold">{expectedDeleteConfirmation}</span>.
+              {t("settings.deleteTripInstruction")} <span className="font-mono font-semibold">{expectedDeleteConfirmation}</span>.
             </p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold block">Confirmação</label>
+            <label className="text-sm font-semibold block">{t("settings.confirmation")}</label>
             <input
               value={deleteConfirmationValue}
               onChange={(e) => setDeleteConfirmationValue(e.target.value)}
@@ -912,7 +912,7 @@ export function SettingsTab() {
                 settings.dark_mode ? "bg-zinc-800 hover:bg-zinc-700 text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
               )}
             >
-              Cancelar
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -920,7 +920,7 @@ export function SettingsTab() {
               disabled={!isDeleteConfirmationValid || updatingTrip}
               className="px-4 py-2 rounded-xl font-medium transition-colors shadow-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
             >
-              {updatingTrip ? "Excluindo..." : "Excluir viagem"}
+              {updatingTrip ? t("settings.deleting") : t("settings.deleteTrip")}
             </button>
           </div>
         </div>

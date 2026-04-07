@@ -791,7 +791,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       <Modal
         isOpen={showAddModal && modalType === 'idea'}
         onClose={closeModal}
-        title="Nova Ideia"
+        title={t("ideas.modalNewTitle")}
         size="lg"
         isDark={settings.dark_mode}
       >
@@ -804,12 +804,12 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           }}
         >
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">Qual a ideia?</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("ideas.modalIdeaLabel")}</label>
             <input
               name="title"
               disabled={isSubmittingIdea}
               required
-              placeholder="Ex: Museu do Louvre"
+              placeholder={t("ideas.modalTitlePlaceholder")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -817,11 +817,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Notas</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.notes")}</label>
             <textarea
               name="notes"
               disabled={isSubmittingIdea}
-              placeholder="Detalhes da ideia..."
+              placeholder={t("ideas.modalNotesPlaceholder")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -829,11 +829,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL do Google Maps</label>
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("ideas.modalMapsLabel")}</label>
             <input
               name="maps_url"
               disabled={isSubmittingIdea}
-              placeholder="https://goo.gl/maps/..."
+              placeholder={t("ideas.modalMapsPlaceholder")}
               className={cn(
                 "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
@@ -857,10 +857,10 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             </label>
           </div>
           
-          <p className="text-[10px] text-zinc-400 px-1 italic">Dica: Você poderá adicionar fotos, anexos e links extras após salvar a ideia, editando-a.</p>
+          <p className="text-[10px] text-zinc-400 px-1 italic">{t("ideas.modalHint")}</p>
           
           <button disabled={isSubmittingIdea} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
-            {isSubmittingIdea ? t("common.saving") : (language === "en" ? "Save idea" : "Salvar Ideia")}
+            {isSubmittingIdea ? t("common.saving") : t("ideas.modalSave")}
           </button>
         </form>
       </Modal>
