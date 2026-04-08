@@ -33,11 +33,11 @@ export function AuthLanding({
       <Card className="max-w-md w-full text-center space-y-6 p-8">
         <div className="flex justify-center">
           <div className="bg-[#0A2342] p-4 rounded-2xl shadow-lg shadow-blue-900/20">
-            <img src="/icon-192.png" alt="Partiu!" className="w-12 h-12" />
+            <img src="/icon-192.png" alt={t("app.name")} className="w-12 h-12" />
           </div>
         </div>
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-zinc-900">Partiu!</h1>
+          <h1 className="text-3xl font-bold text-zinc-900">{t("app.name")}</h1>
           <p className="text-zinc-500">{t("auth.tagline")}</p>
         </div>
         <div className="space-y-3 text-left">

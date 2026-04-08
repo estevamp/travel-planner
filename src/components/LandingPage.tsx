@@ -77,9 +77,9 @@ export function LandingPage({
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/favicon.svg" alt="Partiu!" className="w-12 h-12" />
+            <img src="/favicon.svg" alt={t("app.name")} className="w-12 h-12" />
             <div>
-              <h1 className="text-3xl font-bold text-[var(--accent-color)]">Partiu!</h1>
+              <h1 className="text-3xl font-bold text-[var(--accent-color)]">{t("app.name")}</h1>
               <p className="opacity-70">{session.user.email}</p>
             </div>
           </div>
