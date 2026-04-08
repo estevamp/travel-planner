@@ -1085,9 +1085,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 initialSplitType={editExpenseSplitType}
               />
               {editExpenseSplits.length > 0 && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50">
-                  <Unlock size={14} className="text-blue-800 dark:text-blue-400 flex-shrink-0" />
-                  <p className="text-[10px] font-bold text-[var(--sidebar-active-text)] dark:text-blue-300">
+                <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
+                  <Unlock size={14} className="shrink-0 text-sky-700 dark:text-sky-300" />
+                  <p className="text-[10px] font-semibold leading-relaxed text-inherit">
                     {t("dashboard.splitPublicNotice")}
                   </p>
                 </div>
