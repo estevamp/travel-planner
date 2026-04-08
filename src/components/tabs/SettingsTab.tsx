@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Briefcase, Calendar, HelpCircle } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Languages, Calendar, HelpCircle } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
@@ -178,7 +178,7 @@ export function SettingsTab() {
       <Card className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center">
-            <Briefcase size={20} className="text-white" />
+            <Languages size={20} className="text-white" />
           </div>
           <div>
             <h3 className="font-bold text-lg">{t("settings.language")}</h3>

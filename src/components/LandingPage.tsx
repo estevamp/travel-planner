@@ -1,16 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { LogOut, HelpCircle, FileText } from "lucide-react";
+import { LogOut, HelpCircle, FileText, Languages } from "lucide-react";
 import { supabase } from "../supabase";
 import { Card } from "./Card";
-import { UserSettings, TripSummary } from "../types";
+import { LanguageCode, UserSettings, TripSummary } from "../types";
 import { getThemeStyles } from "../utils/theme";
 import { getErrorMessage } from "../utils";
 import { useToast } from "../hooks/useToast";
 import { useI18n, usePageTitle } from "../i18n/I18nProvider";
 
-export function LandingPage({ session, settings }: { session: Session; settings: UserSettings }) {
+export function LandingPage({
+  session,
+  settings,
+  hasProfile,
+  onLanguageChange,
+}: {
+  session: Session;
+  settings: UserSettings;
+  hasProfile: boolean;
+  onLanguageChange: (language: LanguageCode) => void | Promise<void>;
+}) {
   // A LandingPage sempre usa o tema padrão claro, independente das preferências do usuário
   const landingSettings: UserSettings = { ...settings, theme_palette: "default", dark_mode: false };
 
@@ -101,6 +111,36 @@ export function LandingPage({ session, settings }: { session: Session; settings:
             </button>
           </div>
         </div>
+
+        {!hasProfile && (
+          <Card className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center shrink-0">
+                <Languages size={20} className="text-white" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="font-bold text-[var(--accent-color)]">{t("settings.language")}</h2>
+                <p className="text-sm opacity-70">{t("landing.languageSetupHint")}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(["pt-BR", "en"] as const).map((locale) => (
+                <button
+                  key={locale}
+                  type="button"
+                  onClick={() => void onLanguageChange(locale)}
+                  className={
+                    settings.language_code === locale
+                      ? "min-h-12 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
+                      : "min-h-12 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--accent-color)] hover:border-[var(--accent-color)]/40"
+                  }
+                >
+                  {t(`settings.language.${locale}` as "settings.language.pt-BR" | "settings.language.en")}
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>

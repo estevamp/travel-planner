@@ -16,6 +16,8 @@ import { I18nProvider } from "./i18n/I18nProvider";
 import { HelpPage } from "./components/HelpPage";
 import { TermsPage } from "./components/TermsPage";
 
+const LANGUAGE_STORAGE_KEY = "partiu-preferred-language";
+
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
   dark_mode: false,
@@ -27,7 +29,18 @@ const DEFAULT_SETTINGS: UserSettings = {
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [userSettings, setUserSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [hasProfile, setHasProfile] = useState(false);
+  const [userSettings, setUserSettings] = useState<UserSettings>(() => {
+    const storedLanguage = typeof window !== "undefined"
+      ? window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+      : null;
+
+    if (storedLanguage === "pt-BR" || storedLanguage === "en") {
+      return { ...DEFAULT_SETTINGS, language_code: storedLanguage };
+    }
+
+    return DEFAULT_SETTINGS;
+  });
 
   const loadUserSettings = async (userId: string) => {
     const { data, error } = await supabase
@@ -37,17 +50,47 @@ export default function App() {
       .single();
 
     if (error || !data) {
-      setUserSettings(DEFAULT_SETTINGS);
+      setHasProfile(false);
       return;
     }
 
-    setUserSettings({
+    const nextSettings = {
       theme_palette: (data.theme_palette as any) || DEFAULT_SETTINGS.theme_palette,
       dark_mode: Boolean(data.dark_mode),
       default_currency: (data.default_currency as string) || DEFAULT_SETTINGS.default_currency,
       language_code: ((data.language_code as UserSettings["language_code"] | null) || DEFAULT_SETTINGS.language_code),
       spouse_user_id: (data.spouse_user_id as string | null) || null,
-    });
+    };
+
+    setHasProfile(true);
+    setUserSettings(nextSettings);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, nextSettings.language_code);
+    }
+  };
+
+  const handleLanguageChange = async (language_code: UserSettings["language_code"]) => {
+    setUserSettings((current) => ({ ...current, language_code }));
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language_code);
+    }
+
+    if (!session?.user?.id) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          user_id: session.user.id,
+          language_code,
+        },
+        { onConflict: "user_id" },
+      );
+
+    if (!error) {
+      setHasProfile(true);
+    }
   };
 
   useEffect(() => {
@@ -67,7 +110,8 @@ export default function App() {
           console.error("App: Erro ao carregar dados do usuário:", err);
         }
       } else {
-        setUserSettings(DEFAULT_SETTINGS);
+        setHasProfile(false);
+        setUserSettings((current) => ({ ...DEFAULT_SETTINGS, language_code: current.language_code }));
       }
       console.log("App: Finalizando loadingAuth");
       setLoadingAuth(false);
@@ -84,7 +128,8 @@ export default function App() {
         void supabase.rpc("sync_my_profile");
         void loadUserSettings(nextSession.user.id);
       } else {
-        setUserSettings(DEFAULT_SETTINGS);
+        setHasProfile(false);
+        setUserSettings((current) => ({ ...DEFAULT_SETTINGS, language_code: current.language_code }));
       }
     });
 
@@ -113,7 +158,17 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={session ? <LandingPage session={session} settings={userSettings} /> : <AuthLanding />} />
+            <Route
+              path="/"
+              element={session ? (
+                <LandingPage
+                  session={session}
+                  settings={userSettings}
+                  hasProfile={hasProfile}
+                  onLanguageChange={handleLanguageChange}
+                />
+              ) : <AuthLanding />}
+            />
             <Route
               path="/trip/:id"
               element={
