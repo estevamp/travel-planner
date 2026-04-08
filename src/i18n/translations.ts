@@ -141,7 +141,7 @@ export const ptBR = {
   "expenses.table.amount": "Valor",
   "expenses.table.action": "Acao",
   "expenses.empty": "Nenhuma despesa cadastrada.",
-  "expenses.whoPaidTitle": "Quem pagou nas despesas rateadas",
+  "expenses.whoPaidTitle": "Quem pagou as despesas rateadas",
   "expenses.whoPaidFootnote": "Somente despesas com rateio entre membros · valores em {currency}",
   "expenses.summaryByParticipant": "Resumo por participante",
   "expenses.toReceive": "A receber",
