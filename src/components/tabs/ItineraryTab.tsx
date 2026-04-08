@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
 import {
@@ -12,6 +12,7 @@ import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
 import type { Trip, ItineraryItem, Visibility } from "../../types";
+import { DOCS_BUCKET } from "../../constants";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
 import { ACTIVITY_ICON_COMPONENTS } from "../../constants/icons";
@@ -21,6 +22,7 @@ import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
 import { useUpdateItinerary } from "../../hooks/useUpdateItinerary";
 import { useDeleteItinerary } from "../../hooks/useDeleteItinerary";
 import { useI18n } from "../../i18n/I18nProvider";
+import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +67,10 @@ function formatDateKey(dateKey: string, locale: string): string {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+function isDirectImageSrc(value: string) {
+  return value.startsWith("data:") || value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:");
 }
 
 // ─── AgendaView ───────────────────────────────────────────────────────────────
@@ -381,6 +387,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   const { t } = useI18n();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const { getSignedUrl, cachedUrls, setCachedUrl } = useSignedUrlCache(DOCS_BUCKET);
   const { toggleVisibility } = useOptimisticVisibility<ItineraryItem>(
     "itinerary",
     "itinerary",
@@ -436,9 +443,26 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   const isDark = settings.dark_mode;
 
+  useEffect(() => {
+    const privatePhotoPaths = trip.itinerary
+      .map((item) => item.photo_url)
+      .filter((photoUrl): photoUrl is string => Boolean(photoUrl) && !isDirectImageSrc(photoUrl));
+
+    for (const photoPath of privatePhotoPaths) {
+      if (cachedUrls[photoPath]) continue;
+      void getSignedUrl(photoPath).catch(() => undefined);
+    }
+  }, [trip.itinerary, cachedUrls, getSignedUrl]);
+
   const getCreatorName = (memberId: string) => {
     const member = members.find((m) => m.id === memberId);
     return member?.display_name || t("ideas.unknownCreator");
+  };
+
+  const getItineraryPhotoSrc = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return null;
+    if (isDirectImageSrc(photoUrl)) return photoUrl;
+    return cachedUrls[photoUrl] || null;
   };
 
   const startEditItinerary = (item: ItineraryItem) => {
@@ -591,8 +615,8 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   // ─── renderItineraryItem (unchanged from original) ─────────────────────────
   const renderItineraryItem = (item: ItineraryItem) => (
     <Card key={item.id} className={cn("group p-0 overflow-hidden transition-opacity", item.is_completed && "opacity-75")}>
-      {item.photo_url && (
-        <img src={item.photo_url} alt={item.title} className="w-full h-40 object-cover" />
+      {getItineraryPhotoSrc(item.photo_url) && (
+        <img src={getItineraryPhotoSrc(item.photo_url) ?? undefined} alt={item.title} className="w-full h-40 object-cover" />
       )}
       <div className="p-5 flex items-start gap-3">
         <button
@@ -708,15 +732,17 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 className="hidden"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (!file) return;
+                  if (!file || !currentMember) return;
                   try {
                     const resized = await resizeImage(file, 1200);
                     const ext = file.name.split(".").pop() || "jpg";
-                    const path = `${trip.id}/itinerary/${item.id}.${ext}`;
+                    const path = `${trip.id}/${currentMember.id}/itinerary/${item.id}.${ext}`;
                     const blob = await (await fetch(resized)).blob();
-                    await supabase.storage.from("travel-documents").upload(path, blob, { upsert: true });
-                    const { data: urlData } = supabase.storage.from("travel-documents").getPublicUrl(path);
-                    const photo = urlData.publicUrl;
+                    await supabase.storage.from(DOCS_BUCKET).upload(path, blob, { upsert: true });
+                    const { data: signedData, error: signedUrlError } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
+                    if (signedUrlError || !signedData?.signedUrl) throw signedUrlError || new Error("Falha ao gerar URL da foto");
+                    const photo = path;
+                    setCachedUrl(path, signedData.signedUrl);
                     onTripUpdate((prev) => ({
                       ...prev,
                       itinerary: prev.itinerary.map((i) =>
@@ -843,15 +869,17 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (!file) return;
+                if (!file || !currentMember) return;
                 try {
                   const resized = await resizeImage(file, 1200);
                   const ext = file.name.split(".").pop() || "jpg";
-                  const path = `${trip.id}/itinerary/${item.id}.${ext}`;
+                  const path = `${trip.id}/${currentMember.id}/itinerary/${item.id}.${ext}`;
                   const blob = await (await fetch(resized)).blob();
-                  await supabase.storage.from("travel-documents").upload(path, blob, { upsert: true });
-                  const { data: urlData } = supabase.storage.from("travel-documents").getPublicUrl(path);
-                  const photo = urlData.publicUrl;
+                  await supabase.storage.from(DOCS_BUCKET).upload(path, blob, { upsert: true });
+                  const { data: signedData, error: signedUrlError } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
+                  if (signedUrlError || !signedData?.signedUrl) throw signedUrlError || new Error("Falha ao gerar URL da foto");
+                  const photo = path;
+                  setCachedUrl(path, signedData.signedUrl);
                   onTripUpdate((prev) => ({
                     ...prev,
                     itinerary: prev.itinerary.map((i) =>
