@@ -7,7 +7,7 @@ import {
   AlignLeft, Clock, ImagePlus,
 } from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, fileToDataUrl, resizeImage } from "../../utils";
+import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage } from "../../utils";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -710,8 +710,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   const file = e.target.files?.[0];
                   if (!file) return;
                   try {
-                    const dataUrl = await fileToDataUrl(file);
-                    const resized = await resizeImage(dataUrl, 1200);
+                    const resized = await resizeImage(file, 1200);
                     const ext = file.name.split(".").pop() || "jpg";
                     const path = `${trip.id}/itinerary/${item.id}.${ext}`;
                     const blob = await (await fetch(resized)).blob();
@@ -846,8 +845,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 const file = e.target.files?.[0];
                 if (!file) return;
                 try {
-                  const dataUrl = await fileToDataUrl(file);
-                  const resized = await resizeImage(dataUrl, 1200);
+                  const resized = await resizeImage(file, 1200);
                   const ext = file.name.split(".").pop() || "jpg";
                   const path = `${trip.id}/itinerary/${item.id}.${ext}`;
                   const blob = await (await fetch(resized)).blob();
