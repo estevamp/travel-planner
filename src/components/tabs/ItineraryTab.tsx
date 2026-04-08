@@ -130,13 +130,16 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
 
             {/* Items with left timeline bar */}
             <div
-              className={cn("pl-4 space-y-3 border-l-2", isDark ? "border-zinc-700" : "border-zinc-200")}
+              className={cn(
+                "pl-4 space-y-3 border-l-2 sm:grid sm:grid-cols-2 sm:gap-4 sm:pl-0 sm:space-y-0 sm:border-l-0",
+                isDark ? "border-zinc-700" : "border-zinc-200"
+              )}
             >
               {dayItems.map((item) => (
                 <div key={item.id} className="relative">
                   {/* Dot on the timeline */}
                   <div
-                    className="absolute -left-[21px] top-5 w-3 h-3 rounded-full border-2 flex-shrink-0"
+                    className="absolute -left-[21px] top-5 w-3 h-3 rounded-full border-2 flex-shrink-0 sm:hidden"
                     style={{
                       backgroundColor: item.is_completed
                         ? "#10b981"
@@ -1013,7 +1016,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4 overflow-hidden"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden"
                 >
                   {completedActivities.map(renderItineraryItem)}
                 </motion.div>
