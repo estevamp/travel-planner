@@ -78,6 +78,25 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const [showSettlement, setShowSettlement] = useState(false);
   const [transfers, setTransfers] = useState<SimplifiedTransfer[]>([]);
 
+  const isPartiallyPrivateExpense = useCallback((expense: ExpenseWithSplits) => {
+    const participantIds = new Set(expense.splits?.map((split) => split.member_id) || []);
+    return participantIds.size > 0 && participantIds.size < members.length;
+  }, [members.length]);
+
+  const canCurrentMemberViewExpenseAmount = useCallback((expense: ExpenseWithSplits) => {
+    if (!isPartiallyPrivateExpense(expense)) return true;
+    if (!currentMember) return false;
+
+    return expense.created_by_member_id === currentMember.id
+      || expense.paid_by_member_id === currentMember.id
+      || expense.splits.some((split) => split.member_id === currentMember.id);
+  }, [currentMember, isPartiallyPrivateExpense]);
+
+  const visibleExpensesWithSplits = useMemo(
+    () => expensesWithSplits.filter((expense) => canCurrentMemberViewExpenseAmount(expense)),
+    [expensesWithSplits, canCurrentMemberViewExpenseAmount]
+  );
+
   // Buscar despesas com splits e settlements
   const fetchBalanceData = useCallback(async () => {
     const { data: expensesData, error: expError } = await supabase
@@ -141,26 +160,26 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
   useEffect(() => {
     const calculated = calculateNetBalances(
-      expensesWithSplits,
+      visibleExpensesWithSplits,
       [],           // <── sem settlements
       members,
       settings.default_currency,
       exchangeRates
     );
     setRawBalances(calculated);
-  }, [expensesWithSplits, members, settings.default_currency, exchangeRates]);
+  }, [visibleExpensesWithSplits, members, settings.default_currency, exchangeRates]);
 
   // Transferências bilaterais par a par (sem otimização global)
   const bilateralTransfers = useMemo(
     () =>
       computeBilateralTransfers(
-        expensesWithSplits,
+        visibleExpensesWithSplits,
         settlements,
         members,
         settings.default_currency,
         exchangeRates
       ),
-    [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]
+    [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates]
   );
 
   // Transferências com casais agrupados — exibidas na aba Pagamentos
@@ -210,14 +229,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   // Calcular saldos com conversão de moedas
   useEffect(() => {
     const calculatedBalances = calculateNetBalances(
-      expensesWithSplits,
+      visibleExpensesWithSplits,
       settlements,
       members,
       settings.default_currency,
       exchangeRates
     );
     setBalances(calculatedBalances);
-  }, [expensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
+  }, [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
 
   const convertedExpenses = useMemo(() => {
     return trip.expenses.map(exp => {
@@ -228,6 +247,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       const expenseWithSplits = expensesWithSplits.find(e => e.id === exp.id);
 
       if (expenseWithSplits && expenseWithSplits.splits && expenseWithSplits.splits.length > 0) {
+        if (!canCurrentMemberViewExpenseAmount(expenseWithSplits)) {
+          userAmount = 0;
+          return { ...exp, convertedAmount, userAmount };
+        }
+
         const relevantSplits = expenseWithSplits.splits.filter(split =>
           split.member_id === currentMember?.id ||
           (currentMember?.spouse_member_id && split.member_id === currentMember.spouse_member_id)
@@ -245,10 +269,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
       return { ...exp, convertedAmount, userAmount };
     });
-  }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember]);
+  }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember, canCurrentMemberViewExpenseAmount]);
 
   const payerTotals = useMemo(() => {
-    const splitExpenses = expensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
+    const splitExpenses = visibleExpensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
     const totals: Record<string, number> = {};
     const confirmedTotals: Record<string, number> = {};
     splitExpenses.forEach(exp => {
@@ -268,7 +292,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       }))
       .filter(m => m.amount > 0)
       .sort((a, b) => b.amount - a.amount);
-  }, [expensesWithSplits, members, convert, settings.default_currency, t]);
+  }, [visibleExpensesWithSplits, members, convert, settings.default_currency, t]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -723,6 +747,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                     editingExpenseId={editingExpenseId}
                     expenseDraft={expenseDraft}
                     expensesWithSplits={expensesWithSplits}
+                    currentMemberId={currentMember?.id || null}
                     savingExpense={savingExpense}
                     categories={categories}
                     members={members}
@@ -756,6 +781,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 editingExpenseId={editingExpenseId}
                 expenseDraft={expenseDraft}
                 expensesWithSplits={expensesWithSplits}
+                currentMemberId={currentMember?.id || null}
                 savingExpense={savingExpense}
                 categories={categories}
                 members={members}

@@ -32,6 +32,7 @@ interface ExpenseListItemProps {
   editingExpenseId: string | null;
   expenseDraft: ExpenseDraft;
   expensesWithSplits: ExpenseWithSplits[];
+  currentMemberId: string | null;
   savingExpense: boolean;
   categories: ExpenseCategory[];
   members: TripMember[];
@@ -52,6 +53,7 @@ export function ExpenseListItem({
   editingExpenseId,
   expenseDraft,
   expensesWithSplits,
+  currentMemberId,
   savingExpense,
   categories,
   members,
@@ -69,14 +71,25 @@ export function ExpenseListItem({
   const isEditing = editingExpenseId === exp.id;
   const expWithSplits = expensesWithSplits.find((entry) => entry.id === exp.id);
   const hasSplits = Boolean(expWithSplits?.splits?.length);
-  const visibilityTitle = hasSplits
+  const splitParticipantIds = new Set(expWithSplits?.splits?.map((split) => split.member_id) || []);
+  const isPartiallyPrivate = hasSplits && splitParticipantIds.size < members.length;
+  const canViewAmount = !isPartiallyPrivate || (
+    currentMemberId !== null && (
+      splitParticipantIds.has(currentMemberId) ||
+      expWithSplits?.paid_by_member_id === currentMemberId ||
+      exp.created_by_member_id === currentMemberId
+    )
+  );
+  const visibilityTitle = isPartiallyPrivate
+    ? t("expenses.visibilityPartialPrivateTitle")
+    : hasSplits
     ? t("expenses.splitMustBePublic")
     : exp.visibility === "private"
     ? t("expenses.visibilityPrivateTitle")
     : t("expenses.visibilityPublicTitle");
 
   const splitSummary =
-    expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0 ? (
+    expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0 && canViewAmount ? (
       <div className="mt-1 space-y-0.5">
         <p className="text-[10px] text-zinc-400 leading-tight">
           {t("expenses.paidBy")}{" "}
@@ -105,14 +118,20 @@ export function ExpenseListItem({
       onClick={() => onToggleVisibility(exp)}
       className={cn(
         "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed",
-        exp.visibility === "public"
+        isPartiallyPrivate
+          ? "bg-amber-100 text-amber-800"
+          : exp.visibility === "public"
           ? "bg-blue-100 text-blue-700"
           : "bg-zinc-100 text-zinc-500"
       )}
       disabled={hasSplits}
       title={layout === "table" ? visibilityTitle : undefined}
     >
-      {exp.visibility === "public" ? (
+      {isPartiallyPrivate ? (
+        <>
+          <Lock size={10} /> {t("expenses.partiallyPrivateBadge")}
+        </>
+      ) : exp.visibility === "public" ? (
         <>
           <Users size={10} /> {t("common.public")}
         </>
@@ -244,9 +263,11 @@ export function ExpenseListItem({
             <td className="px-4 py-3">
               <div className="flex flex-col">
                 <span className="font-bold">
-                  {formatCurrency(exp.amount, exp.currency || currency)}
+                  {canViewAmount
+                    ? formatCurrency(exp.amount, exp.currency || currency)
+                    : t("expenses.hiddenAmount")}
                 </span>
-                {exp.currency && exp.currency !== currency && (
+                {canViewAmount && exp.currency && exp.currency !== currency && (
                   <span className="text-[10px] text-zinc-500">
                     ≈ {formatCurrency(convertedAmount, currency)}
                   </span>
@@ -386,9 +407,11 @@ export function ExpenseListItem({
               )}
               <div className="flex flex-col">
                 <span className="font-bold text-base">
-                  {formatCurrency(exp.amount, exp.currency || currency)}
+                  {canViewAmount
+                    ? formatCurrency(exp.amount, exp.currency || currency)
+                    : t("expenses.hiddenAmount")}
                 </span>
-                {exp.currency && exp.currency !== currency && (
+                {canViewAmount && exp.currency && exp.currency !== currency && (
                   <span className="text-[10px] text-zinc-500">
                     ≈ {formatCurrency(convertedAmount, currency)}
                   </span>
