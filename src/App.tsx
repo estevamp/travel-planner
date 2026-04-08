@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import type { UserSettings } from "./types";
+import type { LanguageCode, UserSettings } from "./types";
 import { AuthLanding } from "./components/AuthLanding";
 import { LandingPage } from "./components/LandingPage";
 import { InvitePage } from "./components/InvitePage";
@@ -69,7 +69,7 @@ export default function App() {
     }
   };
 
-  const handleLanguageChange = async (language_code: UserSettings["language_code"]) => {
+  const handleLanguageChange = async (language_code: LanguageCode) => {
     setUserSettings((current) => ({ ...current, language_code }));
 
     if (typeof window !== "undefined") {
@@ -167,7 +167,12 @@ export default function App() {
                   hasProfile={hasProfile}
                   onLanguageChange={handleLanguageChange}
                 />
-              ) : <AuthLanding />}
+              ) : (
+                <AuthLanding
+                  language={userSettings.language_code}
+                  onLanguageChange={handleLanguageChange}
+                />
+              )}
             />
             <Route
               path="/trip/:id"
