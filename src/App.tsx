@@ -18,6 +18,12 @@ import { TermsPage } from "./components/TermsPage";
 
 const LANGUAGE_STORAGE_KEY = "partiu-preferred-language";
 
+function getStoredLanguage(): LanguageCode | null {
+  if (typeof window === "undefined") return null;
+  const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return storedLanguage === "pt-BR" || storedLanguage === "en" ? storedLanguage : null;
+}
+
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
   dark_mode: false,
@@ -31,11 +37,9 @@ export default function App() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
-    const storedLanguage = typeof window !== "undefined"
-      ? window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
-      : null;
+    const storedLanguage = getStoredLanguage();
 
-    if (storedLanguage === "pt-BR" || storedLanguage === "en") {
+    if (storedLanguage) {
       return { ...DEFAULT_SETTINGS, language_code: storedLanguage };
     }
 
@@ -93,6 +97,28 @@ export default function App() {
     }
   };
 
+  const syncProfileAndLoadSettings = async (nextSession: Session) => {
+    const preferredLanguage = getStoredLanguage() ?? userSettings.language_code;
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("user_id", nextSession.user.id)
+      .maybeSingle();
+
+    const profileAlreadyExisted = Boolean(existingProfile);
+
+    await supabase.rpc("sync_my_profile");
+
+    if (!profileAlreadyExisted) {
+      await supabase
+        .from("profiles")
+        .update({ language_code: preferredLanguage })
+        .eq("user_id", nextSession.user.id);
+    }
+
+    await loadUserSettings(nextSession.user.id);
+  };
+
   useEffect(() => {
     let mounted = true;
     console.log("App: Iniciando verificação de sessão...");
@@ -103,9 +129,8 @@ export default function App() {
       if (data.session) {
         try {
           console.log("App: Sincronizando perfil...");
-          await supabase.rpc("sync_my_profile");
           console.log("App: Carregando configurações...");
-          await loadUserSettings(data.session.user.id);
+          await syncProfileAndLoadSettings(data.session);
         } catch (err) {
           console.error("App: Erro ao carregar dados do usuário:", err);
         }
@@ -125,8 +150,7 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (nextSession) {
-        void supabase.rpc("sync_my_profile");
-        void loadUserSettings(nextSession.user.id);
+        void syncProfileAndLoadSettings(nextSession);
       } else {
         setHasProfile(false);
         setUserSettings((current) => ({ ...DEFAULT_SETTINGS, language_code: current.language_code }));
