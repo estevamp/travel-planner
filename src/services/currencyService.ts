@@ -56,8 +56,12 @@ class CurrencyService {
   /**
    * Check if cache is valid
    */
-  private isCacheValid(entry: CacheEntry): boolean {
-    return Date.now() - entry.timestamp < CACHE_DURATION;
+  private isCacheValid(entry: CacheEntry, baseCurrency: string): boolean {
+    const today = new Date().toISOString().split("T")[0];
+    const isFreshByTime = Date.now() - entry.timestamp < CACHE_DURATION;
+    const isSameApiDate = entry?.rates?.date === today;
+    const hasBaseRate = Number(entry?.rates?.rates?.[baseCurrency]) > 0;
+    return isFreshByTime && isSameApiDate && hasBaseRate;
   }
 
   /**
@@ -68,7 +72,7 @@ class CurrencyService {
     const cached = this.cache.get(cacheKey);
 
     // Return cached rates if valid
-    if (cached && this.isCacheValid(cached)) {
+    if (cached && this.isCacheValid(cached, cacheKey)) {
       return cached.rates;
     }
 
@@ -81,6 +85,11 @@ class CurrencyService {
       }
 
       const data: ExchangeRates = await response.json();
+
+      // Defensive check in case API/proxy returns malformed payload
+      if (!data?.rates || Number(data.rates[cacheKey]) <= 0) {
+        throw new Error("Malformed exchange-rate payload");
+      }
 
       // Cache the result
       this.cache.set(cacheKey, {
