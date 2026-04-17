@@ -70,6 +70,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
   // Sub-aba da tela de despesas
   const [expenseSubTab, setExpenseSubTab] = useState<"relatorio" | "pagamentos">("relatorio");
+  const [expenseSort, setExpenseSort] = useState<"dateAsc" | "dateDesc" | "amountDesc" | "amountAsc" | "descriptionAsc" | "descriptionDesc">("dateAsc");
 
   // Estados para rateio e saldos
   const [expensesWithSplits, setExpensesWithSplits] = useState<ExpenseWithSplits[]>([]);
@@ -270,6 +271,37 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       return { ...exp, convertedAmount, userAmount };
     });
   }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember, canCurrentMemberViewExpenseAmount]);
+
+  const convertedAmountByExpenseId = useMemo(
+    () => new Map(convertedExpenses.map((expense) => [expense.id, expense.convertedAmount])),
+    [convertedExpenses]
+  );
+
+  const sortedExpenses = useMemo(() => {
+    const toTime = (value: string) => {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+
+    return [...trip.expenses].sort((a, b) => {
+      switch (expenseSort) {
+        case "dateDesc":
+          return toTime(b.date) - toTime(a.date);
+        case "amountDesc":
+          return (convertedAmountByExpenseId.get(b.id) || 0) - (convertedAmountByExpenseId.get(a.id) || 0);
+        case "amountAsc":
+          return (convertedAmountByExpenseId.get(a.id) || 0) - (convertedAmountByExpenseId.get(b.id) || 0);
+        case "descriptionAsc":
+          return collator.compare(a.description || "", b.description || "");
+        case "descriptionDesc":
+          return collator.compare(b.description || "", a.description || "");
+        case "dateAsc":
+        default:
+          return toTime(a.date) - toTime(b.date);
+      }
+    });
+  }, [trip.expenses, expenseSort, convertedAmountByExpenseId]);
 
   const payerTotals = useMemo(() => {
     const splitExpenses = visibleExpensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
@@ -728,6 +760,30 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           </Card>
 
           {/* Desktop table */}
+          <div className="flex justify-end">
+            <div className="w-full sm:w-72">
+              <label className={cn("mb-1 block text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+                {t("expenses.sort.label")}
+              </label>
+              <select
+                value={expenseSort}
+                onChange={(event) => setExpenseSort(event.target.value as typeof expenseSort)}
+                className={cn(
+                  "w-full px-3 py-2 rounded-xl border text-sm",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                )}
+              >
+                <option value="dateAsc">{t("expenses.sort.dateAsc")}</option>
+                <option value="dateDesc">{t("expenses.sort.dateDesc")}</option>
+                <option value="amountDesc">{t("expenses.sort.amountDesc")}</option>
+                <option value="amountAsc">{t("expenses.sort.amountAsc")}</option>
+                <option value="descriptionAsc">{t("expenses.sort.descriptionAsc")}</option>
+                <option value="descriptionDesc">{t("expenses.sort.descriptionDesc")}</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Desktop table */}
           <Card className="p-0 overflow-hidden hidden md:block">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -739,7 +795,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 </tr>
               </thead>
               <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
-                {trip.expenses.map((exp) => (
+                {sortedExpenses.map((exp) => (
                   <ExpenseListItem
                     key={exp.id}
                     exp={exp}
@@ -753,7 +809,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                     members={members}
                     settings={settings}
                     currency={settings.default_currency}
-                    convertedAmount={convertedExpenses.find((entry) => entry.id === exp.id)?.convertedAmount || 0}
+                    convertedAmount={convertedAmountByExpenseId.get(exp.id) || 0}
                     onToggleVisibility={handleToggleExpenseVisibility}
                     onEdit={openEditExpenseModal}
                     onSave={(expenseId) => void saveExpenseEdit(expenseId)}
@@ -768,12 +824,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
           {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
-            {trip.expenses.length === 0 && (
+            {sortedExpenses.length === 0 && (
               <Card>
                 <p className="text-sm text-zinc-500 text-center">{t("expenses.empty")}</p>
               </Card>
             )}
-            {trip.expenses.map((exp) => (
+            {sortedExpenses.map((exp) => (
               <ExpenseListItem
                 key={exp.id}
                 exp={exp}
@@ -787,7 +843,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 members={members}
                 settings={settings}
                 currency={settings.default_currency}
-                convertedAmount={convertedExpenses.find((entry) => entry.id === exp.id)?.convertedAmount || 0}
+                convertedAmount={convertedAmountByExpenseId.get(exp.id) || 0}
                 onToggleVisibility={handleToggleExpenseVisibility}
                 onEdit={openEditExpenseModal}
                 onSave={(expenseId) => void saveExpenseEdit(expenseId)}
