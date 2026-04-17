@@ -24,6 +24,7 @@ Copie `.env.example` para `.env.local` e preencha:
 VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 VITE_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
+FREECURRENCYAPI_KEY="YOUR_FREECURRENCYAPI_KEY"
 ```
 
 ## 3) Rodar localmente
@@ -40,6 +41,7 @@ npm run dev
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - `FREECURRENCYAPI_KEY`
 3. Faça `Redeploy`.
 
 ## Fluxo implementado

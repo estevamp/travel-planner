@@ -607,6 +607,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     .filter(expense => expense.is_confirmed)
     .reduce((total, expense) => total + expense.userAmount, 0);
   const predictedTotal = convertedExpenses.reduce((total, expense) => total + expense.userAmount, 0);
+  const brlPerUsd = useMemo(() => {
+    const brlRate = Number(exchangeRates.BRL);
+    const usdRate = Number(exchangeRates.USD);
+    if (brlRate > 0 && usdRate > 0) {
+      const quote = brlRate / usdRate;
+      return Number.isFinite(quote) ? quote : null;
+    }
+    return null;
+  }, [exchangeRates]);
   const budgetLimit = Math.max(0, Number(tripBudget?.budget_limit) || 0);
   const confirmedProgress = budgetLimit > 0 ? Math.min((confirmedTotal / budgetLimit) * 100, 100) : 0;
   const predictedProgress = budgetLimit > 0 ? Math.min((predictedTotal / budgetLimit) * 100, 100) : 0;
@@ -969,6 +978,19 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           </Card>
         </div>
       )}
+
+      <Card className={cn("p-4", settings.dark_mode ? "bg-zinc-900/70" : "bg-white")}>
+        <div className="space-y-1">
+          <p className={cn("text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+            Cotação atual BRL/USD
+          </p>
+          <p className={cn("text-sm", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
+            {brlPerUsd
+              ? `1 USD = ${formatCurrency(brlPerUsd, "BRL")} · 1 BRL = ${formatCurrency(1 / brlPerUsd, "USD")}`
+              : "Cotação indisponível no momento"}
+          </p>
+        </div>
+      </Card>
 
       <FloatingActionButton onClick={onOpenModal} />
       {ConfirmDialogNode}

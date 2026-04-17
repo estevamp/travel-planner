@@ -17,7 +17,8 @@ interface CacheEntry {
 
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const CACHE_KEY = 'currency_exchange_rates';
-const API_URL = 'https://api.exchangerate-api.com/v4/latest';
+const API_URL = '/api/exchange-rates';
+const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'GBP', 'JPY', 'ARS', 'CLP', 'PYG'];
 
 class CurrencyService {
   private cache: Map<string, CacheEntry> = new Map();
@@ -77,8 +78,13 @@ class CurrencyService {
     }
 
     try {
-      // Fetch fresh rates from API
-      const response = await fetch(`${API_URL}/${cacheKey}`);
+      // Fetch fresh rates from internal API (server-side proxy to provider)
+      const targetCurrencies = SUPPORTED_CURRENCIES.filter((code) => code !== cacheKey).join(',');
+      const params = new URLSearchParams({
+        base_currency: cacheKey,
+        currencies: targetCurrencies,
+      });
+      const response = await fetch(`${API_URL}?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`);
