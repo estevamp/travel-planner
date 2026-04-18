@@ -45,7 +45,7 @@ interface ExpensesTabProps {
 }
 
 export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: ExpensesTabProps) {
-  const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip, loading } = useTripContext();
+  const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const { t } = useI18n();
@@ -252,6 +252,9 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   }, [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates, isRatesLoading]);
 
   const convertedExpenses = useMemo(() => {
+    if (isRatesLoading) {
+      return trip.expenses.map(exp => ({ ...exp, convertedAmount: 0, userAmount: 0 }));
+    }
     return trip.expenses.map(exp => {
       const currency = exp.currency || settings.default_currency;
       const convertedAmount = convert(Number(exp.amount) || 0, currency);
@@ -282,7 +285,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
       return { ...exp, convertedAmount, userAmount };
     });
-  }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember, canCurrentMemberViewExpenseAmount]);
+  }, [trip.expenses, settings.default_currency, convert, expensesWithSplits, currentMember, canCurrentMemberViewExpenseAmount, isRatesLoading]);
 
   const convertedAmountByExpenseId = useMemo(
     () => new Map(convertedExpenses.map((expense) => [expense.id, expense.convertedAmount])),
@@ -696,7 +699,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {/* ══════════════════════════════════════════════ */}
       {expenseSubTab === "relatorio" && (
         <>
-          {!loading && expensesWithSplits.length > 0 && (
+          {!isRatesLoading && (
             <Card className={cn(
               "border-2",
               settings.dark_mode
