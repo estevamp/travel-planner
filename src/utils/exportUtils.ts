@@ -1,14 +1,16 @@
-import type { Expense, ExpenseCategory, TripMember } from "../types";
+import type { ExpenseCategory, TripMember, ExpenseWithSplits } from "../types";
 import { formatCurrency } from "./index";
 
 export function exportExpensesToCsv(
-  expenses: Expense[],
+  expenses: ExpenseWithSplits[],
   members: TripMember[],
   categories: ExpenseCategory[],
   defaultCurrency: string,
   languageCode: string,
   convert: (amount: number, fromCurrency: string) => number
 ): string {
+  const memberHeaders = members.map((m) => `Rateio (${m.display_name || ""})`);
+
   const headers = [
     "ID",
     "Descrição",
@@ -20,6 +22,7 @@ export function exportExpensesToCsv(
     "Criado Por",
     "Visibilidade",
     "Confirmado",
+    ...memberHeaders,
   ];
 
   const csvRows = [headers.join(",")];
@@ -29,20 +32,26 @@ export function exportExpensesToCsv(
     const category = categories.find((c) => c.id === expense.category_id);
     const convertedAmount = convert(expense.amount, expense.currency || defaultCurrency);
 
+    const memberSplitAmounts = members.map(member => {
+      const split = expense.splits?.find(s => s.member_id === member.id);
+      return split ? split.amount.toFixed(2).replace(/\./g, ",") : "0,00";
+    });
+
     const row = [
       `"${expense.id}"`,
       `"${expense.description.replace(/"/g, '""')}"`,
-      formatCurrency(expense.amount, expense.currency || defaultCurrency, languageCode, false).replace(/,/g, "."),
+      expense.amount.toFixed(2).replace(/\./g, ","),
       `"${expense.currency || defaultCurrency}"`,
-      convertedAmount.toFixed(2).replace(/,/g, "."),
+      convertedAmount.toFixed(2).replace(/\./g, ","),
       `"${category?.name || ""}"`,
       `"${expense.date}"`,
       `"${createdByMember?.display_name || ""}"`,
       `"${expense.visibility}"`,
       `"${expense.is_confirmed ? "Sim" : "Não"}"`,
+      ...memberSplitAmounts,
     ];
     csvRows.push(row.join(","));
   }
 
-  return csvRows.join("\n");
+  return "\ufeff" + csvRows.join("\n");
 }

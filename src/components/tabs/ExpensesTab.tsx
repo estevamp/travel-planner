@@ -432,7 +432,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     }
 
     const csv = exportExpensesToCsv(
-      trip.expenses,
+      expensesWithSplits,
       members,
       categories,
       settings.default_currency,
