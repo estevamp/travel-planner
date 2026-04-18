@@ -78,10 +78,12 @@ class CurrencyService {
     }
 
     try {
-      // Fetch fresh rates from internal API (server-side proxy to provider)
-      const targetCurrencies = SUPPORTED_CURRENCIES.filter((code) => code !== cacheKey).join(',');
+      // Always fetch rates with USD as base (free tier limitation)
+      // Then convert to requested currency if needed
+      const apiBaseCurrency = 'USD';
+      const targetCurrencies = SUPPORTED_CURRENCIES.filter((code) => code !== apiBaseCurrency).join(',');
       const params = new URLSearchParams({
-        base_currency: cacheKey,
+        base_currency: apiBaseCurrency,
         currencies: targetCurrencies,
       });
       const response = await fetch(`${API_URL}?${params.toString()}`);
@@ -93,30 +95,43 @@ class CurrencyService {
       const data: ExchangeRates = await response.json();
 
       // Defensive check in case API/proxy returns malformed payload
-      if (!data?.rates || Number(data.rates[cacheKey]) <= 0) {
+      if (!data?.rates || Number(data.rates[apiBaseCurrency]) <= 0) {
         throw new Error("Malformed exchange-rate payload");
       }
 
-      // Cache the result
-      this.cache.set(cacheKey, {
-        rates: data,
-        timestamp: Date.now(),
-      });
-
-      this.saveCacheToStorage();
-
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch exchange rates:', error);
-
-      // Return expired cache as fallback
-      if (cached) {
-        console.warn('Using expired cache as fallback');
-        return cached.rates;
+      // If requested base currency is not USD, convert the rates
+      let resultData = data;
+      if (baseCurrency !== apiBaseCurrency) {
+        const conversionRate = data.rates[cacheKey];
+        if (!conversionRate || conversionRate <= 0) {
+          throw new Error(`Cannot convert to ${cacheKey}: rate not available`);
+        }
+        // Convert all rates from USD base to requested currency base
+        resultData = {
+          base: cacheKey,
+          date: data.date,
+          rates: Object.fromEntries(
+            Object.entries(data.rates).map(([currency, rate]) => [
+              currency,
+              (rate as number) / conversionRate,
+            ])
+          ),
+        };
       }
 
-      // Return default rates as last resort
-      return this.getDefaultRates(baseCurrency);
+      // Cache the result
+      this.cache.set(cacheKey, { rates: resultData, timestamp: Date.now() });
+      this.saveCacheToStorage();
+
+      return resultData;
+    } catch (error) {
+      console.error("Failed to fetch exchange rates:", error);
+      // If API call fails, try to return expired cache as fallback
+      if (cached) {
+        console.warn("Using expired cache as fallback");
+        return cached.rates;
+      }
+      throw error;
     }
   }
 
