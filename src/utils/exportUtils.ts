@@ -34,15 +34,15 @@ export function exportExpensesToCsv(
 
     const memberSplitAmounts = members.map(member => {
       const split = expense.splits?.find(s => s.member_id === member.id);
-      return split ? split.amount.toFixed(2).replace(/\./g, ",") : "0,00";
+      return split ? `"${split.amount.toFixed(2)}"` : `"0.00"`;
     });
 
     const row = [
       `"${expense.id}"`,
       `"${expense.description.replace(/"/g, '""')}"`,
-      expense.amount.toFixed(2).replace(/\./g, ","),
+      `"${expense.amount.toFixed(2)}"`,
       `"${expense.currency || defaultCurrency}"`,
-      convertedAmount.toFixed(2).replace(/\./g, ","),
+      `"${convertedAmount.toFixed(2)}"`,
       `"${category?.name || ""}"`,
       `"${expense.date}"`,
       `"${createdByMember?.display_name || ""}"`,
