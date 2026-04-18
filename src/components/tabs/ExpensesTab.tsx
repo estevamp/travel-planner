@@ -3,9 +3,9 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { Lock, Unlock, ChevronDown, ChevronUp } from "lucide-react";
+import { Lock, Unlock, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
+import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, exportExpensesToCsv } from "../../utils";
 import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
 import type { ExpenseSplit } from '../../types/splitting';
 import { Card } from "../Card";
@@ -422,10 +422,37 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   };
 
   const undoPayment = async (settlementId: string) => {
-    const { error } = await supabase.from("settlements").delete().eq("id", settlementId);
-    if (error) { toast(getErrorMessage(error), "error"); return; }
-    await fetchBalanceData();
-    toast(t("expenses.paymentUndone"), "success");
+    // ...existing code...
+  };
+
+  const handleExportExpenses = () => {
+    if (!trip || !members || !categories || !settings) {
+      toast(t("expenses.exportError"), "error");
+      return;
+    }
+
+    const csv = exportExpensesToCsv(
+      trip.expenses,
+      members,
+      categories,
+      settings.default_currency,
+      settings.language_code
+    );
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `despesas-${trip.name.replace(/\s/g, "_")}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast(t("expenses.exportSuccess"), "success");
+    } else {
+      toast(t("expenses.exportNotSupported"), "error");
+    }
   };
 
   // Estados para modal de edição completo (com splits)
@@ -781,7 +808,20 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           </Card>
 
           {/* Desktop table */}
-          <div className="flex justify-end">
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleExportExpenses}
+              className={cn(
+                "flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors",
+                settings.dark_mode
+                  ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
+              )}
+            >
+              <Download size={16} />
+              {t("expenses.exportCsv")}
+            </button>
             <div className="w-full sm:w-72">
               <label className={cn("mb-1 block text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
                 {t("expenses.sort.label")}
