@@ -696,7 +696,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {/* ══════════════════════════════════════════════ */}
       {expenseSubTab === "relatorio" && (
         <>
-          {!loading && (
+          {!loading && expensesWithSplits.length > 0 && (
             <Card className={cn(
               "border-2",
               settings.dark_mode
