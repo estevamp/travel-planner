@@ -70,11 +70,18 @@ export function calculateNetBalances(
   });
 
   const convertAmount = (amount: number, fromCurrency: string): number => {
-    if (!targetCurrency || !exchangeRates || fromCurrency === targetCurrency) {
+    const normalizedFromCurrency = (fromCurrency || "").toUpperCase();
+    const normalizedTargetCurrency = (targetCurrency || "").toUpperCase();
+
+    if (
+      !normalizedTargetCurrency ||
+      !exchangeRates ||
+      normalizedFromCurrency === normalizedTargetCurrency
+    ) {
       return amount;
     }
-    const rate = exchangeRates[fromCurrency];
-    if (!rate) {
+    const rate = exchangeRates[normalizedFromCurrency];
+    if (!rate || rate <= 0) {
       console.warn(`No exchange rate found for ${fromCurrency}, using original amount`);
       return amount;
     }
@@ -197,9 +204,15 @@ export function computeBilateralTransfers(
   exchangeRates?: Record<string, number>
 ): SimplifiedTransfer[] {
   const convertAmount = (amount: number, fromCurrency: string): number => {
-    if (!exchangeRates || fromCurrency === targetCurrency) return amount;
-    const rate = exchangeRates[fromCurrency];
-    return rate ? amount / rate : amount;
+    const normalizedFromCurrency = (fromCurrency || "").toUpperCase();
+    const normalizedTargetCurrency = (targetCurrency || "").toUpperCase();
+
+    if (!exchangeRates || normalizedFromCurrency === normalizedTargetCurrency) {
+      return amount;
+    }
+
+    const rate = exchangeRates[normalizedFromCurrency];
+    return rate && rate > 0 ? amount / rate : amount;
   };
 
   const rawDebt: Record<string, Record<string, number>> = {};

@@ -54,7 +54,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     "expenses",
     onTripUpdate
   );
-  const { convert, rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
+  const { convert, rates: exchangeRates, isLoading: isRatesLoading } = useCurrencyConversion(settings.default_currency);
   
   // Custom hooks para UPDATE e DELETE
   const { update: updateExpense, isSubmitting: isUpdatingExpense } = useUpdateExpense({
@@ -160,6 +160,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const [rawBalances, setRawBalances] = useState<MemberBalance[]>([]);
 
   useEffect(() => {
+    if (isRatesLoading) {
+      setRawBalances([]);
+      return;
+    }
+
     const calculated = calculateNetBalances(
       visibleExpensesWithSplits,
       [],           // <── sem settlements
@@ -168,19 +173,21 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       exchangeRates
     );
     setRawBalances(calculated);
-  }, [visibleExpensesWithSplits, members, settings.default_currency, exchangeRates]);
+  }, [visibleExpensesWithSplits, members, settings.default_currency, exchangeRates, isRatesLoading]);
 
   // Transferências bilaterais par a par (sem otimização global)
   const bilateralTransfers = useMemo(
-    () =>
-      computeBilateralTransfers(
+    () => {
+      if (isRatesLoading) return [];
+      return computeBilateralTransfers(
         visibleExpensesWithSplits,
         settlements,
         members,
         settings.default_currency,
         exchangeRates
-      ),
-    [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates]
+      );
+    },
+    [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates, isRatesLoading]
   );
 
   // Transferências com casais agrupados — exibidas na aba Pagamentos
@@ -229,6 +236,11 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
   // Calcular saldos com conversão de moedas
   useEffect(() => {
+    if (isRatesLoading) {
+      setBalances([]);
+      return;
+    }
+
     const calculatedBalances = calculateNetBalances(
       visibleExpensesWithSplits,
       settlements,
@@ -237,7 +249,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       exchangeRates
     );
     setBalances(calculatedBalances);
-  }, [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
+  }, [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates, isRatesLoading]);
 
   const convertedExpenses = useMemo(() => {
     return trip.expenses.map(exp => {
@@ -914,68 +926,79 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {/* ══════════════════════════════════════════════ */}
       {expenseSubTab === "pagamentos" && currentMember && (
         <div className="space-y-6">
-          <Card className="space-y-4">
-            <h3 className="text-sm font-bold">{t("expenses.summaryByParticipant")}</h3>
-            <div className="space-y-3">
-              {memberPaymentSummary.map((m) => {
-                const isCredit = m.saldo > 0.01;
-                const isDebt = m.saldo < -0.01;
-                return (
-                  <div
-                    key={m.id}
-                    className={cn(
-                      "p-3 rounded-xl border",
-                      isCredit
-                        ? settings.dark_mode ? "bg-emerald-950/30 border-emerald-800/50" : "bg-emerald-50 border-emerald-200"
-                        : isDebt
-                        ? settings.dark_mode ? "bg-red-950/30 border-red-800/50" : "bg-red-50 border-red-200"
-                        : settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
-                    )}
-                  >
-                    <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
-                    <div className="flex flex-wrap gap-3">
-                      <div>
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.toReceive")}</p>
-                        <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
+          {isRatesLoading ? (
+            <Card className="space-y-2">
+              <h3 className="text-sm font-bold">{t("expenses.summaryByParticipant")}</h3>
+              <p className={cn("text-sm", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
+                Carregando cotações para calcular os saldos...
+              </p>
+            </Card>
+          ) : (
+            <>
+              <Card className="space-y-4">
+                <h3 className="text-sm font-bold">{t("expenses.summaryByParticipant")}</h3>
+                <div className="space-y-3">
+                  {memberPaymentSummary.map((m) => {
+                    const isCredit = m.saldo > 0.01;
+                    const isDebt = m.saldo < -0.01;
+                    return (
+                      <div
+                        key={m.id}
+                        className={cn(
+                          "p-3 rounded-xl border",
+                          isCredit
+                            ? settings.dark_mode ? "bg-emerald-950/30 border-emerald-800/50" : "bg-emerald-50 border-emerald-200"
+                            : isDebt
+                            ? settings.dark_mode ? "bg-red-950/30 border-red-800/50" : "bg-red-50 border-red-200"
+                            : settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
+                        )}
+                      >
+                        <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
+                        <div className="flex flex-wrap gap-3">
+                          <div>
+                            <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.toReceive")}</p>
+                            <p className="text-sm font-semibold text-emerald-600">{formatCurrency(m.aReceber, settings.default_currency)}</p>
+                          </div>
+                          <div>
+                            <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.toPay")}</p>
+                            <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
+                          </div>
+                          <div className="ml-auto text-right">
+                            <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.balance")}</p>
+                            <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : isDebt ? "text-red-500" : settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                              {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.toPay")}</p>
-                        <p className="text-sm font-semibold text-red-500">{formatCurrency(m.aPagar, settings.default_currency)}</p>
-                      </div>
-                      <div className="ml-auto text-right">
-                        <p className={cn("text-[10px] uppercase font-semibold mb-0.5", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>{t("expenses.balance")}</p>
-                        <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : isDebt ? "text-red-500" : settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                          {m.saldo > 0 ? "+" : ""}{formatCurrency(m.saldo, settings.default_currency)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-              {t("expenses.bilateralNettingFootnote", { currency: settings.default_currency })}
-            </p>
-          </Card>
+                    );
+                  })}
+                </div>
+                <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                  {t("expenses.bilateralNettingFootnote", { currency: settings.default_currency })}
+                </p>
+              </Card>
 
-          <Card>
-            <BalancesSummary
-              balances={balances}
-              currentUserId={currentMember.user_id}
-              members={members}
-              currency={settings.default_currency}
-              isDark={Boolean(settings.dark_mode)}
-              settlements={settlements}
-              transfers={mergedTransfers}
-              onSettleClick={() => {
-                const simplified = simplifyDebts(rawBalances, settings.default_currency);
-                setTransfers(simplified);
-                setShowSettlement(true);
-              }}
-              onRegisterPayment={registerPayment}
-              onUndoPayment={undoPayment}
-            />
-          </Card>
+              <Card>
+                <BalancesSummary
+                  balances={balances}
+                  currentUserId={currentMember.user_id}
+                  members={members}
+                  currency={settings.default_currency}
+                  isDark={Boolean(settings.dark_mode)}
+                  settlements={settlements}
+                  transfers={mergedTransfers}
+                  onSettleClick={() => {
+                    const simplified = simplifyDebts(rawBalances, settings.default_currency);
+                    setTransfers(simplified);
+                    setShowSettlement(true);
+                  }}
+                  onRegisterPayment={registerPayment}
+                  onUndoPayment={undoPayment}
+                />
+              </Card>
+            </>
+          )}
         </div>
       )}
 
