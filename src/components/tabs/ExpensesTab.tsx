@@ -54,7 +54,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     "expenses",
     onTripUpdate
   );
-  const { convert, rates: exchangeRates } = useCurrencyConversion(settings.default_currency);
+  const { convert, rates: exchangeRates, isLoading: isLoadingRates } = useCurrencyConversion(settings.default_currency);
   
   // Custom hooks para UPDATE e DELETE
   const { update: updateExpense, isSubmitting: isUpdatingExpense } = useUpdateExpense({
@@ -160,6 +160,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const [rawBalances, setRawBalances] = useState<MemberBalance[]>([]);
 
   useEffect(() => {
+    // Skip calculation while exchange rates are loading
+    if (isLoadingRates && Object.keys(exchangeRates).length === 0) {
+      setRawBalances([]);
+      return;
+    }
+
     const calculated = calculateNetBalances(
       visibleExpensesWithSplits,
       [],           // <── sem settlements
@@ -168,7 +174,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       exchangeRates
     );
     setRawBalances(calculated);
-  }, [visibleExpensesWithSplits, members, settings.default_currency, exchangeRates]);
+  }, [visibleExpensesWithSplits, members, settings.default_currency, exchangeRates, isLoadingRates]);
 
   // Transferências bilaterais par a par (sem otimização global)
   const bilateralTransfers = useMemo(
@@ -227,8 +233,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       }));
   }, [balances, members]);
 
-  // Calcular saldos com conversão de moedas
+  // Calcular saldos com conversão de moedas — aguardar carregamento de taxas
   useEffect(() => {
+    // Skip balance calculation while exchange rates are still loading to avoid
+    // using raw amounts as if they were in the target currency
+    if (isLoadingRates && Object.keys(exchangeRates).length === 0) {
+      setBalances([]);
+      return;
+    }
+
     const calculatedBalances = calculateNetBalances(
       visibleExpensesWithSplits,
       settlements,
@@ -237,7 +250,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       exchangeRates
     );
     setBalances(calculatedBalances);
-  }, [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates]);
+  }, [visibleExpensesWithSplits, settlements, members, settings.default_currency, exchangeRates, isLoadingRates];
 
   const convertedExpenses = useMemo(() => {
     return trip.expenses.map(exp => {
