@@ -31,6 +31,7 @@ export interface TripContextValue {
   reloadDocuments?: () => void;
   reloadIdeas?: () => void;
   reloadMembers?: () => void;
+  loading: boolean; // Passar o estado de carregamento
 
   // ── Budget (useTripBudget) ─────────────────────────────────────
   tripBudget: TripBudget | null;
@@ -234,6 +235,7 @@ export function TripProvider({
     deleteCurrentTrip,
     navigateToAbout,
     reloadTripOptions,
+    loading, // Passar o estado de carregamento
   };
 
   return (

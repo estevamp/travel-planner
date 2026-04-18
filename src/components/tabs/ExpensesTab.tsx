@@ -45,7 +45,7 @@ interface ExpensesTabProps {
 }
 
 export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: ExpensesTabProps) {
-  const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip } = useTripContext();
+  const { trip, tripId, currentMember, members, categories, settings, tripBudget, reloadTrip, loading } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
   const { t } = useI18n();
@@ -696,117 +696,118 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {/* ══════════════════════════════════════════════ */}
       {expenseSubTab === "relatorio" && (
         <>
-          {/* Budget Overview Card */}
-          <Card className={cn(
-            "border-2",
-            settings.dark_mode
-              ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
-              : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
-          )}>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div>
-                  <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                    {t("expenses.budgetCardTitle")}
-                  </h3>
-                  <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-                    {budgetLimit > 0
-                      ? t("expenses.limitLabel", { amount: formatCurrency(budgetLimit, settings.default_currency) })
-                      : t("expenses.noBudgetDefined")}
-                  </p>
-                </div>
-                <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
+          {!loading && (
+            <Card className={cn(
+              "border-2",
+              settings.dark_mode
+                ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
+                : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+            )}>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div>
-                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>{t("expenses.confirmed")}</p>
-                    <p className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">
-                      {formatCurrency(confirmedTotal, settings.default_currency)}
+                    <h3 className={cn("text-lg font-bold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                      {t("expenses.budgetCardTitle")}
+                    </h3>
+                    <p className={cn("text-sm mt-1", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                      {budgetLimit > 0
+                        ? t("expenses.limitLabel", { amount: formatCurrency(budgetLimit, settings.default_currency) })
+                        : t("expenses.noBudgetDefined")}
                     </p>
                   </div>
-                  <div>
-                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>{t("expenses.totalPredicted")}</p>
-                    <p className={cn("text-base sm:text-lg font-bold tabular-nums", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>
-                      {formatCurrency(predictedTotal, settings.default_currency)}
-                    </p>
+                  <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
+                    <div>
+                      <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>{t("expenses.confirmed")}</p>
+                      <p className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">
+                        {formatCurrency(confirmedTotal, settings.default_currency)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-500")}>{t("expenses.totalPredicted")}</p>
+                      <p className={cn("text-base sm:text-lg font-bold tabular-nums", settings.dark_mode ? "text-zinc-200" : "text-zinc-800")}>
+                        {formatCurrency(predictedTotal, settings.default_currency)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {budgetLimit > 0 && (
-                <button
-                  onClick={() => setIsBudgetExpanded(!isBudgetExpanded)}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-2 py-1 transition-colors border-t mt-2",
-                    settings.dark_mode
-                      ? "text-zinc-500 hover:text-zinc-300 border-zinc-700"
-                      : "text-zinc-400 hover:text-zinc-600 border-blue-100"
-                  )}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider">
-                    {isBudgetExpanded ? t("expenses.collapseDetails") : t("expenses.viewBudgetDetails")}
-                  </span>
-                  {isBudgetExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-              )}
+                {budgetLimit > 0 && (
+                  <button
+                    onClick={() => setIsBudgetExpanded(!isBudgetExpanded)}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 py-1 transition-colors border-t mt-2",
+                      settings.dark_mode
+                        ? "text-zinc-500 hover:text-zinc-300 border-zinc-700"
+                        : "text-zinc-400 hover:text-zinc-600 border-blue-100"
+                    )}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {isBudgetExpanded ? t("expenses.collapseDetails") : t("expenses.viewBudgetDetails")}
+                    </span>
+                    {isBudgetExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                )}
 
-              {budgetLimit > 0 && isBudgetExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden space-y-4 pt-2"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>{t("expenses.progress")}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-emerald-600">{t("expenses.confirmed")}: {confirmedProgress.toFixed(1)}%</span>
-                        <span className={cn("font-bold", isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600"))}>
-                          {t("expenses.predicted")}: {predictedProgress.toFixed(1)}%
+                {budgetLimit > 0 && isBudgetExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden space-y-4 pt-2"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className={settings.dark_mode ? "text-zinc-400" : "text-zinc-600"}>{t("expenses.progress")}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-emerald-600">{t("expenses.confirmed")}: {confirmedProgress.toFixed(1)}%</span>
+                          <span className={cn("font-bold", isOverBudget ? "text-red-600" : (settings.dark_mode ? "text-blue-400" : "text-blue-600"))}>
+                            {t("expenses.predicted")}: {predictedProgress.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="relative h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                        <div
+                          className="absolute h-full transition-all duration-500 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
+                          style={{ width: `${Math.min(confirmedProgress, 100)}%` }}
+                        />
+                        <div
+                          className={cn("absolute h-full transition-all duration-500 rounded-full opacity-40", isOverBudget ? "bg-gradient-to-r from-red-500 to-red-600" : "bg-gradient-to-r from-blue-500 to-blue-600")}
+                          style={{ width: `${Math.min(predictedProgress, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className={cn(
+                      "p-4 rounded-xl border-2",
+                      isOverBudget
+                        ? (settings.dark_mode ? "bg-red-950/30 border-red-900/50" : "bg-red-50 border-red-300")
+                        : (settings.dark_mode ? "bg-emerald-950/30 border-emerald-900/50" : "bg-emerald-50 border-emerald-300")
+                    )}>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
+                          {isOverBudget ? t("expenses.overBudget") : t("expenses.remaining")}
+                        </span>
+                        <span className={cn("text-lg sm:text-xl font-bold tabular-nums", isOverBudget ? "text-red-600" : "text-emerald-600")}>
+                          {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
                         </span>
                       </div>
                     </div>
-                    <div className="relative h-4 rounded-full overflow-hidden border-2 shadow-inner" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-                      <div
-                        className="absolute h-full transition-all duration-500 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
-                        style={{ width: `${Math.min(confirmedProgress, 100)}%` }}
-                      />
-                      <div
-                        className={cn("absolute h-full transition-all duration-500 rounded-full opacity-40", isOverBudget ? "bg-gradient-to-r from-red-500 to-red-600" : "bg-gradient-to-r from-blue-500 to-blue-600")}
-                        style={{ width: `${Math.min(predictedProgress, 100)}%` }}
-                      />
-                    </div>
-                  </div>
+                  </motion.div>
+                )}
 
-                  <div className={cn(
-                    "p-4 rounded-xl border-2",
-                    isOverBudget
-                      ? (settings.dark_mode ? "bg-red-950/30 border-red-900/50" : "bg-red-50 border-red-300")
-                      : (settings.dark_mode ? "bg-emerald-950/30 border-emerald-900/50" : "bg-emerald-50 border-emerald-300")
-                  )}>
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className={cn("text-sm font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-700")}>
-                        {isOverBudget ? t("expenses.overBudget") : t("expenses.remaining")}
-                      </span>
-                      <span className={cn("text-lg sm:text-xl font-bold tabular-nums", isOverBudget ? "text-red-600" : "text-emerald-600")}>
-                        {isOverBudget ? "-" : ""}{formatCurrency(Math.abs(budgetRemaining), settings.default_currency)}
-                      </span>
-                    </div>
+                {budgetLimit === 0 && (
+                  <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                    <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
+                      💡 {t("expenses.configureBudgetPrefix")} <button
+                        onClick={() => onSetActiveTab("settings")}
+                        className={cn("font-semibold hover:underline", settings.dark_mode ? "text-blue-400" : "text-blue-600")}
+                      >{t("expenses.configureBudgetLink")}</button> {t("expenses.configureBudgetSuffix")}
+                    </p>
                   </div>
-                </motion.div>
-              )}
-
-              {budgetLimit === 0 && (
-                <div className="p-4 rounded-xl border-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-                  <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-400" : "text-zinc-600")}>
-                    💡 {t("expenses.configureBudgetPrefix")} <button
-                      onClick={() => onSetActiveTab("settings")}
-                      className={cn("font-semibold hover:underline", settings.dark_mode ? "text-blue-400" : "text-blue-600")}
-                    >{t("expenses.configureBudgetLink")}</button> {t("expenses.configureBudgetSuffix")}
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Desktop table */}
           <div className="flex flex-col sm:flex-row justify-end gap-3">
