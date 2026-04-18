@@ -6,13 +6,15 @@ export function exportExpensesToCsv(
   members: TripMember[],
   categories: ExpenseCategory[],
   defaultCurrency: string,
-  languageCode: string
+  languageCode: string,
+  convert: (amount: number, fromCurrency: string) => number
 ): string {
   const headers = [
     "ID",
     "Descrição",
     "Valor",
     "Moeda",
+    "Valor na Moeda Principal",
     "Categoria",
     "Data",
     "Criado Por",
@@ -25,12 +27,14 @@ export function exportExpensesToCsv(
   for (const expense of expenses) {
     const createdByMember = members.find((m) => m.id === expense.created_by_member_id);
     const category = categories.find((c) => c.id === expense.category_id);
+    const convertedAmount = convert(expense.amount, expense.currency || defaultCurrency);
 
     const row = [
       `"${expense.id}"`,
       `"${expense.description.replace(/"/g, '""')}"`,
-      formatCurrency(expense.amount, expense.currency || defaultCurrency, languageCode, false).replace(/,/g, "."), // Format currency and replace comma with dot for CSV compatibility
+      formatCurrency(expense.amount, expense.currency || defaultCurrency, languageCode, false).replace(/,/g, "."),
       `"${expense.currency || defaultCurrency}"`,
+      convertedAmount.toFixed(2).replace(/,/g, "."),
       `"${category?.name || ""}"`,
       `"${expense.date}"`,
       `"${createdByMember?.display_name || ""}"`,

@@ -436,7 +436,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       members,
       categories,
       settings.default_currency,
-      settings.language_code
+      settings.language_code,
+      convert
     );
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
