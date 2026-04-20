@@ -185,11 +185,13 @@ function calculateTimelinePositions(
   const positions = new Map<string, TimelineItemLayout>();
   if (items.length === 0) return positions;
 
-  // Helper to get effective range (considering min duration)
+  // Helper to get effective range clamped to visible area (6am–midnight)
   const getEffectiveRange = (item: ItineraryItem) => {
     const { startMin, endMin } = getItemTimelineRange(item, activeDate);
-    const duration = Math.max(endMin - startMin, 30);
-    return { start: startMin, end: startMin + duration };
+    const clampedStart = Math.max(startMin, 6 * 60);
+    const clampedEnd = Math.min(endMin, 24 * 60);
+    const duration = Math.max(clampedEnd - clampedStart, 30);
+    return { start: clampedStart, end: clampedStart + duration };
   };
 
   // 1. Sort items by start time, then by duration (longer first)
@@ -376,21 +378,14 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
   );
   const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
 
-  // Separate spanning items (multi-day) from regular timed items
+  // All timed items (not all-day) — includes spanning/multi-day items
   const allTimedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
-  const spanningItems = allTimedItems.filter((i) => {
-    const startDate = i.start_time?.slice(0, 10) ?? "";
-    const endDate = i.end_time?.slice(0, 10) ?? "";
-    return startDate !== activeKey || (endDate && endDate !== activeKey);
-  });
-  const regularTimedItems = allTimedItems.filter((i) => {
-    const startDate = i.start_time?.slice(0, 10) ?? "";
-    const endDate = i.end_time?.slice(0, 10) ?? "";
-    return startDate === activeKey && (!endDate || endDate === activeKey);
-  });
+  // No separation: all timed items participate in side-by-side layout
+  const spanningItems: typeof allTimedItems = [];
+  const regularTimedItems = allTimedItems;
 
-  // Calculate side-by-side positions only for regular timed items
-  const positions = calculateTimelinePositions(regularTimedItems, activeKey);
+  // Calculate side-by-side positions for all timed items
+  const positions = calculateTimelinePositions(allTimedItems, activeKey);
 
   const totalHeight = HOURS.length * 60 * PX_PER_MIN;
 
@@ -520,7 +515,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
             )}
 
             {/* Spanning items — rendered as thin strips on the left edge */}
-            {spanningItems.map((item) => {
+            {spanningItems.map((item, idx) => {
               const { startMin, endMin } = getItemTimelineRange(item, activeKey);
               const visibleStart = Math.max(startMin, VISIBLE_START_MIN);
               const visibleEnd = Math.min(endMin, VISIBLE_END_MIN);
@@ -534,7 +529,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                   style={{
                     position: "absolute",
                     top,
-                    left: 0,
+                    left: idx * 8,
                     width: 6,
                     height,
                     backgroundColor: typeColor,
@@ -566,11 +561,12 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
               const layout = positions.get(item.id);
               const column = layout?.column ?? 0;
               const totalColumns = layout?.totalColumns ?? 1;
-              // Leave 8px on the left for spanning item strips
-              const availableLeft = spanningItems.length > 0 ? 10 : 0;
-              const colWidth = (100 - availableLeft) / totalColumns;
-              const colLeft = availableLeft + column * colWidth;
+              // Pixel offset for spanning strips: each strip is 6px + 2px gap
+              const stripPx = spanningItems.length * 8;
               const typeColor = getActivityTypeColor(item.type_id);
+              // Each column gets equal share of remaining width
+              const colWidthPct = 100 / totalColumns;
+              const colLeftPct = column * colWidthPct;
 
               return (
                 <div
@@ -578,8 +574,8 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                   style={{
                     position: "absolute",
                     top,
-                    left: `calc(${colLeft}% + 1px)`,
-                    width: `calc(${colWidth}% - 2px)`,
+                    left: `calc(${stripPx}px + ${colLeftPct}% + 1px)`,
+                    width: `calc(${colWidthPct}% - ${stripPx / totalColumns}px - 2px)`,
                     height: Math.max(height, 36),
                     backgroundColor: isDark ? "rgba(39, 39, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
                     backdropFilter: "blur(8px)",
