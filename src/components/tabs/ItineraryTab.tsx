@@ -650,38 +650,41 @@ function TimelineView({ items, isDark, onStartEdit, onDelete, renderItem }: Time
                       className="flex flex-col items-center gap-1 flex-shrink-0 ml-auto"
                       onTouchStart={(e) => e.stopPropagation()}
                       onTouchEnd={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       <button
                         type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           onStartEdit(item);
                         }}
                         className={cn(
-                          "p-1.5 rounded-lg transition-colors",
+                          "p-2 rounded-lg transition-colors active:scale-95",
                           isDark
                             ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"
                             : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"
                         )}
                       >
-                        <FilePenLine size={14} />
+                        <FilePenLine size={16} />
                       </button>
                       <button
                         type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           onDelete(item);
                         }}
                         className={cn(
-                          "p-1.5 rounded-lg transition-colors",
+                          "p-2 rounded-lg transition-colors active:scale-95",
                           isDark
                             ? "text-zinc-400 hover:text-red-400 hover:bg-red-950/40"
                             : "text-zinc-500 hover:text-red-500 hover:bg-red-50"
                         )}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
