@@ -43,10 +43,80 @@ function timeToMin(t: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
+function getItemTimelineRange(
+  item: ItineraryItem,
+  activeDate: string
+): { startMin: number; endMin: number; isSpanningDay: boolean } {
+  const startDate = item.start_time?.slice(0, 10) ?? "";
+  const endDate = item.end_time?.slice(0, 10) ?? "";
+
+  // Start time calculation
+  let startMin: number;
+  if (startDate === activeDate) {
+    // Item starts on active day
+    startMin = item.start_time ? timeToMin(item.start_time.slice(11)) : 0;
+  } else if (startDate < activeDate && endDate >= activeDate) {
+    // Item started before, continues through this day - show from start of day (00:00)
+    startMin = 0;
+  } else {
+    startMin = 0;
+  }
+
+  // End time calculation
+  let endMin: number;
+  if (endDate === activeDate) {
+    // Item ends on active day
+    endMin = item.end_time ? timeToMin(item.end_time.slice(11)) : 24 * 60;
+  } else if (endDate > activeDate) {
+    // Item continues past this day - show until end of day (23:59)
+    endMin = 24 * 60;
+  } else {
+    endMin = item.end_time ? timeToMin(item.end_time.slice(11)) : 24 * 60;
+  }
+
+  const isSpanningDay = startDate !== activeDate || endDate !== activeDate;
+
+  // Clamp to Timeline view range (6am to midnight)
+  // But only clamp if the entire item is within the day
+  let displayStartMin = startMin;
+  let displayEndMin = endMin;
+
+  if (!isSpanningDay) {
+    // Only clamp single-day items to the 6am-midnight view
+    displayStartMin = Math.max(startMin, 6 * 60);
+    displayEndMin = Math.min(endMin, 24 * 60);
+  } else {
+    // For spanning items, show the full range even if outside 6am-midnight
+    // but clamp to 0 and 1440
+    displayStartMin = Math.max(startMin, 0);
+    displayEndMin = Math.min(endMin, 24 * 60);
+  }
+
+  return {
+    startMin: displayStartMin,
+    endMin: displayEndMin,
+    isSpanningDay,
+  };
+}
+
 function groupByDate(items: ItineraryItem[]): Record<string, ItineraryItem[]> {
   return items.reduce<Record<string, ItineraryItem[]>>((acc, item) => {
-    const key = item.start_time ? item.start_time.slice(0, 10) : "sem-data";
-    (acc[key] ??= []).push(item);
+    if (!item.start_time) {
+      (acc["sem-data"] ??= []).push(item);
+      return acc;
+    }
+
+    const startDate = item.start_time.slice(0, 10);
+    (acc[startDate] ??= []).push(item);
+
+    // If the item spans multiple days, also add it to the end date
+    if (item.end_time) {
+      const endDate = item.end_time.slice(0, 10);
+      if (endDate !== startDate) {
+        (acc[endDate] ??= []).push(item);
+      }
+    }
+
     return acc;
   }, {});
 }
@@ -316,12 +386,9 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
 
             {/* Timed activity blocks */}
             {timedItems.map((item) => {
-              const startMin = timeToMin(item.start_time!.slice(11));
-              const endMin = item.end_time
-                ? timeToMin(item.end_time.slice(11))
-                : startMin + 60;
+              const { startMin, endMin, isSpanningDay } = getItemTimelineRange(item, activeKey);
               const durationMin = Math.max(endMin - startMin, 30);
-              const top = (startMin - 6 * 60) * PX_PER_MIN;
+              const top = Math.max(0, (startMin - 6 * 60) * PX_PER_MIN);
               const height = durationMin * PX_PER_MIN;
               const Icon =
                 (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) ||
@@ -368,8 +435,24 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                       )}
                       {height >= 68 && (
                         <p className={cn("text-[10px]", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                          {item.start_time?.slice(11, 16)}
-                          {item.end_time ? ` – ${item.end_time.slice(11, 16)}` : ""}
+                          {isSpanningDay ? (
+                            <>
+                              {item.start_time?.slice(0, 10) === activeKey
+                                ? `${item.start_time?.slice(11, 16)} →`
+                                : `← ${item.start_time?.slice(11, 16)}`}
+                              {item.end_time ? ` ${item.end_time.slice(11, 16)}` : ""}
+                              {item.start_time?.slice(0, 10) !== item.end_time?.slice(0, 10) && (
+                                <span className="block text-[9px] opacity-75">
+                                  {item.end_time?.slice(0, 10) === activeKey ? "ends" : "continues"}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {item.start_time?.slice(11, 16)}
+                              {item.end_time ? ` – ${item.end_time.slice(11, 16)}` : ""}
+                            </>
+                          )}
                         </p>
                       )}
                     </div>
