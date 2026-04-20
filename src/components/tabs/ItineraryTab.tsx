@@ -185,12 +185,19 @@ function calculateTimelinePositions(
   const positions = new Map<string, TimelineItemLayout>();
   if (items.length === 0) return positions;
 
+  // Helper to get effective range (considering min duration)
+  const getEffectiveRange = (item: ItineraryItem) => {
+    const { startMin, endMin } = getItemTimelineRange(item, activeDate);
+    const duration = Math.max(endMin - startMin, 30);
+    return { start: startMin, end: startMin + duration };
+  };
+
   // 1. Sort items by start time, then by duration (longer first)
   const sortedItems = [...items].sort((a, b) => {
-    const aRange = getItemTimelineRange(a, activeDate);
-    const bRange = getItemTimelineRange(b, activeDate);
-    if (aRange.startMin !== bRange.startMin) return aRange.startMin - bRange.startMin;
-    return (bRange.endMin - bRange.startMin) - (aRange.endMin - aRange.startMin);
+    const aRange = getEffectiveRange(a);
+    const bRange = getEffectiveRange(b);
+    if (aRange.start !== bRange.start) return aRange.start - bRange.start;
+    return (bRange.end - bRange.start) - (aRange.end - aRange.start);
   });
 
   // 2. Group into clusters of overlapping items
@@ -199,14 +206,14 @@ function calculateTimelinePositions(
   let clusterEnd = -1;
 
   sortedItems.forEach(item => {
-    const { startMin, endMin } = getItemTimelineRange(item, activeDate);
-    if (startMin >= clusterEnd) {
+    const { start, end } = getEffectiveRange(item);
+    if (start >= clusterEnd) {
       if (currentCluster.length > 0) clusters.push(currentCluster);
       currentCluster = [item];
-      clusterEnd = endMin;
+      clusterEnd = end;
     } else {
       currentCluster.push(item);
-      clusterEnd = Math.max(clusterEnd, endMin);
+      clusterEnd = Math.max(clusterEnd, end);
     }
   });
   if (currentCluster.length > 0) clusters.push(currentCluster);
@@ -216,15 +223,15 @@ function calculateTimelinePositions(
     const columns: ItineraryItem[][] = [];
     
     cluster.forEach(item => {
-      const { startMin } = getItemTimelineRange(item, activeDate);
+      const { start } = getEffectiveRange(item);
       
-      // Find the first column where this item fits (no overlap with last item in column)
+      // Find the first column where this item fits
       let placed = false;
       for (let i = 0; i < columns.length; i++) {
         const lastItemInColumn = columns[i][columns[i].length - 1];
-        const { endMin: lastEnd } = getItemTimelineRange(lastItemInColumn, activeDate);
+        const { end: lastEnd } = getEffectiveRange(lastItemInColumn);
         
-        if (startMin >= lastEnd) {
+        if (start >= lastEnd) {
           columns[i].push(item);
           placed = true;
           break;
@@ -521,21 +528,21 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                   style={{
                     position: "absolute",
                     top,
-                    left: `${left}%`,
-                    width: `${width}%`,
+                    left: `calc(${left}% + 1px)`,
+                    width: `calc(${width}% - 2px)`,
                     height: Math.max(height, 36),
-                    backgroundColor: isDark ? "rgba(39, 39, 42, 0.8)" : "rgba(255, 255, 255, 0.8)",
-                    backdropFilter: "blur(4px)",
+                    backgroundColor: isDark ? "rgba(39, 39, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                    backdropFilter: "blur(8px)",
                     borderLeft: `4px solid ${typeColor}`,
-                    borderRadius: "4px 10px 10px 4px",
+                    borderRadius: "6px",
                     overflow: "hidden",
                     padding: "4px 8px",
                     boxShadow: isDark
-                      ? "0 1px 4px rgba(0,0,0,0.4)"
-                      : "0 1px 4px rgba(0,0,0,0.08)",
+                      ? "0 2px 8px rgba(0,0,0,0.5)"
+                      : "0 2px 8px rgba(0,0,0,0.1)",
                     opacity: item.is_completed ? 0.6 : 1,
-                    zIndex: 1,
-                    border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.05)",
+                    zIndex: 10 + column,
+                    border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(0,0,0,0.1)",
                     borderLeftWidth: "4px",
                     borderLeftColor: typeColor,
                   }}
