@@ -143,6 +143,78 @@ function isDirectImageSrc(value: string) {
   return value.startsWith("data:") || value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:");
 }
 
+// Color palette for different activity types (using HSL for consistent saturation/lightness)
+const TYPE_COLORS = [
+  "#3B82F6", // blue
+  "#EC4899", // pink
+  "#10B981", // emerald
+  "#F59E0B", // amber
+  "#8B5CF6", // violet
+  "#06B6D4", // cyan
+  "#EF4444", // red
+  "#14B8A6", // teal
+  "#6366F1", // indigo
+  "#D97706", // orange
+];
+
+function getActivityTypeColor(typeId: string | null | undefined): string {
+  if (!typeId) return "#9CA3AF"; // gray for no type
+  // Generate a deterministic index from the typeId
+  let hash = 0;
+  for (let i = 0; i < typeId.length; i++) {
+    const char = typeId.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  const index = Math.abs(hash) % TYPE_COLORS.length;
+  return TYPE_COLORS[index];
+}
+
+interface TimelineItemLayout {
+  itemId: string;
+  column: number;
+  totalColumns: number;
+}
+
+function calculateTimelinePositions(
+  items: ItineraryItem[],
+  activeDate: string
+): Map<string, TimelineItemLayout> {
+  const positions = new Map<string, TimelineItemLayout>();
+
+  // For each item, find which column it should be in
+  items.forEach((item, itemIndex) => {
+    const { startMin: itemStart, endMin: itemEnd } = getItemTimelineRange(item, activeDate);
+
+    // Find all items that overlap with this one
+    const overlappingIndices = [itemIndex];
+    items.forEach((otherItem, otherIndex) => {
+      if (otherIndex === itemIndex) return;
+      const { startMin: otherStart, endMin: otherEnd } = getItemTimelineRange(otherItem, activeDate);
+
+      // Check if ranges overlap
+      if (itemStart < otherEnd && itemEnd > otherStart) {
+        overlappingIndices.push(otherIndex);
+      }
+    });
+
+    // Sort the overlapping items by start time, then by ID for consistency
+    overlappingIndices.sort((a, b) => {
+      const aStart = getItemTimelineRange(items[a], activeDate).startMin;
+      const bStart = getItemTimelineRange(items[b], activeDate).startMin;
+      if (aStart !== bStart) return aStart - bStart;
+      return items[a].id.localeCompare(items[b].id);
+    });
+
+    const column = overlappingIndices.indexOf(itemIndex);
+    const totalColumns = overlappingIndices.length;
+
+    positions.set(item.id, { itemId: item.id, column, totalColumns });
+  });
+
+  return positions;
+}
+
 // ─── AgendaView ───────────────────────────────────────────────────────────────
 
 interface AgendaViewProps {
@@ -975,14 +1047,14 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 {item.start_time && (
                   <span className={cn("text-xs whitespace-nowrap font-medium", isDark ? "text-zinc-400" : "text-zinc-500")}>
                     {item.is_all_day
-                      ? format(new Date(item.start_time), "dd/MM")
+                      ? format(new Date(item.start_time + "T00:00:00"), "dd/MM")
                       : format(new Date(item.start_time), "dd/MM HH:mm")}
                     {item.end_time && !item.is_all_day
                       ? ` – ${format(new Date(item.end_time), "HH:mm")}`
                       : ""}
                     {item.is_all_day && item.end_time &&
                     item.end_time.slice(0, 10) !== item.start_time.slice(0, 10)
-                      ? ` – ${format(new Date(item.end_time), "dd/MM")}`
+                      ? ` – ${format(new Date(item.end_time + "T00:00:00"), "dd/MM")}`
                       : ""}
                     {item.is_all_day && !item.end_time ? " · Dia todo" : ""}
                   </span>
