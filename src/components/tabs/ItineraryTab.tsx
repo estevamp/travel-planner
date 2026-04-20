@@ -183,35 +183,70 @@ function calculateTimelinePositions(
   activeDate: string
 ): Map<string, TimelineItemLayout> {
   const positions = new Map<string, TimelineItemLayout>();
+  if (items.length === 0) return positions;
 
-  // For each item, find which column it should be in
-  items.forEach((item, itemIndex) => {
-    const { startMin: itemStart, endMin: itemEnd } = getItemTimelineRange(item, activeDate);
+  // 1. Sort items by start time, then by duration (longer first)
+  const sortedItems = [...items].sort((a, b) => {
+    const aRange = getItemTimelineRange(a, activeDate);
+    const bRange = getItemTimelineRange(b, activeDate);
+    if (aRange.startMin !== bRange.startMin) return aRange.startMin - bRange.startMin;
+    return (bRange.endMin - bRange.startMin) - (aRange.endMin - aRange.startMin);
+  });
 
-    // Find all items that overlap with this one
-    const overlappingIndices = [itemIndex];
-    items.forEach((otherItem, otherIndex) => {
-      if (otherIndex === itemIndex) return;
-      const { startMin: otherStart, endMin: otherEnd } = getItemTimelineRange(otherItem, activeDate);
+  // 2. Group into clusters of overlapping items
+  const clusters: ItineraryItem[][] = [];
+  let currentCluster: ItineraryItem[] = [];
+  let clusterEnd = -1;
 
-      // Check if ranges overlap
-      if (itemStart < otherEnd && itemEnd > otherStart) {
-        overlappingIndices.push(otherIndex);
+  sortedItems.forEach(item => {
+    const { startMin, endMin } = getItemTimelineRange(item, activeDate);
+    if (startMin >= clusterEnd) {
+      if (currentCluster.length > 0) clusters.push(currentCluster);
+      currentCluster = [item];
+      clusterEnd = endMin;
+    } else {
+      currentCluster.push(item);
+      clusterEnd = Math.max(clusterEnd, endMin);
+    }
+  });
+  if (currentCluster.length > 0) clusters.push(currentCluster);
+
+  // 3. Process each cluster to assign columns
+  clusters.forEach(cluster => {
+    const columns: ItineraryItem[][] = [];
+    
+    cluster.forEach(item => {
+      const { startMin } = getItemTimelineRange(item, activeDate);
+      
+      // Find the first column where this item fits (no overlap with last item in column)
+      let placed = false;
+      for (let i = 0; i < columns.length; i++) {
+        const lastItemInColumn = columns[i][columns[i].length - 1];
+        const { endMin: lastEnd } = getItemTimelineRange(lastItemInColumn, activeDate);
+        
+        if (startMin >= lastEnd) {
+          columns[i].push(item);
+          placed = true;
+          break;
+        }
+      }
+      
+      if (!placed) {
+        columns.push([item]);
       }
     });
 
-    // Sort the overlapping items by start time, then by ID for consistency
-    overlappingIndices.sort((a, b) => {
-      const aStart = getItemTimelineRange(items[a], activeDate).startMin;
-      const bStart = getItemTimelineRange(items[b], activeDate).startMin;
-      if (aStart !== bStart) return aStart - bStart;
-      return items[a].id.localeCompare(items[b].id);
+    // Assign positions based on the number of columns in this cluster
+    const totalCols = columns.length;
+    columns.forEach((colItems, colIndex) => {
+      colItems.forEach(item => {
+        positions.set(item.id, {
+          itemId: item.id,
+          column: colIndex,
+          totalColumns: totalCols
+        });
+      });
     });
-
-    const column = overlappingIndices.indexOf(itemIndex);
-    const totalColumns = overlappingIndices.length;
-
-    positions.set(item.id, { itemId: item.id, column, totalColumns });
   });
 
   return positions;
