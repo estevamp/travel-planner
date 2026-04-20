@@ -349,12 +349,14 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     amount: string;
     visibility: Visibility;
     is_confirmed: boolean;
+    payment_date: string | null;
   }>({
     description: "",
     category_id: "",
     amount: "0",
     visibility: "public",
     is_confirmed: false,
+    payment_date: null,
   });
 
   const registerPayment = async (fromMemberIds: string[], toMemberIds: string[], amount: number) => {
@@ -509,6 +511,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               amount: nextAmount,
               visibility: expenseDraft.visibility,
               is_confirmed: expenseDraft.is_confirmed,
+              payment_date: expenseDraft.payment_date,
               category: expenseDraft.category_id
                 ? categories.find(c => c.id === expenseDraft.category_id) || null
                 : null
@@ -525,6 +528,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       visibility: expenseDraft.visibility,
       is_confirmed: expenseDraft.is_confirmed,
       category_id: expenseDraft.category_id || null,
+      payment_date: expenseDraft.payment_date,
       tripId: tripId!,
     });
 
@@ -594,6 +598,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               currency: editExpenseCurrency,
               visibility,
               is_confirmed,
+              payment_date: (form.get("payment_date") as string) || null,
               category: category_id ? categories.find(c => c.id === category_id) || null : null
             }
           : exp
