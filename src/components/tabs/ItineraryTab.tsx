@@ -378,14 +378,23 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
   );
   const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
 
-  // All timed items (not all-day) — includes spanning/multi-day items
+  // All timed items (not all-day)
   const allTimedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
-  // No separation: all timed items participate in side-by-side layout
-  const spanningItems: typeof allTimedItems = [];
-  const regularTimedItems = allTimedItems;
 
-  // Calculate side-by-side positions for all timed items
-  const positions = calculateTimelinePositions(allTimedItems, activeKey);
+  // Items that cover the entire visible day (start before 6am AND end after midnight)
+  // are shown as thin strips — they shouldn't compete with regular items for columns
+  const fullDaySpanningItems = allTimedItems.filter((i) => {
+    const { startMin, endMin } = getItemTimelineRange(i, activeKey);
+    return startMin <= VISIBLE_START_MIN && endMin >= VISIBLE_END_MIN;
+  });
+  const fullDaySpanningIds = new Set(fullDaySpanningItems.map((i) => i.id));
+
+  // Regular items: have a meaningful time range within the visible day
+  const regularTimedItems = allTimedItems.filter((i) => !fullDaySpanningIds.has(i.id));
+
+  // Calculate side-by-side positions only for regular items
+  const positions = calculateTimelinePositions(regularTimedItems, activeKey);
+  const spanningItems = fullDaySpanningItems;
 
   const totalHeight = HOURS.length * 60 * PX_PER_MIN;
 
@@ -564,9 +573,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
               // Pixel offset for spanning strips: each strip is 6px + 2px gap
               const stripPx = spanningItems.length * 8;
               const typeColor = getActivityTypeColor(item.type_id);
-              // Each column gets equal share of remaining width
-              const colWidthPct = 100 / totalColumns;
-              const colLeftPct = column * colWidthPct;
+              // Each column gets equal share of remaining width (after strip offset)
 
               return (
                 <div
@@ -574,8 +581,8 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                   style={{
                     position: "absolute",
                     top,
-                    left: `calc(${stripPx}px + ${colLeftPct}% + 1px)`,
-                    width: `calc(${colWidthPct}% - ${stripPx / totalColumns}px - 2px)`,
+                    left: `calc(${stripPx}px + (100% - ${stripPx}px) * ${column} / ${totalColumns} + 1px)`,
+                    width: `calc((100% - ${stripPx}px) / ${totalColumns} - 2px)`,
                     height: Math.max(height, 36),
                     backgroundColor: isDark ? "rgba(39, 39, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
                     backdropFilter: "blur(8px)",
