@@ -176,12 +176,7 @@ export function ExpenseListItem({
                 </label>
               </div>
               <p className="text-xs text-zinc-400">
-                {formatDate(exp.date, settings.language_code)}
-                {exp.payment_date && (
-                  <span className="ml-2 text-emerald-600">
-                    • {t("expenses.paidOn")} {formatDate(exp.payment_date, settings.language_code)}
-                  </span>
-                )}
+                {formatDate(exp.payment_date || exp.date, settings.language_code)}
               </p>
             </td>
             <td className="px-4 py-3">
@@ -254,12 +249,7 @@ export function ExpenseListItem({
                 )}
               </div>
               <p className="text-xs text-zinc-400">
-                {formatDate(exp.date, settings.language_code)}
-                {exp.payment_date && (
-                  <span className="ml-2 text-emerald-600">
-                    • {t("expenses.paidOn")} {formatDate(exp.payment_date, settings.language_code)}
-                  </span>
-                )}
+                {formatDate(exp.payment_date || exp.date, settings.language_code)}
               </p>
             </td>
             <td className="px-4 py-3 text-xs uppercase">
@@ -408,12 +398,7 @@ export function ExpenseListItem({
               )}
             </div>
             <p className="text-xs text-zinc-400 mb-2">
-              {formatDate(exp.date, settings.language_code)}
-              {exp.payment_date && (
-                <span className="ml-2 text-emerald-600">
-                  • {t("expenses.paidOn")} {formatDate(exp.payment_date, settings.language_code)}
-                </span>
-              )}
+              {formatDate(exp.payment_date || exp.date, settings.language_code)}
             </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               {exp.category ? (
