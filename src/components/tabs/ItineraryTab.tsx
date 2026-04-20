@@ -646,30 +646,42 @@ function TimelineView({ items, isDark, onStartEdit, onDelete, renderItem }: Time
                       )}
                     </div>
                     {/* Edit / Delete buttons */}
-                    <div className="flex flex-col items-center gap-0.5 flex-shrink-0 ml-auto">
+                    <div
+                      className="flex flex-col items-center gap-1 flex-shrink-0 ml-auto"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                    >
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onStartEdit(item); }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onStartEdit(item);
+                        }}
                         className={cn(
-                          "p-1 rounded transition-colors",
+                          "p-1.5 rounded-lg transition-colors",
                           isDark
-                            ? "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700"
-                            : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+                            ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"
+                            : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"
                         )}
                       >
-                        <FilePenLine size={11} />
+                        <FilePenLine size={14} />
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onDelete(item);
+                        }}
                         className={cn(
-                          "p-1 rounded transition-colors",
+                          "p-1.5 rounded-lg transition-colors",
                           isDark
-                            ? "text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
-                            : "text-zinc-400 hover:text-red-500 hover:bg-red-50"
+                            ? "text-zinc-400 hover:text-red-400 hover:bg-red-950/40"
+                            : "text-zinc-500 hover:text-red-500 hover:bg-red-50"
                         )}
                       >
-                        <Trash2 size={11} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
