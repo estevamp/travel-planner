@@ -300,9 +300,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     const collator = new Intl.Collator(undefined, { sensitivity: "base" });
 
     return [...trip.expenses].sort((a, b) => {
+      const dateA = a.payment_date || a.date;
+      const dateB = b.payment_date || b.date;
+
       switch (expenseSort) {
         case "dateDesc":
-          return toTime(b.date) - toTime(a.date);
+          return toTime(dateB) - toTime(dateA);
         case "amountDesc":
           return (convertedAmountByExpenseId.get(b.id) || 0) - (convertedAmountByExpenseId.get(a.id) || 0);
         case "amountAsc":
@@ -313,7 +316,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           return collator.compare(b.description || "", a.description || "");
         case "dateAsc":
         default:
-          return toTime(a.date) - toTime(b.date);
+          return toTime(dateA) - toTime(dateB);
       }
     });
   }, [trip.expenses, expenseSort, convertedAmountByExpenseId]);
