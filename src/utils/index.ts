@@ -18,6 +18,18 @@ export function formatCurrency(value: number, currency = "BRL", locale: Language
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(value);
 }
 
+export function formatDate(dateString: string, locale: LanguageCode = "pt-BR") {
+  if (!dateString) return "";
+  // dateString is expected to be YYYY-MM-DD
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 export const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();

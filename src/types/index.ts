@@ -76,6 +76,7 @@ export interface Expense {
   category_id?: string | null;
   category?: ExpenseCategory | null;
   date: string;
+  payment_date?: string | null;
   visibility: Visibility;
   is_confirmed: boolean;
 }

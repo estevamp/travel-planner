@@ -7,7 +7,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { cn, formatCurrency, maskCurrency } from "../utils";
+import { cn, formatCurrency, maskCurrency, formatDate } from "../utils";
 import { Card } from "./Card";
 import type {
   Expense,
@@ -175,7 +175,14 @@ export function ExpenseListItem({
                   )}
                 </label>
               </div>
-              <p className="text-xs text-zinc-400">{exp.date}</p>
+              <p className="text-xs text-zinc-400">
+                {formatDate(exp.date, settings.language_code)}
+                {exp.payment_date && (
+                  <span className="ml-2 text-emerald-600">
+                    • {t("expenses.paidOn")} {formatDate(exp.payment_date, settings.language_code)}
+                  </span>
+                )}
+              </p>
             </td>
             <td className="px-4 py-3">
               <select
@@ -246,7 +253,14 @@ export function ExpenseListItem({
                   <Circle size={14} className="text-zinc-400 flex-shrink-0" title={t("expenses.predicted")} />
                 )}
               </div>
-              <p className="text-xs text-zinc-400">{exp.date}</p>
+              <p className="text-xs text-zinc-400">
+                {formatDate(exp.date, settings.language_code)}
+                {exp.payment_date && (
+                  <span className="ml-2 text-emerald-600">
+                    • {t("expenses.paidOn")} {formatDate(exp.payment_date, settings.language_code)}
+                  </span>
+                )}
+              </p>
             </td>
             <td className="px-4 py-3 text-xs uppercase">
               {exp.category ? (
@@ -393,7 +407,14 @@ export function ExpenseListItem({
                 <Circle size={14} className="text-zinc-400 flex-shrink-0" title={t("expenses.predicted")} />
               )}
             </div>
-            <p className="text-xs text-zinc-400 mb-2">{exp.date}</p>
+            <p className="text-xs text-zinc-400 mb-2">
+              {formatDate(exp.date, settings.language_code)}
+              {exp.payment_date && (
+                <span className="ml-2 text-emerald-600">
+                  • {t("expenses.paidOn")} {formatDate(exp.payment_date, settings.language_code)}
+                </span>
+              )}
+            </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               {exp.category ? (
                 <span

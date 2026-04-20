@@ -14,6 +14,7 @@ interface CreateExpenseParams {
   currency: string;
   onClose: () => void;
   onResetCurrency?: () => void;
+  paymentDate?: string | null;
 }
 
 interface UseCreateExpenseReturn {
@@ -40,6 +41,7 @@ export function useCreateExpense(deps: UseCreateExpenseDeps): UseCreateExpenseRe
     currency,
     onClose,
     onResetCurrency,
+    paymentDate,
   }: CreateExpenseParams) => {
     if (!tripId || !currentMember) return;
 
@@ -63,6 +65,7 @@ export function useCreateExpense(deps: UseCreateExpenseDeps): UseCreateExpenseRe
         category_id,
         visibility,
         date: new Date().toISOString().split("T")[0],
+        payment_date: paymentDate || null,
         category: category_id ? categories.find(c => c.id === category_id) || null : null,
         is_confirmed,
       };
@@ -82,6 +85,7 @@ export function useCreateExpense(deps: UseCreateExpenseDeps): UseCreateExpenseRe
         category_id,
         visibility,
         date: new Date().toISOString().split("T")[0],
+        payment_date: paymentDate || null,
         is_confirmed,
         paid_by_member_id: payerId || currentMember.id,
         split_type: splitType,
@@ -106,6 +110,7 @@ export function useCreateExpense(deps: UseCreateExpenseDeps): UseCreateExpenseRe
         category_id,
         visibility,
         date: new Date().toISOString().split("T")[0],
+        payment_date: paymentDate || null,
         is_confirmed,
         paid_by_member_id: payerId || currentMember.id,
         split_type: splitType,

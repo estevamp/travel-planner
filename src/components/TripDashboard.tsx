@@ -217,6 +217,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       splits: expenseSplits,
       splitType: expenseSplitType,
       currency: expenseCurrency,
+      paymentDate: (form.get("payment_date") as string) || null,
       onClose: closeModal,
       onResetCurrency: () => setExpenseCurrency(settings.default_currency),
     });
@@ -690,7 +691,19 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             ))}
           </select>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.paymentDate")}</label>
+              <input
+                type="date"
+                name="payment_date"
+                disabled={isSubmittingExpense}
+                className={cn(
+                  "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
+                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
+                )}
+              />
+            </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("dashboard.amount")}</label>
               <input

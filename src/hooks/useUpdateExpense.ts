@@ -14,6 +14,7 @@ interface UpdateExpenseParams {
   visibility: "public" | "private";
   is_confirmed: boolean;
   category_id: string | null;
+  payment_date?: string | null;
   payerId?: string;
   splitType?: SplitType;
   splits?: CreateExpenseSplitInput[];
@@ -46,6 +47,7 @@ export function useUpdateExpense(deps: UseUpdateExpenseDeps): UseUpdateExpenseRe
       visibility,
       is_confirmed,
       category_id,
+      payment_date,
       payerId,
       splitType = "equal",
       splits = [],
@@ -69,6 +71,7 @@ export function useUpdateExpense(deps: UseUpdateExpenseDeps): UseUpdateExpenseRe
             visibility,
             is_confirmed,
             category_id,
+            payment_date,
             paid_by_member_id: payerId,
             split_type: splitType,
           },
@@ -84,6 +87,7 @@ export function useUpdateExpense(deps: UseUpdateExpenseDeps): UseUpdateExpenseRe
         visibility,
         is_confirmed,
         category_id,
+        payment_date,
         paid_by_member_id: payerId,
         split_type: splitType,
       }).eq("id", expenseId);

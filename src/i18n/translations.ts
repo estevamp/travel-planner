@@ -110,6 +110,7 @@ export const ptBR = {
   "dashboard.noCategory": "Sem categoria",
   "dashboard.amount": "Valor",
   "dashboard.currency": "Moeda",
+  "dashboard.paymentDate": "Data de pagamento",
   "dashboard.markConfirmed": "Marcar como confirmada",
   "dashboard.publicRequiredForSplit": "Visibilidade definida pelo rateio",
   "dashboard.split": "Rateio",
@@ -169,6 +170,7 @@ export const ptBR = {
   "expenses.partiallyPrivateBadge": "Parcialmente privado",
   "expenses.hiddenAmount": "Valor privado",
   "expenses.paidBy": "Pago por",
+  "expenses.paidOn": "pago em",
   "expenses.generalCategory": "Geral",
   "expenses.collapseDetails": "Recolher detalhes",
   "expenses.viewBudgetDetails": "Ver detalhes do orçamento",
@@ -354,7 +356,7 @@ export const ptBR = {
   "public.terms.section.availability.body": "Fazemos o possível para manter o serviço funcionando, mas pode haver indisponibilidades temporárias, manutenção ou falhas de terceiros.",
   "public.terms.section.contact.title": "Contato",
   "public.terms.section.contact.body": "Se precisar de ajuda ou quiser relatar algum problema, entre em contato pelo e-mail estevamp@gmail.com.",
-} as const;
+};
 
 export const en: typeof ptBR = {
   "app.name": "Partiu!",
@@ -464,6 +466,7 @@ export const en: typeof ptBR = {
   "dashboard.noCategory": "No category",
   "dashboard.amount": "Amount",
   "dashboard.currency": "Currency",
+  "dashboard.paymentDate": "Payment date",
   "dashboard.markConfirmed": "Mark as confirmed",
   "dashboard.publicRequiredForSplit": "Visibility defined by split",
   "dashboard.split": "Split",
@@ -522,6 +525,7 @@ export const en: typeof ptBR = {
   "expenses.partiallyPrivateBadge": "Partially private",
   "expenses.hiddenAmount": "Private amount",
   "expenses.paidBy": "Paid by",
+  "expenses.paidOn": "paid on",
   "expenses.generalCategory": "General",
   "expenses.collapseDetails": "Collapse details",
   "expenses.viewBudgetDetails": "View budget details",
