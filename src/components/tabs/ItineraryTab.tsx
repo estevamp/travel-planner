@@ -1189,7 +1189,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                         return "";
                       }
                     })()}
-                    {item.is_all_day && !item.end_time ? " · Dia todo" : ""}
                   </span>
                 )}
                 {item.created_by_member_id && (
