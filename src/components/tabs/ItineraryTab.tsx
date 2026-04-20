@@ -131,7 +131,9 @@ function sortedDateKeys(grouped: Record<string, ItineraryItem[]>): string[] {
 
 function formatDateKey(dateKey: string, locale: string): string {
   if (dateKey === "sem-data") return locale === "en" ? "No date set" : "Sem data definida";
-  return new Date(dateKey + "T00:00:00").toLocaleDateString(locale, {
+  const date = new Date(dateKey + "T00:00:00");
+  if (isNaN(date.getTime())) return dateKey;
+  return date.toLocaleDateString(locale, {
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -317,6 +319,13 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
   const keys = sortedDateKeys(grouped);
   const [activeKey, setActiveKey] = useState<string>(keys[0] ?? "sem-data");
 
+  // Recalculate positions for overlapping items
+  const dayItems = [...(grouped[activeKey] ?? [])].sort((a, b) =>
+    (a.start_time ?? "").localeCompare(b.start_time ?? "")
+  );
+  const timedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
+  const positions = calculateTimelinePositions(timedItems, activeKey);
+
   if (keys.length === 0) {
     return (
       <div className={cn("text-center py-16 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
@@ -325,11 +334,6 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
     );
   }
 
-  const dayItems = [...(grouped[activeKey] ?? [])].sort((a, b) =>
-    (a.start_time ?? "").localeCompare(b.start_time ?? "")
-  );
-
-  const timedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
   const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
 
       const totalHeight = HOURS.length * 60 * PX_PER_MIN;
@@ -352,10 +356,13 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
           const label =
             key === "sem-data"
               ? (language === "en" ? "No date" : "Sem data")
-              : new Date(key + "T00:00:00").toLocaleDateString(language, {
-                  day: "2-digit",
-                  month: "2-digit",
-                });
+              : (() => {
+                  const d = new Date(key + "T00:00:00");
+                  return isNaN(d.getTime()) ? key : d.toLocaleDateString(language, {
+                    day: "2-digit",
+                    month: "2-digit",
+                  });
+                })();
           return (
             <button
               key={key}
@@ -466,30 +473,43 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                 (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) ||
                 Calendar;
 
+              const layout = positions.get(item.id);
+              const column = layout?.column ?? 0;
+              const totalColumns = layout?.totalColumns ?? 1;
+              const width = 100 / totalColumns;
+              const left = column * width;
+              const typeColor = getActivityTypeColor(item.type_id);
+
               return (
                 <div
                   key={item.id}
                   style={{
                     position: "absolute",
                     top,
-                    left: 0,
-                    right: 0,
+                    left: `${left}%`,
+                    width: `${width}%`,
                     height: Math.max(height, 36),
-                    backgroundColor: "var(--card-bg)",
-                    borderLeft: "3px solid var(--accent-color)",
-                    borderRadius: "0 10px 10px 0",
+                    backgroundColor: isDark ? "rgba(39, 39, 42, 0.8)" : "rgba(255, 255, 255, 0.8)",
+                    backdropFilter: "blur(4px)",
+                    borderLeft: `4px solid ${typeColor}`,
+                    borderRadius: "4px 10px 10px 4px",
                     overflow: "hidden",
                     padding: "4px 8px",
                     boxShadow: isDark
                       ? "0 1px 4px rgba(0,0,0,0.4)"
                       : "0 1px 4px rgba(0,0,0,0.08)",
                     opacity: item.is_completed ? 0.6 : 1,
+                    zIndex: 1,
+                    border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.05)",
+                    borderLeftWidth: "4px",
+                    borderLeftColor: typeColor,
                   }}
                 >
                   <div className="flex items-center gap-1.5 h-full overflow-hidden">
                     <Icon
                       size={12}
-                      className={cn("flex-shrink-0", isDark ? "text-zinc-400" : "text-zinc-500")}
+                      className="flex-shrink-0"
+                      style={{ color: typeColor }}
                     />
                     <div className="min-w-0">
                       <p
@@ -1046,16 +1066,34 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               <div className="flex items-center justify-between mt-1.5 gap-2">
                 {item.start_time && (
                   <span className={cn("text-xs whitespace-nowrap font-medium", isDark ? "text-zinc-400" : "text-zinc-500")}>
-                    {item.is_all_day
-                      ? format(new Date(item.start_time + "T00:00:00"), "dd/MM")
-                      : format(new Date(item.start_time), "dd/MM HH:mm")}
-                    {item.end_time && !item.is_all_day
-                      ? ` – ${format(new Date(item.end_time), "HH:mm")}`
-                      : ""}
-                    {item.is_all_day && item.end_time &&
-                    item.end_time.slice(0, 10) !== item.start_time.slice(0, 10)
-                      ? ` – ${format(new Date(item.end_time + "T00:00:00"), "dd/MM")}`
-                      : ""}
+                    {(() => {
+                      try {
+                        const start = item.is_all_day
+                          ? new Date(item.start_time + "T00:00:00")
+                          : new Date(item.start_time);
+                        
+                        if (isNaN(start.getTime())) return "";
+
+                        let res = format(start, item.is_all_day ? "dd/MM" : "dd/MM HH:mm");
+
+                        if (item.end_time) {
+                          const end = item.is_all_day
+                            ? new Date(item.end_time + "T00:00:00")
+                            : new Date(item.end_time);
+                          
+                          if (!isNaN(end.getTime())) {
+                            if (!item.is_all_day) {
+                              res += ` – ${format(end, "HH:mm")}`;
+                            } else if (item.end_time.slice(0, 10) !== item.start_time.slice(0, 10)) {
+                              res += ` – ${format(end, "dd/MM")}`;
+                            }
+                          }
+                        }
+                        return res;
+                      } catch (e) {
+                        return "";
+                      }
+                    })()}
                     {item.is_all_day && !item.end_time ? " · Dia todo" : ""}
                   </span>
                 )}
