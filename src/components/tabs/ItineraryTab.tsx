@@ -351,6 +351,8 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
 interface TimelineViewProps {
   items: ItineraryItem[];
   isDark: boolean;
+  onStartEdit: (item: ItineraryItem) => void;
+  onDelete: (item: ItineraryItem) => void;
   renderItem: (item: ItineraryItem) => React.ReactNode;
 }
 
@@ -359,7 +361,7 @@ const PX_PER_MIN = 1.2; // pixels per minute
 const VISIBLE_START_MIN = 6 * 60; // 6am in minutes
 const VISIBLE_END_MIN = 24 * 60;  // midnight in minutes
 
-function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
+function TimelineView({ items, isDark, onStartEdit, onDelete, renderItem }: TimelineViewProps) {
   const { language } = useI18n();
   const grouped = groupByDate(items);
   const keys = sortedDateKeys(grouped);
@@ -600,13 +602,13 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                     borderLeftColor: typeColor,
                   }}
                 >
-                  <div className="flex items-center gap-1.5 h-full overflow-hidden">
+                  <div className="flex items-start gap-1.5 h-full overflow-hidden">
                     <Icon
                       size={12}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 mt-0.5"
                       style={{ color: typeColor }}
                     />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p
                         className={cn(
                           "text-xs font-bold truncate leading-tight",
@@ -642,6 +644,33 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                           )}
                         </p>
                       )}
+                    </div>
+                    {/* Edit / Delete buttons */}
+                    <div className="flex flex-col items-center gap-0.5 flex-shrink-0 ml-auto">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onStartEdit(item); }}
+                        className={cn(
+                          "p-1 rounded transition-colors",
+                          isDark
+                            ? "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700"
+                            : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+                        )}
+                      >
+                        <FilePenLine size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+                        className={cn(
+                          "p-1 rounded transition-colors",
+                          isDark
+                            ? "text-zinc-500 hover:text-red-400 hover:bg-red-950/40"
+                            : "text-zinc-400 hover:text-red-500 hover:bg-red-50"
+                        )}
+                      >
+                        <Trash2 size={11} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1329,6 +1358,8 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               <TimelineView
                 items={openActivities}
                 isDark={isDark}
+                onStartEdit={startEditItinerary}
+                onDelete={deleteItineraryItemHandler}
                 renderItem={renderItineraryItem}
               />
             </motion.div>
