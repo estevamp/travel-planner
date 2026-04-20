@@ -354,19 +354,14 @@ interface TimelineViewProps {
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06h–23h
 const PX_PER_MIN = 1.2; // pixels per minute
+const VISIBLE_START_MIN = 6 * 60; // 6am in minutes
+const VISIBLE_END_MIN = 24 * 60;  // midnight in minutes
 
 function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
   const { language } = useI18n();
   const grouped = groupByDate(items);
   const keys = sortedDateKeys(grouped);
   const [activeKey, setActiveKey] = useState<string>(keys[0] ?? "sem-data");
-
-  // Recalculate positions for overlapping items
-  const dayItems = [...(grouped[activeKey] ?? [])].sort((a, b) =>
-    (a.start_time ?? "").localeCompare(b.start_time ?? "")
-  );
-  const timedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
-  const positions = calculateTimelinePositions(timedItems, activeKey);
 
   if (keys.length === 0) {
     return (
@@ -376,14 +371,33 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
     );
   }
 
+  const dayItems = [...(grouped[activeKey] ?? [])].sort((a, b) =>
+    (a.start_time ?? "").localeCompare(b.start_time ?? "")
+  );
   const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
 
-      const totalHeight = HOURS.length * 60 * PX_PER_MIN;
+  // Separate spanning items (multi-day) from regular timed items
+  const allTimedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
+  const spanningItems = allTimedItems.filter((i) => {
+    const startDate = i.start_time?.slice(0, 10) ?? "";
+    const endDate = i.end_time?.slice(0, 10) ?? "";
+    return startDate !== activeKey || (endDate && endDate !== activeKey);
+  });
+  const regularTimedItems = allTimedItems.filter((i) => {
+    const startDate = i.start_time?.slice(0, 10) ?? "";
+    const endDate = i.end_time?.slice(0, 10) ?? "";
+    return startDate === activeKey && (!endDate || endDate === activeKey);
+  });
 
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const nowInRange = nowMin >= 6 * 60 && nowMin < 24 * 60;
-    const isToday = activeKey === now.toISOString().slice(0, 10);
+  // Calculate side-by-side positions only for regular timed items
+  const positions = calculateTimelinePositions(regularTimedItems, activeKey);
+
+  const totalHeight = HOURS.length * 60 * PX_PER_MIN;
+
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowInRange = nowMin >= 6 * 60 && nowMin < 24 * 60;
+  const isToday = activeKey === now.toISOString().slice(0, 10);
 
   return (
     <div>
@@ -448,7 +462,7 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
       )}
 
       {/* Hourly grid */}
-      {timedItems.length === 0 && allDayItems.length === 0 ? (
+      {allTimedItems.length === 0 && allDayItems.length === 0 ? (
         <div className={cn("text-center py-12 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
           {language === "en" ? "No activities on this day." : "Nenhuma atividade neste dia."}
         </div>
@@ -505,21 +519,13 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
               </div>
             )}
 
-            {/* Timed activity blocks */}
-            {timedItems.map((item) => {
-              const { startMin, endMin, isSpanningDay } = getItemTimelineRange(item, activeKey);
-              const durationMin = Math.max(endMin - startMin, 30);
-              const top = Math.max(0, (startMin - 6 * 60) * PX_PER_MIN);
-              const height = durationMin * PX_PER_MIN;
-              const Icon =
-                (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) ||
-                Calendar;
-
-              const layout = positions.get(item.id);
-              const column = layout?.column ?? 0;
-              const totalColumns = layout?.totalColumns ?? 1;
-              const width = 100 / totalColumns;
-              const left = column * width;
+            {/* Spanning items — rendered as thin strips on the left edge */}
+            {spanningItems.map((item) => {
+              const { startMin, endMin } = getItemTimelineRange(item, activeKey);
+              const visibleStart = Math.max(startMin, VISIBLE_START_MIN);
+              const visibleEnd = Math.min(endMin, VISIBLE_END_MIN);
+              const top = (visibleStart - VISIBLE_START_MIN) * PX_PER_MIN;
+              const height = Math.max((visibleEnd - visibleStart) * PX_PER_MIN, 36);
               const typeColor = getActivityTypeColor(item.type_id);
 
               return (
@@ -528,8 +534,52 @@ function TimelineView({ items, isDark, renderItem }: TimelineViewProps) {
                   style={{
                     position: "absolute",
                     top,
-                    left: `calc(${left}% + 1px)`,
-                    width: `calc(${width}% - 2px)`,
+                    left: 0,
+                    width: 6,
+                    height,
+                    backgroundColor: typeColor,
+                    borderRadius: 3,
+                    opacity: item.is_completed ? 0.4 : 0.7,
+                    zIndex: 5,
+                  }}
+                  title={item.title}
+                />
+              );
+            })}
+
+            {/* Regular timed activity blocks — side-by-side when overlapping */}
+            {regularTimedItems.map((item) => {
+              const { startMin, endMin, isSpanningDay } = getItemTimelineRange(item, activeKey);
+
+              // Clamp to visible range
+              const visibleStart = Math.max(startMin, VISIBLE_START_MIN);
+              const visibleEnd = Math.min(endMin, VISIBLE_END_MIN);
+              const visibleDuration = Math.max(visibleEnd - visibleStart, 30);
+
+              const top = (visibleStart - VISIBLE_START_MIN) * PX_PER_MIN;
+              const height = visibleDuration * PX_PER_MIN;
+
+              const Icon =
+                (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) ||
+                Calendar;
+
+              const layout = positions.get(item.id);
+              const column = layout?.column ?? 0;
+              const totalColumns = layout?.totalColumns ?? 1;
+              // Leave 8px on the left for spanning item strips
+              const availableLeft = spanningItems.length > 0 ? 10 : 0;
+              const colWidth = (100 - availableLeft) / totalColumns;
+              const colLeft = availableLeft + column * colWidth;
+              const typeColor = getActivityTypeColor(item.type_id);
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    position: "absolute",
+                    top,
+                    left: `calc(${colLeft}% + 1px)`,
+                    width: `calc(${colWidth}% - 2px)`,
                     height: Math.max(height, 36),
                     backgroundColor: isDark ? "rgba(39, 39, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
                     backdropFilter: "blur(8px)",
