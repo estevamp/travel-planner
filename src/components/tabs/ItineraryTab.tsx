@@ -817,6 +817,16 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   };
 
   const startEditItinerary = (item: ItineraryItem) => {
+    if (viewMode === "timeline") {
+      setViewMode("agenda");
+      // Give a small delay for the view to switch and the element to be rendered
+      setTimeout(() => {
+        const element = document.getElementById(`itinerary-item-${item.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    }
     setEditingItineraryId(item.id);
     const isAllDay = item.is_all_day || false;
     setItineraryDraft({
@@ -965,7 +975,11 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   // ─── renderItineraryItem (unchanged from original) ─────────────────────────
   const renderItineraryItem = (item: ItineraryItem) => (
-    <Card key={item.id} className={cn("group p-0 overflow-hidden transition-opacity", item.is_completed && "opacity-75")}>
+    <div key={item.id}>
+      <Card
+        id={`itinerary-item-${item.id}`}
+        className={cn("group p-0 overflow-hidden transition-opacity", item.is_completed && "opacity-75")}
+      >
       {getItineraryPhotoSrc(item.photo_url) && (
         <img src={getItineraryPhotoSrc(item.photo_url) ?? undefined} alt={item.title} className="w-full h-40 object-cover" />
       )}
@@ -1295,8 +1309,9 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             </button>
           </div>
         )}
-      </div>
-    </Card>
+        </div>
+      </Card>
+    </div>
   );
 
   const VIEW_OPTIONS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
@@ -1357,7 +1372,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 isDark={isDark}
                 onToggleCompleted={toggleCompleted}
                 onStartEdit={startEditItinerary}
-                onDelete={deleteItineraryItem}
+                onDelete={deleteItineraryItemHandler}
                 renderItem={renderItineraryItem}
               />
             </motion.div>
