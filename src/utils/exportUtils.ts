@@ -34,9 +34,8 @@ export function exportExpensesToCsv(
 
     const memberSplitAmounts = members.map(member => {
       const split = expense.splits?.find(s => s.member_id === member.id);
-      return split ? `"${split.amount.toFixed(2)}"` : `"0.00"`;
-    });
-
+      const splitAmountInDefaultCurrency = split ? convert(split.amount, expense.currency || defaultCurrency) : 0;
+      return `"${splitAmountInDefaultCurrency.toFixed(2)}"`;
     const row = [
       `"${expense.id}"`,
       `"${expense.description.replace(/"/g, '""')}"`,
