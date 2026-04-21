@@ -34,13 +34,31 @@ export default async function handler(req: any, res: any) {
 
   let upstreamResponse: any;
   try {
+    // Tenta primeiro com os filtros de moedas
     upstreamResponse = await fetch(`https://api.freecurrencyapi.com/v1/latest?${params.toString()}`);
+    
+    // Se der erro 422, tenta buscar todas as moedas sem filtro (mais seguro)
+    if (upstreamResponse.status === 422) {
+      params.delete("currencies");
+      upstreamResponse = await fetch(`https://api.freecurrencyapi.com/v1/latest?${params.toString()}`);
+    }
   } catch (error) {
     return json(res, 502, { error: "Failed to contact currency provider", details: String(error) });
   }
 
   const rawText = await upstreamResponse.text();
   if (!upstreamResponse.ok) {
+    // Se mesmo após o retry falhar com 422 ou outro erro,
+    // retornamos um objeto vazio com sucesso para não quebrar o app
+    if (upstreamResponse.status === 422 || upstreamResponse.status === 403) {
+      return json(res, 200, {
+        base: baseCurrency,
+        date: new Date().toISOString().split("T")[0],
+        rates: { [baseCurrency]: 1 },
+        warning: "Some currencies were not available"
+      });
+    }
+
     return json(res, upstreamResponse.status, {
       error: "Currency provider error",
       details: rawText,

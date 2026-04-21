@@ -18,7 +18,7 @@ interface CacheEntry {
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const CACHE_KEY = 'currency_exchange_rates';
 const API_URL = '/api/exchange-rates';
-const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'GBP', 'JPY', 'ARS', 'CLP', 'PYG'];
+const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'GBP', 'JPY'];
 
 class CurrencyService {
   private cache: Map<string, CacheEntry> = new Map();
@@ -95,8 +95,9 @@ class CurrencyService {
       const data: ExchangeRates = await response.json();
 
       // Defensive check in case API/proxy returns malformed payload
-      if (!data?.rates || Number(data.rates[apiBaseCurrency]) <= 0) {
-        throw new Error("Malformed exchange-rate payload");
+      // Note: Some APIs might not return the base currency in the rates object
+      if (!data?.rates || Object.keys(data.rates).length === 0) {
+        throw new Error("Malformed exchange-rate payload: no rates found");
       }
 
       // If requested base currency is not USD, convert the rates
