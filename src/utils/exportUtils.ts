@@ -52,5 +52,5 @@ export function exportExpensesToCsv(
     csvRows.push(row.join(","));
   }
 
-  return csvRows.join("\n");
+  return "\ufeff" + csvRows.join("\n");
 }
