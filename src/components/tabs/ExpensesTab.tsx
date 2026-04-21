@@ -822,21 +822,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           )}
 
           {/* Desktop table */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleExportExpenses}
-              className={cn(
-                "flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors",
-                settings.dark_mode
-                  ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
-              )}
-            >
-              <Download size={16} />
-              {t("expenses.exportCsv")}
-            </button>
-            <div className="w-full sm:w-72">
+          <div className="w-full sm:w-72">
               <label className={cn("mb-1 block text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
                 {t("expenses.sort.label")}
               </label>
@@ -856,7 +842,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 <option value="descriptionDesc">{t("expenses.sort.descriptionDesc")}</option>
               </select>
             </div>
-          </div>
 
           {/* Desktop table */}
           <Card className="p-0 overflow-hidden hidden md:block">
@@ -972,6 +957,19 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           )}
 
+          <button
+            type="button"
+            onClick={handleExportExpenses}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors",
+              settings.dark_mode
+                ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
+            )}
+          >
+            <Download size={16} />
+            {t("expenses.exportCsv")}
+          </button>
         </>
       )}
 
