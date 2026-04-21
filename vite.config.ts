@@ -15,6 +15,15 @@ export default defineConfig(() => {
       'import.meta.env.VITE_APP_BUILD': JSON.stringify(`${buildDate}.${buildTime}`),
     },
     plugins: [react(), tailwindcss()],
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+          rewrite: (path) => path,
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
