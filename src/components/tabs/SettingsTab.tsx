@@ -422,10 +422,6 @@ export function SettingsTab() {
                       <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
                         <div
                           className="flex-1"
-                          style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkSidebarActiveBg : palette.lightSidebarActiveBg }}
-                        />
-                        <div
-                          className="flex-1"
                           style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
                         />
                         <div
