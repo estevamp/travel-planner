@@ -114,4 +114,3 @@ export function formatDate(dateInput: string | Date, locale: LanguageCode = "pt-
 }
 
 export { exportExpensesToCsv } from "./exportUtils";
-export { formatDate };
