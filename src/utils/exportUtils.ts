@@ -1,5 +1,4 @@
 import type { ExpenseCategory, TripMember, ExpenseWithSplits } from "../types";
-import { formatCurrency } from "./index";
 
 export function exportExpensesToCsv(
   expenses: ExpenseWithSplits[],
@@ -36,6 +35,7 @@ export function exportExpensesToCsv(
       const split = expense.splits?.find(s => s.member_id === member.id);
       const splitAmountInDefaultCurrency = split ? convert(split.amount, expense.currency || defaultCurrency) : 0;
       return `"${splitAmountInDefaultCurrency.toFixed(2)}"`;
+    });
     const row = [
       `"${expense.id}"`,
       `"${expense.description.replace(/"/g, '""')}"`,
