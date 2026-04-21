@@ -100,4 +100,18 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+export function formatDate(dateInput: string | Date, locale: LanguageCode = "pt-BR", options?: Intl.DateTimeFormatOptions): string {
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) {
+    return ""; // Invalid date
+  }
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  };
+  return new Intl.DateTimeFormat(locale, { ...defaultOptions, ...options }).format(date);
+}
+
 export { exportExpensesToCsv } from "./exportUtils";
+export { formatDate };
