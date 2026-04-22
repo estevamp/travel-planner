@@ -9,6 +9,7 @@ import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
 import { Card } from "../Card";
 import { useI18n } from "../../i18n/I18nProvider";
+import { isIOS } from "../../utils";
 
 interface PeopleTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -34,32 +35,38 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const [addingGuest, setAddingGuest] = useState(false);
   const [invitingGuestId, setInvitingGuestId] = useState<string | null>(null);
   const [guestInviteEmail, setGuestInviteEmail] = useState("");
+  const [copyModalLink, setCopyModalLink] = useState<string | null>(null);
 
   const reload = async () => {
     if (reloadMembers) await reloadMembers();
     else await reloadTrip();
   };
 
-const createInvite = async () => {
-  const email = inviteEmail.trim().toLowerCase();
-  if (!email) return;
-  const firstTry = await supabase.rpc("create_trip_invite", { p_trip_id: tripId, p_email: email });
-  let inviteToken = firstTry.data as string | null;
-  let inviteError = firstTry.error;
-  if (!inviteToken && inviteError?.code === "PGRST202") {
-    const secondTry = await supabase.rpc("create_trip_invite", { trip_id: tripId, email });
-    inviteToken = secondTry.data as string | null;
-    inviteError = secondTry.error;
-  }
-  if (!inviteToken || inviteError) { toast(getErrorMessage(inviteError), "error"); return; }
-  const link = `${window.location.origin}/invite/${inviteToken}`;
-  setGeneratedLink(link);
-  setInviteEmail("");
-  // Sem setTimeout — copia direto enquanto ainda está no contexto do gesto
-  const copied = await copyToClipboard(link);
-  if (copied) toast(t("people.copyLinkSuccess"), "success");
-  reloadTrip();
-};
+  const createInvite = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) return;
+    const firstTry = await supabase.rpc("create_trip_invite", { p_trip_id: tripId, p_email: email });
+    let inviteToken = firstTry.data as string | null;
+    let inviteError = firstTry.error;
+    if (!inviteToken && inviteError?.code === "PGRST202") {
+      const secondTry = await supabase.rpc("create_trip_invite", { trip_id: tripId, email });
+      inviteToken = secondTry.data as string | null;
+      inviteError = secondTry.error;
+    }
+    if (!inviteToken || inviteError) { toast(getErrorMessage(inviteError), "error"); return; }
+    const link = `${window.location.origin}/invite/${inviteToken}`;
+    setGeneratedLink(link);
+    setInviteEmail("");
+    reloadTrip();
+
+    if (isIOS()) {
+      // iOS: não tenta copiar automaticamente, mostra modal
+      setCopyModalLink(link);
+    } else {
+      const copied = await copyToClipboard(link);
+      if (copied) toast(t("people.copyLinkSuccess"), "success");
+    }
+  };
 
   const cancelInvite = async (inviteId: string) => {
     const { error } = await supabase.rpc("cancel_trip_invite", { p_trip_id: tripId, p_invite_id: inviteId });
@@ -443,6 +450,47 @@ const createInvite = async () => {
               ))}
           </div>
         </Card>
+      )}
+      {copyModalLink && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setCopyModalLink(null)}
+        >
+          <div
+            className={cn(
+              "w-full max-w-md rounded-3xl p-6 space-y-4",
+              settings.dark_mode ? "bg-zinc-900" : "bg-white"
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-base">{t("people.copyLink")}</h3>
+            <p className="text-sm text-zinc-500">
+              Segure o link abaixo e toque em "Copiar":
+            </p>
+            <input
+              readOnly
+              value={copyModalLink}
+              ref={(el) => {
+                if (el) {
+                  el.focus();
+                  el.setSelectionRange(0, copyModalLink.length);
+                }
+              }}
+              className={cn(
+                "w-full px-3 py-3 rounded-xl border text-sm",
+                settings.dark_mode
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-200"
+                  : "bg-zinc-50 border-zinc-200 text-zinc-700"
+              )}
+            />
+            <button
+              onClick={() => setCopyModalLink(null)}
+              className="w-full py-3 rounded-2xl bg-zinc-900 text-white text-sm font-bold"
+            >
+              {t("common.close")}
+            </button>
+          </div>
+        </div>
       )}
     </motion.div>
   );

@@ -116,6 +116,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+export function isIOS(): boolean {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 export function formatDate(dateInput: string | Date, locale: LanguageCode = "pt-BR", options?: Intl.DateTimeFormatOptions): string {
   const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   if (isNaN(date.getTime())) {
