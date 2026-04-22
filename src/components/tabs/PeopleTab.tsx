@@ -40,24 +40,26 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     else await reloadTrip();
   };
 
-  const createInvite = async () => {
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email) return;
-    const firstTry = await supabase.rpc("create_trip_invite", { p_trip_id: tripId, p_email: email });
-    let inviteToken = firstTry.data as string | null;
-    let inviteError = firstTry.error;
-    if (!inviteToken && inviteError?.code === "PGRST202") {
-      const secondTry = await supabase.rpc("create_trip_invite", { trip_id: tripId, email });
-      inviteToken = secondTry.data as string | null;
-      inviteError = secondTry.error;
-    }
-    if (!inviteToken || inviteError) { toast(getErrorMessage(inviteError), "error"); return; }
-    const link = `${window.location.origin}/invite/${inviteToken}`;
-    setGeneratedLink(link);
-    setInviteEmail("");
-    setTimeout(async () => { if (await copyToClipboard(link)) toast(t("people.copyLinkSuccess"), "success"); }, 100);
-    reloadTrip();
-  };
+const createInvite = async () => {
+  const email = inviteEmail.trim().toLowerCase();
+  if (!email) return;
+  const firstTry = await supabase.rpc("create_trip_invite", { p_trip_id: tripId, p_email: email });
+  let inviteToken = firstTry.data as string | null;
+  let inviteError = firstTry.error;
+  if (!inviteToken && inviteError?.code === "PGRST202") {
+    const secondTry = await supabase.rpc("create_trip_invite", { trip_id: tripId, email });
+    inviteToken = secondTry.data as string | null;
+    inviteError = secondTry.error;
+  }
+  if (!inviteToken || inviteError) { toast(getErrorMessage(inviteError), "error"); return; }
+  const link = `${window.location.origin}/invite/${inviteToken}`;
+  setGeneratedLink(link);
+  setInviteEmail("");
+  // Sem setTimeout — copia direto enquanto ainda está no contexto do gesto
+  const copied = await copyToClipboard(link);
+  if (copied) toast(t("people.copyLinkSuccess"), "success");
+  reloadTrip();
+};
 
   const cancelInvite = async (inviteId: string) => {
     const { error } = await supabase.rpc("cancel_trip_invite", { p_trip_id: tripId, p_invite_id: inviteId });

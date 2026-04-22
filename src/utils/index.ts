@@ -76,26 +76,42 @@ export function parseCurrencyToNumber(value: string): number {
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
+  // Método moderno — funciona na maioria dos browsers com contexto seguro
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
       await navigator.clipboard.writeText(text);
       return true;
-    } else {
-      // Fallback for non-secure contexts or older browsers/iOS
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-9999px";
-      textArea.style.top = "0";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      const successful = document.execCommand("copy");
-      document.body.removeChild(textArea);
-      return successful;
+    } catch {
+      // Fallthrough para o método legado
     }
-  } catch (err) {
-    console.error("Failed to copy: ", err);
+  }
+
+  // Fallback legado — seleciona um textarea temporário
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.opacity = "0";
+    textArea.style.pointerEvents = "none";
+    textArea.setAttribute("readonly", ""); // evita teclado no mobile
+    document.body.appendChild(textArea);
+    
+    // iOS precisa de range + selection, não só .select()
+    const range = document.createRange();
+    range.selectNodeContents(textArea);
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    textArea.setSelectionRange(0, text.length);
+    
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return successful;
+  } catch {
     return false;
   }
 }
