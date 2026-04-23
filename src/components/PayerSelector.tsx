@@ -1,4 +1,4 @@
-import React from "react";
+import type { ChangeEvent } from "react";
 import { TripMember } from "../types";
 import { cn } from "../utils";
 
@@ -47,7 +47,7 @@ export function PayerSelector({
           <span className="text-sm font-semibold block required-indicator whitespace-nowrap">Outra pessoa:</span>
           <select
             value={isOtherPersonSelected ? selectedPayerId : ""}
-            onChange={(e) => onSelect(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => onSelect(e.target.value)}
             className={cn(
               "w-full flex-1 px-3 py-2 rounded-xl border-2",
               "text-sm font-medium",
