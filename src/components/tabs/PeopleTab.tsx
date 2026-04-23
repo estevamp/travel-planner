@@ -1,19 +1,141 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail, Heart, BadgeCheck } from "lucide-react";
+import { Trash2, Crown, Copy, Pencil, Check, X, UserX, Mail, Heart, BadgeCheck, Share2 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, copyToClipboard } from "../../utils";
 import type { Trip } from "../../types";
 import { Card } from "../Card";
 import { useI18n } from "../../i18n/I18nProvider";
-import { isIOS } from "../../utils";
 
 interface PeopleTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
   isOnline: boolean;
+}
+
+// Modal renderizado via portal para escapar de qualquer overflow/z-index pai
+function CopyLinkModal({
+  link,
+  isDark,
+  onClose,
+}: {
+  link: string;
+  isDark: boolean;
+  onClose: () => void;
+}) {
+  const canShare = typeof navigator.share === "function";
+
+  const handleShare = async () => {
+    try {
+      await navigator.share({ url: link });
+      onClose();
+    } catch {
+      // usuário cancelou — não faz nada
+    }
+  };
+
+  return createPortal(
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "1rem", paddingBottom: "calc(1rem + env(safe-area-inset-bottom))", backgroundColor: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 480,
+          borderRadius: 24,
+          padding: 24,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          backgroundColor: isDark ? "#18181b" : "#ffffff",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <p style={{ fontWeight: 700, fontSize: 16, margin: 0, color: isDark ? "#f4f4f5" : "#18181b" }}>
+            Link de convite gerado
+          </p>
+          <p style={{ fontSize: 13, margin: "4px 0 0", color: isDark ? "#a1a1aa" : "#71717a" }}>
+            {canShare
+              ? "Compartilhe o link pelo botão abaixo ou segure para copiar manualmente."
+              : "Segure o texto abaixo e toque em \"Copiar\"."}
+          </p>
+        </div>
+
+        <input
+          readOnly
+          value={link}
+          ref={(el) => {
+            if (el) {
+              // Pequeno delay para garantir que o DOM está pronto antes de selecionar
+              setTimeout(() => {
+                el.focus();
+                el.setSelectionRange(0, link.length);
+              }, 100);
+            }
+          }}
+          style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: 12,
+            border: `1px solid ${isDark ? "#3f3f46" : "#e4e4e7"}`,
+            backgroundColor: isDark ? "#27272a" : "#f4f4f5",
+            color: isDark ? "#d4d4d8" : "#3f3f46",
+            fontSize: 13,
+            boxSizing: "border-box",
+            userSelect: "all",
+            WebkitUserSelect: "all",
+          }}
+        />
+
+        {canShare && (
+          <button
+            onClick={handleShare}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: 16,
+              border: "none",
+              backgroundColor: "#2563eb",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <Share2 size={16} />
+            Compartilhar link
+          </button>
+        )}
+
+        <button
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: 16,
+            border: `1px solid ${isDark ? "#3f3f46" : "#e4e4e7"}`,
+            backgroundColor: "transparent",
+            color: isDark ? "#a1a1aa" : "#71717a",
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
@@ -42,6 +164,16 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     else await reloadTrip();
   };
 
+  // Tenta copiar; se falhar (ex: PWA iOS), abre o modal de compartilhamento
+  const copyOrShowModal = async (link: string) => {
+    const copied = await copyToClipboard(link);
+    if (copied) {
+      toast(t("people.copyLinkSuccess"), "success");
+    } else {
+      setCopyModalLink(link);
+    }
+  };
+
   const createInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
     if (!email) return;
@@ -58,14 +190,8 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     setGeneratedLink(link);
     setInviteEmail("");
     reloadTrip();
-
-    if (isIOS()) {
-      // iOS: não tenta copiar automaticamente, mostra modal
-      setCopyModalLink(link);
-    } else {
-      const copied = await copyToClipboard(link);
-      if (copied) toast(t("people.copyLinkSuccess"), "success");
-    }
+    // Sempre abre o modal — mais confiável em PWA/iOS que clipboard automático
+    setCopyModalLink(link);
   };
 
   const cancelInvite = async (inviteId: string) => {
@@ -136,11 +262,11 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     });
     if (error || !token) { toast(getErrorMessage(error), "error"); return; }
     const link = `${window.location.origin}/invite/${token}`;
-    await copyToClipboard(link);
-    toast(t("people.inviteLinkCopied"), "success");
     setInvitingGuestId(null);
     setGuestInviteEmail("");
     await reloadTrip();
+    // Abre modal em vez de tentar clipboard direto
+    setCopyModalLink(link);
   };
 
   const inputCls = cn(
@@ -248,10 +374,8 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                           <option value="">{t("people.noSpouse")}</option>
                           {members
                             .filter((m) => {
-                              if (m.id === member.id) return false; // não listar si mesmo
-                              // Permitir se já é o cônjuge atual (para manter a opção visível)
+                              if (m.id === member.id) return false;
                               if (m.id === spouseMemberId) return true;
-                              // Excluir quem já está vinculado a outro cônjuge
                               if (m.spouse_member_id && m.spouse_member_id !== member.id) return false;
                               return true;
                             })
@@ -419,7 +543,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                 )}
               />
               <button
-                onClick={() => copyToClipboard(generatedLink).then(() => toast(t("people.copyLinkSuccess"), "success"))}
+                onClick={() => copyOrShowModal(generatedLink)}
                 className="p-2 rounded-xl border border-[var(--sidebar-border)] text-zinc-400 hover:text-zinc-700 transition-colors"
                 title={t("people.copyLink")}
               >
@@ -451,46 +575,14 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
           </div>
         </Card>
       )}
+
+      {/* Modal de compartilhamento — renderizado via portal no document.body */}
       {copyModalLink && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setCopyModalLink(null)}
-        >
-          <div
-            className={cn(
-              "w-full max-w-md rounded-3xl p-6 space-y-4",
-              settings.dark_mode ? "bg-zinc-900" : "bg-white"
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-bold text-base">{t("people.copyLink")}</h3>
-            <p className="text-sm text-zinc-500">
-              Segure o link abaixo e toque em "Copiar":
-            </p>
-            <input
-              readOnly
-              value={copyModalLink}
-              ref={(el) => {
-                if (el) {
-                  el.focus();
-                  el.setSelectionRange(0, copyModalLink.length);
-                }
-              }}
-              className={cn(
-                "w-full px-3 py-3 rounded-xl border text-sm",
-                settings.dark_mode
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-200"
-                  : "bg-zinc-50 border-zinc-200 text-zinc-700"
-              )}
-            />
-            <button
-              onClick={() => setCopyModalLink(null)}
-              className="w-full py-3 rounded-2xl bg-zinc-900 text-white text-sm font-bold"
-            >
-              {t("common.close")}
-            </button>
-          </div>
-        </div>
+        <CopyLinkModal
+          link={copyModalLink}
+          isDark={settings.dark_mode}
+          onClose={() => setCopyModalLink(null)}
+        />
       )}
     </motion.div>
   );
