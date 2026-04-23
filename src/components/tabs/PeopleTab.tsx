@@ -189,9 +189,9 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
     const link = `${window.location.origin}/invite/${inviteToken}`;
     setGeneratedLink(link);
     setInviteEmail("");
-    reloadTrip();
     // Sempre abre o modal — mais confiável em PWA/iOS que clipboard automático
     setCopyModalLink(link);
+    reloadTrip();
   };
 
   const cancelInvite = async (inviteId: string) => {
