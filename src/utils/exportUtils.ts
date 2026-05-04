@@ -1,4 +1,4 @@
-import type { ExpenseCategory, TripMember, ExpenseWithSplits } from "../types";
+import type { ExpenseCategory, TripMember, ExpenseWithSplits, Settlement } from "../types";
 
 export function exportExpensesToCsv(
   expenses: ExpenseWithSplits[],
@@ -48,6 +48,44 @@ export function exportExpensesToCsv(
       `"${expense.visibility}"`,
       `"${expense.is_confirmed ? "Sim" : "Não"}"`,
       ...memberSplitAmounts,
+    ];
+    csvRows.push(row.join(","));
+  }
+
+  return "\ufeff" + csvRows.join("\n");
+}
+
+export function exportPaymentsToCsv(
+  settlements: Settlement[],
+  members: TripMember[],
+  defaultCurrency: string,
+  convert: (amount: number, fromCurrency: string) => number
+): string {
+  const headers = [
+    "ID",
+    "Quem Pagou",
+    "Quem Recebeu",
+    "Valor",
+    "Moeda",
+    "Data",
+    "Confirmado",
+  ];
+
+  const csvRows = [headers.join(",")];
+
+  for (const settlement of settlements) {
+    const payer = members.find((m) => m.id === settlement.from_member_id);
+    const receiver = members.find((m) => m.id === settlement.to_member_id);
+    const convertedAmount = convert(settlement.amount, settlement.currency || defaultCurrency);
+
+    const row = [
+      `"${settlement.id}"`,
+      `"${(payer?.display_name || "").replace(/"/g, '""')}"`,
+      `"${(receiver?.display_name || "").replace(/"/g, '""')}"`,
+      `"${convertedAmount.toFixed(2)}"`,
+      `"${defaultCurrency}"`,
+      `"${settlement.date}"`,
+      `"${settlement.is_confirmed ? "Sim" : "Não"}"`,
     ];
     csvRows.push(row.join(","));
   }
