@@ -28,7 +28,7 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
   const { trip, setTrip, tripId, currentMember, itineraryTypes, settings } = useTripContext();
   const { enqueue, isOnline } = deps;
 
-  const create = async ({ form, allDay, currency, onClose }: CreateItineraryParams) => {
+  const create = async ({ form, allDay, onClose }: CreateItineraryParams) => {
     if (!tripId || !currentMember) return;
 
     setIsSubmitting(true);

@@ -1,6 +1,4 @@
-import { Expense } from "./index";
-
-export type SplitType = "equal" | "unequal";
+import type { Expense, SplitType } from "./index";
 
 /**
  * Represents how an expense is split among participants

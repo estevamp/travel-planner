@@ -1,5 +1,4 @@
-import { TripMember } from "../types";
-import { CreateExpenseSplitInput, SplitType } from "../types/splitting";
+import type { CreateExpenseSplitInput, SplitType, TripMember } from "../types";
 import { calculateEqualSplits, validateUnequalSplits } from "../utils/splitting";
 import { useState, useEffect } from "react";
 import { cn, maskCurrency, parseCurrencyToNumber } from "../utils";

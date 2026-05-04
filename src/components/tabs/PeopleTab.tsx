@@ -343,10 +343,14 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
                           </span>
                         )}
                         {!isGuest && member.user_id && (
-                          <BadgeCheck size={14} className="text-blue-400 shrink-0" title={t("people.badges.linkedAccount")} />
+                          <span title={t("people.badges.linkedAccount")} aria-label={t("people.badges.linkedAccount")}>
+                            <BadgeCheck size={14} className="text-blue-400 shrink-0" />
+                          </span>
                         )}
                         {member.role === "admin" && (
-                          <Crown size={14} className="text-amber-400 opacity-80" title={t("people.badges.tripAdmin")} />
+                          <span title={t("people.badges.tripAdmin")} aria-label={t("people.badges.tripAdmin")}>
+                            <Crown size={14} className="text-amber-400 opacity-80" />
+                          </span>
                         )}
                         {(member.id === currentMember?.id || isAdmin) && (
                           <button

@@ -350,6 +350,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     description: string;
     category_id: string;
     amount: string;
+    currency: string;
     visibility: Visibility;
     is_confirmed: boolean;
     payment_date: string | null;
@@ -357,6 +358,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     description: "",
     category_id: "",
     amount: "0",
+    currency: settings.default_currency,
     visibility: "public",
     is_confirmed: false,
     payment_date: null,
@@ -541,6 +543,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               description,
               category_id: expenseDraft.category_id || null,
               amount: nextAmount,
+              currency: expenseDraft.currency || settings.default_currency,
               visibility: expenseDraft.visibility,
               is_confirmed: expenseDraft.is_confirmed,
               payment_date: expenseDraft.payment_date,
@@ -1239,7 +1242,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.currency")}</label>
-              <CurrencySelector value={editExpenseCurrency} onChange={setEditExpenseCurrency} isDark={settings.dark_mode} />
+              <CurrencySelector value={editExpenseCurrency} onChange={setEditExpenseCurrency} />
             </div>
           </div>
 

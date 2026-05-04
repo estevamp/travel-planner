@@ -9,13 +9,19 @@
  *   - iOS / outros: SyncManager ausente → fallback via evento "online" (no useOfflineQueue)
  */
 
+interface SyncManagerRegistration extends ServiceWorkerRegistration {
+  sync?: {
+    register: (tag: string) => Promise<void>;
+  };
+}
+
 export async function registerServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
 
   try {
     const registration = await navigator.serviceWorker.register("/sw.js", {
       scope: "/",
-    });
+    }) as SyncManagerRegistration;
 
     console.log("[SW] Registrado com sucesso:", registration.scope);
 
@@ -23,7 +29,7 @@ export async function registerServiceWorker(): Promise<void> {
     // (disponível apenas no Android Chrome / Chromium)
     if ("SyncManager" in window) {
       try {
-        await registration.sync.register("flush-queue");
+        await registration.sync?.register("flush-queue");
         console.log("[SW] Background Sync 'flush-queue' registrado");
       } catch (syncErr) {
         // Silencioso — o fallback via evento "online" está no useOfflineQueue
@@ -39,7 +45,7 @@ export async function registerServiceWorker(): Promise<void> {
         // Também re-registra o Background Sync ao retornar ao app
         // (cobre o caso de o app ter ficado em background por longo período)
         if ("SyncManager" in window) {
-          registration.sync.register("flush-queue").catch(() => {});
+          registration.sync?.register("flush-queue").catch(() => {});
         }
       }
     });

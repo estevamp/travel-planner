@@ -57,23 +57,26 @@ export function InvitePage({ session }: { session: Session | null }) {
   useEffect(() => {
     if (!session || !token || attempted || tripId) return;
     setAttempted(true);
-    setLoading(true);
-    setError(null);
-    supabase
-      .rpc("accept_trip_invite", { p_token: token })
-      .then(async ({ data, error: rpcError }) => {
+    const acceptInvite = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: rpcError } = await supabase.rpc("accept_trip_invite", { p_token: token });
         if (rpcError || !data) {
           setError(getErrorMessage(rpcError));
           return;
         }
         await supabase.auth.refreshSession();
-        setTripId(data as string);
-        if (tripId) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          window.location.href = `/trip/${tripId}`;
-        }
-      })
-      .finally(() => setLoading(false));
+        const acceptedTripId = data as string;
+        setTripId(acceptedTripId);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        window.location.href = `/trip/${acceptedTripId}`;
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void acceptInvite();
   }, [session, token, attempted, tripId]);
 
   if (!token)

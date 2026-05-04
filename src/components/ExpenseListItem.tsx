@@ -22,8 +22,10 @@ export interface ExpenseDraft {
   description: string;
   category_id: string;
   amount: string;
+  currency: string;
   visibility: "public" | "private";
   is_confirmed: boolean;
+  payment_date: string | null;
 }
 
 interface ExpenseListItemProps {
@@ -243,9 +245,13 @@ export function ExpenseListItem({
               <div className="flex items-center gap-2">
                 <p className="font-medium">{exp.description}</p>
                 {exp.is_confirmed ? (
-                  <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title={t("expenses.confirmed")} />
+                  <span title={t("expenses.confirmed")} aria-label={t("expenses.confirmed")}>
+                    <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
+                  </span>
                 ) : (
-                  <Circle size={14} className="text-zinc-400 flex-shrink-0" title={t("expenses.predicted")} />
+                  <span title={t("expenses.predicted")} aria-label={t("expenses.predicted")}>
+                    <Circle size={14} className="text-zinc-400 flex-shrink-0" />
+                  </span>
                 )}
               </div>
               <p className="text-xs text-zinc-400">
@@ -392,9 +398,13 @@ export function ExpenseListItem({
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-bold truncate">{exp.description}</h4>
               {exp.is_confirmed ? (
-                <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" title={t("expenses.confirmed")} />
+                <span title={t("expenses.confirmed")} aria-label={t("expenses.confirmed")}>
+                  <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
+                </span>
               ) : (
-                <Circle size={14} className="text-zinc-400 flex-shrink-0" title={t("expenses.predicted")} />
+                <span title={t("expenses.predicted")} aria-label={t("expenses.predicted")}>
+                  <Circle size={14} className="text-zinc-400 flex-shrink-0" />
+                </span>
               )}
             </div>
             <p className="text-xs text-zinc-400 mb-2">

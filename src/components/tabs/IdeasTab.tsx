@@ -177,7 +177,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     const confirmed = await confirm({
       title: t("ideas.convertTitle"),
       message: t("ideas.convertMessage", { title: idea.title }),
-      variant: 'primary',
+      variant: 'default',
       isDark: settings.dark_mode
     });
     if (!confirmed) return;

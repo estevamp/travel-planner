@@ -7,6 +7,7 @@ export interface ItineraryType {
 
 export type Visibility = "public" | "private";
 export type LanguageCode = "pt-BR" | "en";
+export type SplitType = "equal" | "unequal";
 export type ThemePalette =
   | "default"
   | "ocean"
@@ -77,6 +78,8 @@ export interface Expense {
   category?: ExpenseCategory | null;
   date: string;
   payment_date?: string | null;
+  paid_by_member_id?: string | null;
+  split_type?: SplitType | null;
   visibility: Visibility;
   is_confirmed: boolean;
 }
@@ -160,6 +163,7 @@ export interface TripSummary {
   id: string;
   name: string;
   destination: string;
+  theme_palette?: ThemePalette;
   created_at: string;
 }
 

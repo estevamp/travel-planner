@@ -66,6 +66,8 @@ export function useCreateExpense(deps: UseCreateExpenseDeps): UseCreateExpenseRe
         visibility,
         date: new Date().toISOString().split("T")[0],
         payment_date: paymentDate || null,
+        paid_by_member_id: payerId || currentMember.id,
+        split_type: splitType,
         category: category_id ? categories.find(c => c.id === category_id) || null : null,
         is_confirmed,
       };

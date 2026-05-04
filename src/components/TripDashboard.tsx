@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
@@ -94,7 +94,12 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   
   // Estado local apenas para UI
   const [activeTab, setActiveTab] = useState<ActiveTab>("itinerary");
-  const { startTour } = useTour(!!trip, setActiveTab);
+  const setKnownActiveTab = useCallback((tab: string) => {
+    if (isValidTab(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
+  const { startTour } = useTour(!!trip, setKnownActiveTab);
 
   const { enqueue, pendingCount, isSyncing, isOnline } = useOfflineQueue();
 
@@ -314,7 +319,9 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
                 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
                 {trip.name} {isAdmin && (
-                  <Crown size={14} className="md:hidden text-amber-400 opacity-80" title={t("dashboard.admin")} />
+                  <span title={t("dashboard.admin")} aria-label={t("dashboard.admin")}>
+                    <Crown size={14} className="md:hidden text-amber-400 opacity-80" />
+                  </span>
                 )} 
               </h2>
               <div className="flex items-center gap-1">
@@ -381,7 +388,9 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           </div>
           <div className="hidden md:flex items-center gap-2">
             {isAdmin && (
-              <Crown size={14} className="text-amber-400 opacity-80" title={t("dashboard.admin")} />
+              <span title={t("dashboard.admin")} aria-label={t("dashboard.admin")}>
+                <Crown size={14} className="text-amber-400 opacity-80" />
+              </span>
             )}
           </div>
         </header>
@@ -461,8 +470,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             transition={{ duration: 0.15 }}
           >
             {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
-            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
-            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} isOnline={isOnline}/>}
             {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} isOnline={isOnline}/>}
             {activeTab === "settings"  && <SettingsTab />}

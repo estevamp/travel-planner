@@ -110,6 +110,7 @@ export const ptBR = {
   "dashboard.noCategory": "Sem categoria",
   "dashboard.amount": "Valor",
   "dashboard.currency": "Moeda",
+  "dashboard.paymentDate": "Data de pagamento",
   "dashboard.markConfirmed": "Marcar como confirmada",
   "dashboard.publicRequiredForSplit": "Visibilidade definida pelo rateio",
   "dashboard.split": "Rateio",
@@ -357,7 +358,10 @@ export const ptBR = {
   "public.terms.section.contact.body": "Se precisar de ajuda ou quiser relatar algum problema, entre em contato pelo e-mail estevamp@gmail.com.",
 } as const;
 
-export const en: typeof ptBR = {
+export type TranslationKey = keyof typeof ptBR;
+type TranslationDictionary = Record<TranslationKey, string>;
+
+export const en: TranslationDictionary = {
   "app.name": "Partiu!",
   "common.loading": "Loading...",
   "common.saving": "Saving...",
@@ -465,6 +469,7 @@ export const en: typeof ptBR = {
   "dashboard.noCategory": "No category",
   "dashboard.amount": "Amount",
   "dashboard.currency": "Currency",
+  "dashboard.paymentDate": "Payment date",
   "dashboard.markConfirmed": "Mark as confirmed",
   "dashboard.publicRequiredForSplit": "Visibility defined by split",
   "dashboard.split": "Split",
@@ -714,6 +719,4 @@ export const en: typeof ptBR = {
 export const translations = {
   "pt-BR": ptBR,
   en,
-} satisfies Record<LanguageCode, typeof ptBR>;
-
-export type TranslationKey = keyof typeof ptBR;
+} satisfies Record<LanguageCode, TranslationDictionary>;
