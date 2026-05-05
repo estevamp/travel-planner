@@ -443,6 +443,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
     const csv = exportExpensesToCsv(
       expensesWithSplits,
+      settlements,
       members,
       categories,
       settings.default_currency,
