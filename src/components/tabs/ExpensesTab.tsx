@@ -1123,7 +1123,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               : "Cotação indisponível no momento"}
           </p>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1 mt-4">
           <p className={cn("text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
             Cotação atual BRL/EUR
           </p>
