@@ -76,14 +76,14 @@ export function exportExpensesToCsv(
     const payer = members.find((m) => m.id === settlement.from_member_id);
     const receiver = members.find((m) => m.id === settlement.to_member_id);
     const currency = settlement.currency || defaultCurrency;
-    const convertedAmount = convert(settlement.amount, currency);
+    const convertedAmount = convert(settlement.amount * -1, currency);
     const reportDate = settlement.date;
     const emptyMemberSplits = members.map(() => csvCell(""));
 
     const row = [
       csvCell(formatCsvDate(reportDate)),
       csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
-      csvCell(settlement.amount.toFixed(2)),
+      csvCell((settlement.amount * -1).toFixed(2)),
       csvCell(currency),
       csvCell(convertedAmount.toFixed(2)),
       csvCell(""),
