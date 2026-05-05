@@ -17,13 +17,12 @@ export function exportExpensesToCsv(
   const memberHeaders = members.map((m) => `Rateio (${m.display_name || ""})`);
 
   const headers = [
-    "ID",
+    "Data",
     "Descrição",
     "Valor",
     "Moeda",
     "Valor na Moeda Principal",
     "Categoria",
-    "Data",
     "Pago por",
     "Recebido por",
     "Criado Por",
@@ -49,19 +48,17 @@ export function exportExpensesToCsv(
       return csvCell(splitAmountInDefaultCurrency.toFixed(2));
     });
     const row = [
-      csvCell(expense.id),
+      csvCell(reportDate),
       csvCell(expense.description),
+      csvCell(paidByMember?.display_name || ""),
       csvCell(expense.amount.toFixed(2)),
       csvCell(expense.currency || defaultCurrency),
       csvCell(convertedAmount.toFixed(2)),
       csvCell(category?.name || ""),
-      csvCell(reportDate),
-      csvCell(paidByMember?.display_name || ""),
       csvCell(""),
       csvCell(createdByMember?.display_name || ""),
       csvCell(expense.visibility),
       csvCell(expense.is_confirmed ? "Sim" : "Não"),
-      csvCell(""),
       ...memberSplitAmounts,
     ];
     reportRows.push({ date: reportDate, order: 0, row });
@@ -72,25 +69,24 @@ export function exportExpensesToCsv(
     const receiver = members.find((m) => m.id === settlement.to_member_id);
     const currency = settlement.currency || defaultCurrency;
     const convertedAmount = convert(settlement.amount, currency);
+    const reportDate = settlement.date;
     const emptyMemberSplits = members.map(() => csvCell(""));
 
     const row = [
-      csvCell(settlement.id),
-      csvCell(""),
+      csvCell(reportDate),
+      csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
+      csvCell(payer?.display_name || ""),
       csvCell(settlement.amount.toFixed(2)),
       csvCell(currency),
       csvCell(convertedAmount.toFixed(2)),
       csvCell(""),
-      csvCell(settlement.date),
-      csvCell(payer?.display_name || ""),
       csvCell(receiver?.display_name || ""),
       csvCell(""),
       csvCell(""),
       csvCell(settlement.is_confirmed ? "Sim" : "Não"),
-      csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
       ...emptyMemberSplits,
     ];
-    reportRows.push({ date: settlement.date, order: 1, row });
+    reportRows.push({ date: reportDate, order: 1, row });
   }
 
   reportRows
