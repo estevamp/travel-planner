@@ -24,6 +24,8 @@ export function exportExpensesToCsv(
     "Valor na Moeda Principal",
     "Categoria",
     "Data",
+    "Pago por",
+    "Recebido por",
     "Criado Por",
     "Visibilidade",
     "Confirmado",
@@ -36,6 +38,7 @@ export function exportExpensesToCsv(
 
   for (const expense of expenses) {
     const createdByMember = members.find((m) => m.id === expense.created_by_member_id);
+    const paidByMember = members.find((m) => m.id === expense.paid_by_member_id);
     const category = categories.find((c) => c.id === expense.category_id);
     const convertedAmount = convert(expense.amount, expense.currency || defaultCurrency);
     const reportDate = expense.payment_date || expense.date;
@@ -53,6 +56,8 @@ export function exportExpensesToCsv(
       csvCell(convertedAmount.toFixed(2)),
       csvCell(category?.name || ""),
       csvCell(reportDate),
+      csvCell(paidByMember?.display_name || ""),
+      csvCell(""),
       csvCell(createdByMember?.display_name || ""),
       csvCell(expense.visibility),
       csvCell(expense.is_confirmed ? "Sim" : "Não"),
@@ -77,6 +82,8 @@ export function exportExpensesToCsv(
       csvCell(convertedAmount.toFixed(2)),
       csvCell(""),
       csvCell(settlement.date),
+      csvCell(payer?.display_name || ""),
+      csvCell(receiver?.display_name || ""),
       csvCell(""),
       csvCell(""),
       csvCell(settlement.is_confirmed ? "Sim" : "Não"),
