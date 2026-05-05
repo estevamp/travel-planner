@@ -37,10 +37,8 @@ export function exportExpensesToCsv(
     "Categoria",
     "Pago por",
     "Recebido por",
-    "Criado Por",
     "Visibilidade",
     "Confirmado",
-    "Acerto",
     ...memberHeaders,
   ];
 
@@ -48,7 +46,6 @@ export function exportExpensesToCsv(
   const reportRows: Array<{ date: string; order: number; row: string[] }> = [];
 
   for (const expense of expenses) {
-    const createdByMember = members.find((m) => m.id === expense.created_by_member_id);
     const paidByMember = members.find((m) => m.id === expense.paid_by_member_id);
     const category = categories.find((c) => c.id === expense.category_id);
     const convertedAmount = convert(expense.amount, expense.currency || defaultCurrency);
@@ -68,10 +65,8 @@ export function exportExpensesToCsv(
       csvCell(category?.name || ""),
       csvCell(paidByMember?.display_name || ""),
       csvCell(""),
-      csvCell(createdByMember?.display_name || ""),
       csvCell(expense.visibility),
       csvCell(expense.is_confirmed ? "Sim" : "Não"),
-      csvCell(""),
       ...memberSplitAmounts,
     ];
     reportRows.push({ date: reportDate, order: 0, row });
@@ -87,7 +82,7 @@ export function exportExpensesToCsv(
 
     const row = [
       csvCell(formatCsvDate(reportDate)),
-      csvCell(""),
+      csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
       csvCell(settlement.amount.toFixed(2)),
       csvCell(currency),
       csvCell(convertedAmount.toFixed(2)),
@@ -95,9 +90,7 @@ export function exportExpensesToCsv(
       csvCell(payer?.display_name || ""),
       csvCell(receiver?.display_name || ""),
       csvCell(""),
-      csvCell(""),
       csvCell(settlement.is_confirmed ? "Sim" : "Não"),
-      csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
       ...emptyMemberSplits,
     ];
     reportRows.push({ date: reportDate, order: 1, row });
