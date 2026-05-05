@@ -127,8 +127,7 @@ export function BalancesSummary({
       setPaymentAmount("");
       return;
     }
-    const paidAmount = getSettlementsForTransfer(t).reduce((sum, settlement) => sum + settlement.amount, 0);
-    const remaining = Math.max(0, t.amount - paidAmount);
+    const remaining = Math.max(0, t.amount);
     setOpenPaymentKey(key);
     setExpandedHistoryKey(null);
     setPaymentAmount(maskCurrency(Math.round(Math.max(remaining, 0) * 100).toFixed(0), language));
@@ -242,7 +241,7 @@ export function BalancesSummary({
             const pairSettlements = getSettlementsForTransfer(transfer);
             const hasPastPayments = pairSettlements.length > 0;
             const paidAmount = pairSettlements.reduce((sum, s) => sum + s.amount, 0);
-            const remaining = Math.max(0, transfer.amount - paidAmount);
+            const remaining = Math.max(0, transfer.amount);
 
             // Se é um grupo casal, mostra um badge indicando isso
             const isFromCouple = transfer.from_member_ids.length > 1;
