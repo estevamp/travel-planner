@@ -692,6 +692,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     .filter(expense => expense.is_confirmed)
     .reduce((total, expense) => total + expense.userAmount, 0);
   const predictedTotal = convertedExpenses.reduce((total, expense) => total + expense.userAmount, 0);
+
   const brlPerUsd = useMemo(() => {
     const brlRate = Number(exchangeRates.BRL);
     const usdRate = Number(exchangeRates.USD);
@@ -701,6 +702,17 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     }
     return null;
   }, [exchangeRates]);
+
+  const brlPerEur = useMemo(() => {
+    const brlRate = Number(exchangeRates.BRL);
+    const eurRate = Number(exchangeRates.EUR);
+    if (brlRate > 0 && eurRate > 0) {
+      const quote = brlRate / eurRate;
+      return Number.isFinite(quote) ? quote : null;
+    }
+    return null;
+  }, [exchangeRates]);
+
   const budgetLimit = Math.max(0, Number(tripBudget?.budget_limit) || 0);
   const confirmedProgress = budgetLimit > 0 ? Math.min((confirmedTotal / budgetLimit) * 100, 100) : 0;
   const predictedProgress = budgetLimit > 0 ? Math.min((predictedTotal / budgetLimit) * 100, 100) : 0;
@@ -1111,6 +1123,16 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               : "Cotação indisponível no momento"}
           </p>
         </div>
+        <div className="space-y-1">
+          <p className={cn("text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+            Cotação atual BRL/EUR
+          </p>
+          <p className={cn("text-sm", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
+            {brlPerEur
+              ? `1 EUR = ${formatCurrency(brlPerEur, "BRL")} · 1 BRL = ${formatCurrency(1 / brlPerEur, "EUR")}`
+              : "Cotação indisponível no momento"}
+          </p>
+        </div>        
       </Card>
 
       <FloatingActionButton onClick={onOpenModal} />
