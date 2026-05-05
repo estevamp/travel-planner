@@ -14,6 +14,18 @@ export function exportExpensesToCsv(
     const parsed = Date.parse(value);
     return Number.isNaN(parsed) ? 0 : parsed;
   };
+  const formatCsvDate = (value: string) => {
+    if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
   const memberHeaders = members.map((m) => `Rateio (${m.display_name || ""})`);
 
   const headers = [
@@ -48,17 +60,18 @@ export function exportExpensesToCsv(
       return csvCell(splitAmountInDefaultCurrency.toFixed(2));
     });
     const row = [
-      csvCell(reportDate),
+      csvCell(formatCsvDate(reportDate)),
       csvCell(expense.description),
-      csvCell(paidByMember?.display_name || ""),
       csvCell(expense.amount.toFixed(2)),
       csvCell(expense.currency || defaultCurrency),
       csvCell(convertedAmount.toFixed(2)),
       csvCell(category?.name || ""),
+      csvCell(paidByMember?.display_name || ""),
       csvCell(""),
       csvCell(createdByMember?.display_name || ""),
       csvCell(expense.visibility),
       csvCell(expense.is_confirmed ? "Sim" : "Não"),
+      csvCell(""),
       ...memberSplitAmounts,
     ];
     reportRows.push({ date: reportDate, order: 0, row });
@@ -73,17 +86,18 @@ export function exportExpensesToCsv(
     const emptyMemberSplits = members.map(() => csvCell(""));
 
     const row = [
-      csvCell(reportDate),
-      csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
-      csvCell(payer?.display_name || ""),
+      csvCell(formatCsvDate(reportDate)),
+      csvCell(""),
       csvCell(settlement.amount.toFixed(2)),
       csvCell(currency),
       csvCell(convertedAmount.toFixed(2)),
       csvCell(""),
+      csvCell(payer?.display_name || ""),
       csvCell(receiver?.display_name || ""),
       csvCell(""),
       csvCell(""),
       csvCell(settlement.is_confirmed ? "Sim" : "Não"),
+      csvCell(`${payer?.display_name || ""} pagou ${receiver?.display_name || ""}`.trim()),
       ...emptyMemberSplits,
     ];
     reportRows.push({ date: reportDate, order: 1, row });
