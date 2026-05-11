@@ -9,6 +9,8 @@ import { getThemeStyles } from "../utils/theme";
 import { getErrorMessage } from "../utils";
 import { useToast } from "../hooks/useToast";
 import { useI18n, usePageTitle } from "../i18n/I18nProvider";
+import { FirstTripOnboarding } from "./onboarding/FirstTripOnboarding";
+import { getOnboardingState, markFirstTripCreated, skipOnboarding } from "../utils/onboarding";
 
 export function LandingPage({
   session,
@@ -32,6 +34,7 @@ export function LandingPage({
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [onboardingState, setOnboardingState] = useState(() => getOnboardingState());
 
   usePageTitle(t("app.name"));
 
@@ -51,23 +54,44 @@ export function LandingPage({
     void loadTrips();
   }, []);
 
-  const createTrip = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const createTripWithData = async (data: { name: string; destination: string }) => {
     setCreating(true);
     const now = new Date().toISOString();
-    const { data, error } = await supabase.rpc("create_trip_with_admin", {
-      p_name: name.trim(),
-      p_destination: destination.trim(),
+    const { data: tripId, error } = await supabase.rpc("create_trip_with_admin", {
+      p_name: data.name.trim(),
+      p_destination: data.destination.trim(),
       p_start: now,
       p_end: now,
     });
     setCreating(false);
-    if (error || !data) {
+    if (error || !tripId) {
       toast(getErrorMessage(error) || t("landing.createTripError"), 'error');
       return;
     }
-    navigate(`/trip/${data}`);
+    const shouldContinueOnboarding = trips.length === 0 && !onboardingState.skippedAt;
+    if (shouldContinueOnboarding) {
+      setOnboardingState(markFirstTripCreated(tripId));
+      navigate(`/trip/${tripId}?onboarding=activity`);
+      return;
+    }
+
+    navigate(`/trip/${tripId}`);
   };
+
+  const createTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createTripWithData({ name, destination });
+  };
+
+  if (!loadingTrips && trips.length === 0 && !onboardingState.skippedAt) {
+    return (
+      <FirstTripOnboarding
+        creating={creating}
+        onCreate={createTripWithData}
+        onSkip={() => setOnboardingState(skipOnboarding())}
+      />
+    );
+  }
 
   return (
     <div

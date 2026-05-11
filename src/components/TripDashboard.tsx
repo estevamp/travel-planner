@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -39,6 +39,7 @@ import { PayerSelector } from "./PayerSelector";
 import { SplitSelector } from "./SplitSelector";
 import { CreateTripModal } from "./CreateTripModal";
 import { useI18n } from "../i18n/I18nProvider";
+import { getOnboardingState, markFirstActivityCreated, markFirstActivityStarted, skipOnboarding } from "../utils/onboarding";
 
 interface TripDashboardProps {
   session: Session;
@@ -81,6 +82,7 @@ interface TripDashboardContentProps {
 
 function TripDashboardContent({ session }: TripDashboardContentProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t, language } = useI18n();
   
   // Get data from context
@@ -99,7 +101,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
       setActiveTab(tab);
     }
   }, []);
-  const { startTour } = useTour(!!trip, setKnownActiveTab);
+  const isActivityOnboardingRoute = searchParams.get("onboarding") === "activity";
+  const { startTour } = useTour(!!trip && !isActivityOnboardingRoute, setKnownActiveTab);
 
   const { enqueue, pendingCount, isSyncing, isOnline } = useOfflineQueue();
 
@@ -142,6 +145,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
+  const [onboardingState, setOnboardingState] = useState(() => getOnboardingState());
+  const [showFirstActivitySuccess, setShowFirstActivitySuccess] = useState(false);
 
   // Custom hooks para CRUD
   const { create: createItinerary, isSubmitting: isSubmittingItinerary } = useCreateItinerary({
@@ -179,6 +184,36 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     return getThemeStyles({ ...settings, theme_palette: effectivePalette });
   }, [settings, trip?.theme_palette]);
 
+  const isFirstActivityOnboardingActive =
+    searchParams.get("onboarding") === "activity" &&
+    trip.itinerary.length === 0 &&
+    !onboardingState.firstActivityCreated &&
+    !onboardingState.skippedAt;
+
+  useEffect(() => {
+    if (isFirstActivityOnboardingActive && activeTab !== "itinerary") {
+      setActiveTab("itinerary");
+    }
+  }, [activeTab, isFirstActivityOnboardingActive]);
+
+  useEffect(() => {
+    if (!showFirstActivitySuccess) return;
+    const timeout = window.setTimeout(() => setShowFirstActivitySuccess(false), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [showFirstActivitySuccess]);
+
+  const clearActivityOnboardingParam = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("onboarding");
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const handleSkipFirstActivityOnboarding = useCallback(() => {
+    setOnboardingState(skipOnboarding());
+    setShowFirstActivitySuccess(false);
+    clearActivityOnboardingParam();
+  }, [clearActivityOnboardingParam]);
+
   // Modal helpers
   const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
     setModalType(type);
@@ -195,6 +230,11 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     }
   };
 
+  const openFirstActivityModal = () => {
+    setOnboardingState(markFirstActivityStarted());
+    openModal("itinerary");
+  };
+
   const closeModal = () => {
     setShowAddModal(false);
     setModalType(null);
@@ -208,10 +248,18 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
 
   // Wrappers para os hooks (adaptam as chamadas dos modais)
   const handleCreateItinerary = async (form: FormData) => {
+    const shouldCompleteOnboarding = isFirstActivityOnboardingActive;
     await createItinerary({
       form,
       allDay: itineraryAllDay,
-      onClose: closeModal,
+      onClose: () => {
+        closeModal();
+        if (shouldCompleteOnboarding) {
+          setOnboardingState(markFirstActivityCreated());
+          setShowFirstActivitySuccess(true);
+          clearActivityOnboardingParam();
+        }
+      },
     });
   };
 
@@ -469,7 +517,17 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "itinerary" && (
+              <ItineraryTab
+                onOpenModal={isFirstActivityOnboardingActive ? openFirstActivityModal : () => openModal('itinerary')}
+                onTripUpdate={setTrip}
+                isOnline={isOnline}
+                enqueue={enqueue}
+                isOnboardingFirstActivity={isFirstActivityOnboardingActive && !showAddModal && !onboardingState.firstActivityStarted}
+                showOnboardingSuccess={showFirstActivitySuccess}
+                onSkipFirstActivityOnboarding={handleSkipFirstActivityOnboarding}
+              />
+            )}
             {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} isOnline={isOnline}/>}

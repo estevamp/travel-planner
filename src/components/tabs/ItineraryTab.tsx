@@ -15,6 +15,7 @@ import type { Trip, ItineraryItem, Visibility } from "../../types";
 import { DOCS_BUCKET } from "../../constants";
 import { Card } from "../Card";
 import { FloatingActionButton } from "../FloatingActionButton";
+import { FirstActivityHint } from "../onboarding/FirstActivityHint";
 import { ACTIVITY_ICON_COMPONENTS } from "../../constants/icons";
 import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
@@ -33,6 +34,9 @@ interface ItineraryTabProps {
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
   isOnline: boolean;
 enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
+  isOnboardingFirstActivity?: boolean;
+  showOnboardingSuccess?: boolean;
+  onSkipFirstActivityOnboarding?: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -699,7 +703,15 @@ function TimelineView({ items, isDark, onStartEdit, onDelete, renderItem }: Time
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: ItineraryTabProps) {
+export function ItineraryTab({
+  onOpenModal,
+  onTripUpdate,
+  isOnline,
+  enqueue,
+  isOnboardingFirstActivity = false,
+  showOnboardingSuccess = false,
+  onSkipFirstActivityOnboarding,
+}: ItineraryTabProps) {
   const { trip, tripId, currentMember, settings, itineraryTypes, members } = useTripContext();
   const { t } = useI18n();
   const { toast } = useToast();
@@ -1425,7 +1437,20 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
         )}
       </div>
 
-      <FloatingActionButton onClick={onOpenModal} />
+      <AnimatePresence>
+        {(isOnboardingFirstActivity || showOnboardingSuccess) && (
+          <FirstActivityHint
+            success={showOnboardingSuccess}
+            onSkip={onSkipFirstActivityOnboarding ?? (() => undefined)}
+          />
+        )}
+      </AnimatePresence>
+
+      <FloatingActionButton
+        onClick={onOpenModal}
+        position={isOnboardingFirstActivity ? "bottom-center" : "bottom-right"}
+        className={isOnboardingFirstActivity ? "ring-8 ring-white/90" : undefined}
+      />
       {ConfirmDialogNode}
 
       <VisibilityBottomSheet
