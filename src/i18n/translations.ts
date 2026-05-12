@@ -4,6 +4,7 @@ export const DEFAULT_LANGUAGE: LanguageCode = "pt-BR";
 
 export const ptBR = {
   "app.name": "Partiu!",
+  "app.loading": "Carregando app...",
   "common.loading": "Carregando...",
   "common.saving": "Salvando...",
   "common.create": "Criar",
@@ -363,6 +364,7 @@ type TranslationDictionary = Record<TranslationKey, string>;
 
 export const en: TranslationDictionary = {
   "app.name": "Partiu!",
+  "app.loading": "Loading app...",
   "common.loading": "Loading...",
   "common.saving": "Saving...",
   "common.create": "Create",
