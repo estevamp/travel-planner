@@ -9,7 +9,7 @@ import { getThemeStyles } from "../utils/theme";
 import { useSwipeTabs } from "../hooks/useSwipeTabs";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
 import { SyncIndicator } from "./SyncIndicator";
-import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType } from "../types";
+import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType, Visibility } from "../types";
 
 // Context
 import { TripProvider, useTripContext } from "../context/TripContext";
@@ -159,6 +159,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
 
   // Feature: Dia Todo (All Day)
   const [itineraryAllDay, setItineraryAllDay] = useState(false);
+  const [itineraryVisibility, setItineraryVisibility] = useState<Visibility>("public");
   
   // Moedas para cada formulário
   const [itineraryCurrency, setItineraryCurrency] = useState(settings.default_currency);
@@ -185,6 +186,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     setShowAddModal(true);
     if (type === 'itinerary') {
       setItineraryAllDay(false);
+      setItineraryVisibility("public");
     }
     if (type === 'expense' && currentMember) {
       // Inicializar pagador como o usuário atual
@@ -199,6 +201,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
     setShowAddModal(false);
     setModalType(null);
     setItineraryAllDay(false);
+    setItineraryVisibility("public");
     // Resetar estados de rateio
     setExpensePayerId("");
     setExpenseSplits([]);
@@ -509,20 +512,40 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             ))}
           </select>
 
-          <div className="flex items-center gap-2 px-1">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                name="visibility"
-                value="private"
-                disabled={isSubmittingItinerary}
-                className="rounded border-zinc-300 text-[var(--sidebar-active-bg)] focus:ring-[var(--sidebar-active-bg)]"
-              />
-              <div className="flex items-center gap-1.5 text-zinc-600">
-                <Lock size={14} />
-                <span>{t("dashboard.privateWithSpouse")}</span>
-              </div>
-            </label>
+          <input type="hidden" name="visibility" value={itineraryVisibility} />
+
+          <div
+            className={cn(
+              "grid grid-cols-2 gap-1 rounded-xl border p-1",
+              settings.dark_mode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+            )}
+          >
+            {(["public", "private"] as const).map((visibility) => {
+              const active = itineraryVisibility === visibility;
+              const Icon = visibility === "public" ? Users : Lock;
+              return (
+                <button
+                  key={visibility}
+                  type="button"
+                  disabled={isSubmittingItinerary}
+                  onClick={() => setItineraryVisibility(visibility)}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    active
+                      ? settings.dark_mode
+                        ? "bg-zinc-700 text-white"
+                        : "bg-white text-zinc-900 shadow-sm"
+                      : settings.dark_mode
+                      ? "text-zinc-400 hover:text-zinc-200"
+                      : "text-zinc-500 hover:text-zinc-700"
+                  )}
+                  aria-pressed={active}
+                >
+                  <Icon size={13} />
+                  {visibility === "public" ? t("common.public") : t("common.private")}
+                </button>
+              );
+            })}
           </div>
           
           <div className="space-y-1">
