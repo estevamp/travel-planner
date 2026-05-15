@@ -728,7 +728,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   // Edit state
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
-  const [savingItinerary, setSavingItinerary] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [itineraryDraft, setItineraryDraft] = useState<{
     type_id: string | null;
@@ -1030,6 +1029,38 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 placeholder="Local"
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
               />
+              <div
+                className={cn(
+                  "grid grid-cols-2 gap-1 rounded-xl border p-1",
+                  isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+                )}
+              >
+                {(["public", "private"] as const).map((visibility) => {
+                  const active = itineraryDraft.visibility === visibility;
+                  const Icon = visibility === "public" ? Users : Lock;
+                  return (
+                    <button
+                      key={visibility}
+                      type="button"
+                      onClick={() => setItineraryDraft((cur) => ({ ...cur, visibility }))}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors",
+                        active
+                          ? isDark
+                            ? "bg-zinc-700 text-white"
+                            : "bg-white text-zinc-900 shadow-sm"
+                          : isDark
+                          ? "text-zinc-400 hover:text-zinc-200"
+                          : "text-zinc-500 hover:text-zinc-700"
+                      )}
+                      aria-pressed={active}
+                    >
+                      <Icon size={13} />
+                      {visibility === "public" ? t("common.public") : t("common.private")}
+                    </button>
+                  );
+                })}
+              </div>
               <label className="flex items-center gap-2 text-xs">
                 <input
                   type="checkbox"
@@ -1144,11 +1175,11 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => void saveItineraryEdit(item.id)}
-                  disabled={savingItinerary}
+                  disabled={isUpdatingItinerary}
                   className="flex-1 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-50"
                   style={{ backgroundColor: "var(--accent-color)" }}
                 >
-                  {savingItinerary ? "Salvando…" : "Salvar"}
+                  {isUpdatingItinerary ? "Salvando…" : "Salvar"}
                 </button>
                 <button
                   onClick={() => setEditingItineraryId(null)}
