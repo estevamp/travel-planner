@@ -1,8 +1,56 @@
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
+*.class
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Dependencies
 node_modules/
-build/
-dist/
-coverage/
-.DS_Store
+venv/
+.venv/
+.env
+.env.local
+.env.*
+
+# Logs and temp files
 *.log
-.env*
-!.env.example
+*.tmp
+*.swp
+*.swo
+
+# Editors
+.vscode/
+.idea/
+
+# Build outputs
+dist/
+build/
+target/
+*.tar
+*.gz
+*.zip
+*.rar
+*.7z
+*.bz2
+*.xz
+*.tgz
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+```

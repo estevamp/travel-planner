@@ -48,6 +48,7 @@ export interface ItineraryItem {
   title: string;
   description: string;
   location: string;
+  url?: string | null;
   start_time: string | null;
   end_time: string | null;
   is_all_day?: boolean;

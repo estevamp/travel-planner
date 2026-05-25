@@ -10,6 +10,7 @@ interface UpdateItineraryParams {
   title: string;
   description: string;
   location: string;
+  url: string;
   visibility: "public" | "private";
   start_time: string | null;
   end_time: string | null;

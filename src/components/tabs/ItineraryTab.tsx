@@ -734,6 +734,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     title: string;
     description: string;
     location: string;
+    url: string;
     visibility: Visibility;
     start_time: string;
     end_time: string;
@@ -743,6 +744,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     title: "",
     description: "",
     location: "",
+    url: "",
     visibility: "public",
     start_time: "",
     end_time: "",
@@ -833,6 +835,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       title: item.title,
       description: item.description || "",
       location: item.location || "",
+      url: item.url || "",
       visibility: item.visibility,
       start_time: item.start_time
         ? isAllDay
@@ -878,6 +881,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               title,
               description: itineraryDraft.description.trim(),
               location: itineraryDraft.location.trim(),
+              url: itineraryDraft.url.trim(),
               visibility: itineraryDraft.visibility,
               start_time,
               end_time,
@@ -893,6 +897,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       title,
       description: itineraryDraft.description.trim(),
       location: itineraryDraft.location.trim(),
+      url: itineraryDraft.url.trim(),
       visibility: itineraryDraft.visibility,
       start_time,
       end_time,
@@ -1027,6 +1032,12 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 value={itineraryDraft.location}
                 onChange={(e) => setItineraryDraft((cur) => ({ ...cur, location: e.target.value }))}
                 placeholder="Local"
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
+              />
+              <input
+                value={itineraryDraft.url}
+                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, url: e.target.value }))}
+                placeholder="URL"
                 className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
               />
               <div
@@ -1206,6 +1217,16 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 <p className={cn("text-xs mt-1 flex items-center gap-1", isDark ? "text-zinc-500" : "text-zinc-400")}>
                   <MapPin size={10} /> {item.location}
                 </p>
+              )}
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn("text-xs mt-1 inline-flex items-center gap-1 hover:underline", isDark ? "text-zinc-400" : "text-zinc-500")}
+                >
+                  {item.url}
+                </a>
               )}
 
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">

@@ -39,6 +39,7 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
       const type_id = (form.get("type_id") as string) || null;
       const description = (form.get("description") as string) || "";
       const location = (form.get("location") as string) || "";
+      const url = (form.get("url") as string) || "";
 
       // Handle all-day events
       let start_time: string | null = null;
@@ -75,6 +76,7 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
         title,
         description,
         location,
+        url: url || null,
         start_time,
         end_time,
         is_all_day: allDay,
@@ -104,6 +106,7 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
         title,
         description,
         location,
+        url: url || null,
         start_time,
         end_time,
         is_all_day: allDay,
@@ -129,6 +132,7 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
         title,
         description,
         location,
+        url: url || null,
         start_time,
         end_time,
         is_all_day: allDay,
