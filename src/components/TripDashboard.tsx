@@ -573,6 +573,18 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
               )}
             />
           </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL</label>
+            <input
+              name="url"
+              disabled={isSubmittingItinerary}
+              placeholder="https://example.com"
+              className={cn(
+                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+              )}
+            />
+          </div>
           
           <label className="flex items-center gap-2 text-sm">
             <input 
