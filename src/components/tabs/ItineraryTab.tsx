@@ -4,10 +4,10 @@ import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
   ChevronDown, ChevronRight, MapPin, Lock, Users,
-  AlignLeft, Clock, ImagePlus,
+  AlignLeft, Clock, ImagePlus, Download,
 } from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage } from "../../utils";
+import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../../utils";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -761,6 +761,30 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   const isDark = settings.dark_mode;
 
+  const handleExportPdf = () => {
+    if (!trip || !members || !settings) {
+      toast(t("itinerary.exportError"), "error");
+      return;
+    }
+
+    try {
+      exportItineraryToPdf(
+        trip.name,
+        trip.destination,
+        trip.start_date,
+        trip.end_date,
+        trip.itinerary,
+        itineraryTypes,
+        members,
+        settings.language_code,
+        settings.default_currency
+      );
+      toast(t("itinerary.exportSuccess"), "success");
+    } catch (err) {
+      toast(getErrorMessage(err), "error");
+    }
+  };
+
   useEffect(() => {
     const privatePhotoPaths = trip.itinerary
       .map((item) => item.photo_url)
@@ -1379,34 +1403,49 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       exit={{ opacity: 0, y: -10 }}
       className="space-y-6"
     >
-      {/* ── View switcher ── */}
-      <div
-        className={cn(
-          "flex gap-1 p-1 rounded-xl w-fit",
-          isDark ? "bg-zinc-800" : "bg-zinc-100"
-        )}
-      >
-        {VIEW_OPTIONS.map((opt) => {
-          const isActive = viewMode === opt.id;
-          return (
-            <button
-              key={opt.id}
-              onClick={() => setViewMode(opt.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                isActive
-                  ? "text-white shadow-sm"
-                  : isDark
-                  ? "text-zinc-500 hover:text-zinc-300"
-                  : "text-zinc-500 hover:text-zinc-700"
-              )}
-              style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          );
-        })}
+      {/* ── Header with view switcher and export button ── */}
+      <div className="flex items-center justify-between">
+        <div
+          className={cn(
+            "flex gap-1 p-1 rounded-xl",
+            isDark ? "bg-zinc-800" : "bg-zinc-100"
+          )}
+        >
+          {VIEW_OPTIONS.map((opt) => {
+            const isActive = viewMode === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setViewMode(opt.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  isActive
+                    ? "text-white shadow-sm"
+                    : isDark
+                    ? "text-zinc-500 hover:text-zinc-300"
+                    : "text-zinc-500 hover:text-zinc-700"
+                )}
+                style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
+              >
+                {opt.icon}
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={handleExportPdf}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all",
+            isDark
+              ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+          )}
+        >
+          <Download size={14} />
+          {t("itinerary.exportPdf")}
+        </button>
       </div>
 
       {/* ── Content area ── */}

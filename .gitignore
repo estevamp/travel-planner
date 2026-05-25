@@ -2,13 +2,14 @@
 # Dependencies
 node_modules/
 
+# Logs
+*.log
+*.tmp
+
 # Environment
 .env
 .env.local
 *.env.*
-
-# Logs
-*.log
 
 # Coverage
 coverage/
@@ -34,50 +35,4 @@ __pycache__/
 # Build outputs
 dist/
 build/
-*.out
-*.exe
-*.dll
-*.so
-*.a
-*.o
-*.obj
-
-# Temporary files
-*.tmp
-*.temp
-*~
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Testing
-.pytest_cache/
-.mypy_cache/
-.nyc_output/
-coverage.xml
-
-# Compression
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
 ```
