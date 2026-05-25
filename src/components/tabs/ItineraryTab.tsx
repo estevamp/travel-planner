@@ -1444,7 +1444,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
           )}
         >
           <Download size={14} />
-          {t("itinerary.exportPdf")}
+          {t("dashboard.exportToPDF")}
         </button>
       </div>
 
