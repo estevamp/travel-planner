@@ -1,29 +1,15 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-*.class
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
 # Dependencies
 node_modules/
-venv/
-.venv/
-.env
-.env.local
-.env.*
 
 # Logs and temp files
 *.log
 *.tmp
-*.swp
-*.swo
+
+# Environment
+.env
+.env.local
+*.env.*
 
 # Editors
 .vscode/
@@ -32,25 +18,4 @@ venv/
 # Build outputs
 dist/
 build/
-target/
-*.tar
-*.gz
-*.zip
-*.rar
-*.7z
-*.bz2
-*.xz
-*.tgz
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# OS
-.DS_Store
-Thumbs.db
 ```

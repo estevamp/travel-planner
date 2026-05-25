@@ -134,4 +134,4 @@ export function formatDate(dateInput: string | Date, locale: LanguageCode = "pt-
   return new Intl.DateTimeFormat(locale, { ...defaultOptions, ...options }).format(date);
 }
 
-export { exportExpensesToCsv, exportPaymentsToCsv } from "./exportUtils";
+export { exportExpensesToCsv, exportPaymentsToCsv, exportItineraryToPdf } from "./exportUtils";
