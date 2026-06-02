@@ -432,7 +432,19 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   };
 
   const undoPayment = async (settlementId: string) => {
-    // ...existing code...
+    const { error } = await supabase
+      .from("settlements")
+      .update({ is_confirmed: false })
+      .eq("id", settlementId)
+      .eq("trip_id", tripId);
+
+    if (error) {
+      toast(getErrorMessage(error), "error");
+      return;
+    }
+
+    await fetchBalanceData();
+    toast(t("expenses.paymentUndone"), "success");
   };
 
   const handleExportExpenses = () => {

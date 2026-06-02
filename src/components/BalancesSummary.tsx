@@ -146,8 +146,11 @@ export function BalancesSummary({
 
   const handleUndoPayment = async (settlementId: string) => {
     setUndoingId(settlementId);
-    await onUndoPayment(settlementId);
-    setUndoingId(null);
+    try {
+      await onUndoPayment(settlementId);
+    } finally {
+      setUndoingId(null);
+    }
   };
 
   // Busca settlements para todos os pares de IDs do grupo
