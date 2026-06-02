@@ -434,7 +434,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const undoPayment = async (settlementId: string) => {
     const { error } = await supabase
       .from("settlements")
-      .update({ is_confirmed: false })
+      .delete()
       .eq("id", settlementId)
       .eq("trip_id", tripId);
 
