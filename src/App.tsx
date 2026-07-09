@@ -61,10 +61,7 @@ export default function App() {
                     onOnboardingChange={handleOnboardingChange}
                   />
                 ) : (
-                  <AuthLanding
-                    language={userSettings.language_code}
-                    onLanguageChange={handleLanguageChange}
-                  />
+                  <AuthLanding />
                 )
               }
             />

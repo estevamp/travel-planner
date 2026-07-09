@@ -18,6 +18,16 @@ interface LandingPageProps {
 
 type LandingScreen = "intro" | "create" | "trips" | "created";
 
+const INTRO_IMAGES = [
+  "/pics/13972854661_084a70e106_w.jpg",
+  "/pics/4660931639_b42e56675d_c.jpg",
+  "/pics/4660938241_e668c867ee_c.jpg",
+  "/pics/5185419641_9be0f93c43_c.jpg",
+  "/pics/6329653479_ea4db2f711_c.jpg",
+  "/pics/6346087908_c655d9cf9a_c.jpg",
+  "/pics/6372134987_fb8e6b7b6b_w.jpg",
+] as const;
+
 export function LandingPage({
   settings,
   onLanguageChange,
@@ -33,6 +43,9 @@ export function LandingPage({
   const [destination, setDestination] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [introImage] = useState(
+    () => INTRO_IMAGES[Math.floor(Math.random() * INTRO_IMAGES.length)]
+  );
 
   const screen = useMemo<LandingScreen>(() => {
     if (settings.onboarding_status === "active" && !settings.onboarding_trip_id) return "intro";
@@ -113,8 +126,12 @@ export function LandingPage({
     return (
       <main className="min-h-screen bg-white px-5 py-8 flex flex-col items-center text-[#0A2342]">
         <div className="w-full max-w-[402px] flex-1 flex flex-col items-center justify-center">
-          <div className="w-full aspect-[.72] max-h-[336px] rounded-[28px] border-2 border-dashed border-[#dbe9fd] bg-[#f4f8ff] flex items-center justify-center" aria-label="Espaço reservado para imagem da aventura">
-            <Compass className="text-[#2462EB]/35" size={48} aria-hidden="true" />
+          <div className="w-full aspect-[.72] max-h-[336px] overflow-hidden rounded-[28px] bg-[#f4f8ff]">
+            <img
+              src={introImage}
+              alt="Destino de viagem"
+              className="h-full w-full object-cover object-center"
+            />
           </div>
           <h1 className="mt-3 max-w-[330px] text-center text-[28px] leading-[1.12] font-extrabold tracking-[-0.04em]">{copy.introTitle}</h1>
           <p className="mt-3 max-w-[320px] text-center text-[15px] leading-6 text-slate-600">{copy.introBody}</p>

@@ -1,19 +1,11 @@
 import { useState } from "react";
-import { Languages } from "lucide-react";
 import { Card } from "./Card";
 import { getErrorMessage } from "../utils";
 import { supabase } from "../supabase";
 import { useToast } from "../hooks/useToast";
 import { useI18n, usePageTitle } from "../i18n/I18nProvider";
-import type { LanguageCode } from "../types";
 
-export function AuthLanding({
-  language,
-  onLanguageChange,
-}: {
-  language: LanguageCode;
-  onLanguageChange: (language: LanguageCode) => void | Promise<void>;
-}) {
+export function AuthLanding() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
@@ -39,28 +31,6 @@ export function AuthLanding({
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-zinc-900">{t("app.name")}</h1>
           <p className="text-zinc-500">{t("auth.tagline")}</p>
-        </div>
-        <div className="space-y-3 text-left">
-          <div className="flex items-center gap-2 text-zinc-700">
-            <Languages size={16} />
-            <span className="text-sm font-semibold">{t("settings.language")}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {(["pt-BR", "en"] as const).map((locale) => (
-              <button
-                key={locale}
-                type="button"
-                onClick={() => void onLanguageChange(locale)}
-                className={
-                  language === locale
-                    ? "min-h-11 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center border-[#0A2342] bg-[#0A2342] text-white shadow-md shadow-blue-900/10"
-                    : "min-h-11 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                }
-              >
-                {t(`settings.language.${locale}` as "settings.language.pt-BR" | "settings.language.en")}
-              </button>
-            ))}
-          </div>
         </div>
         <button
           disabled={loading}
