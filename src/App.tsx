@@ -25,7 +25,7 @@ export default function App() {
   const { session, loading } = useAuth();
 
   // 2. Pega as configurações do usuário (e toda a lógica relacionada)
-  const { userSettings, setUserSettings, hasProfile, handleLanguageChange } =
+  const { userSettings, setUserSettings, handleLanguageChange, handleOnboardingChange } =
     useUserSettings();
 
   if (loading) {
@@ -56,10 +56,9 @@ export default function App() {
               element={
                 session ? (
                   <LandingPage
-                    session={session}
                     settings={userSettings}
-                    hasProfile={hasProfile}
                     onLanguageChange={handleLanguageChange}
+                    onOnboardingChange={handleOnboardingChange}
                   />
                 ) : (
                   <AuthLanding
@@ -78,6 +77,7 @@ export default function App() {
                     session={session as Session}
                     settings={userSettings}
                     onSettingsChange={setUserSettings}
+                    onOnboardingComplete={() => handleOnboardingChange("completed", null)}
                   />
                 </ProtectedRoute>
               }

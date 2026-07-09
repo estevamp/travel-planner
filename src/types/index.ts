@@ -8,6 +8,7 @@ export interface ItineraryType {
 export type Visibility = "public" | "private";
 export type LanguageCode = "pt-BR" | "en";
 export type SplitType = "equal" | "unequal";
+export type OnboardingStatus = "active" | "skipped" | "completed";
 export type ThemePalette =
   | "default"
   | "ocean"
@@ -28,6 +29,8 @@ export interface UserSettings {
   default_currency: string;
   language_code: LanguageCode;
   spouse_user_id: string | null;
+  onboarding_status: OnboardingStatus;
+  onboarding_trip_id: string | null;
   budget_limit_masked?: string;
 }
 

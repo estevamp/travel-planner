@@ -38,12 +38,14 @@ import { CurrencySelector } from "./CurrencySelector";
 import { PayerSelector } from "./PayerSelector";
 import { SplitSelector } from "./SplitSelector";
 import { CreateTripModal } from "./CreateTripModal";
+import { OnboardingActivityModal } from "./OnboardingActivityModal";
 import { useI18n } from "../i18n/I18nProvider";
 
 interface TripDashboardProps {
   session: Session;
   settings: UserSettings;
   onSettingsChange: (next: UserSettings) => void;
+  onOnboardingComplete: () => Promise<boolean>;
 }
 
 type ActiveTab = "itinerary" | "expenses" | "ideas" | "documents" | "people" | "settings";
@@ -56,7 +58,7 @@ function isValidTab(value: string): value is ActiveTab {
   return (VALID_TABS as readonly string[]).includes(value);
 }
 
-function TripDashboard({ session, settings, onSettingsChange }: TripDashboardProps) {
+function TripDashboard({ session, settings, onSettingsChange, onOnboardingComplete }: TripDashboardProps) {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -70,16 +72,17 @@ function TripDashboard({ session, settings, onSettingsChange }: TripDashboardPro
       onSettingsChange={onSettingsChange}
       onTripDeleted={() => navigate('/')}
     >
-      <TripDashboardContent session={session} />
+      <TripDashboardContent session={session} onOnboardingComplete={onOnboardingComplete} />
     </TripProvider>
   );
 }
 
 interface TripDashboardContentProps {
   session: Session;
+  onOnboardingComplete: () => Promise<boolean>;
 }
 
-function TripDashboardContent({ session }: TripDashboardContentProps) {
+function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardContentProps) {
   const navigate = useNavigate();
   const { t, language } = useI18n();
   
@@ -142,6 +145,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
+  const isGuidedTrip = settings.onboarding_status === "active" && settings.onboarding_trip_id === tripId;
+  const [onboardingStep, setOnboardingStep] = useState<"hint" | "form" | "complete">("hint");
 
   // Custom hooks para CRUD
   const { create: createItinerary, isSubmitting: isSubmittingItinerary } = useCreateItinerary({
@@ -211,11 +216,24 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
 
   // Wrappers para os hooks (adaptam as chamadas dos modais)
   const handleCreateItinerary = async (form: FormData) => {
-    await createItinerary({
+    return createItinerary({
       form,
       allDay: itineraryAllDay,
       onClose: closeModal,
     });
+  };
+
+  const createFirstActivity = async (form: FormData) => {
+    const created = await createItinerary({
+      form,
+      allDay: false,
+      onClose: () => undefined,
+    });
+    if (created) {
+      await onOnboardingComplete();
+      setOnboardingStep("complete");
+    }
+    return created;
   };
 
   const handleCreateExpense = async (form: FormData) => {
@@ -472,7 +490,7 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
+            {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} isOnline={isOnline}/>}
@@ -494,8 +512,8 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            await handleCreateItinerary(new FormData(e.currentTarget));
-            (e.target as HTMLFormElement).reset();
+            const created = await handleCreateItinerary(new FormData(e.currentTarget));
+            if (created) (e.target as HTMLFormElement).reset();
           }}
         >
           <select
@@ -969,6 +987,27 @@ function TripDashboardContent({ session }: TripDashboardContentProps) {
           }
         }}
       />
+      {isGuidedTrip && onboardingStep === "hint" && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[70] mx-auto w-[min(86vw,360px)] rounded-2xl bg-white p-6 text-center shadow-[0_8px_22px_rgba(0,0,0,.22)] md:bottom-10">
+          <p className="text-[16px] leading-6 text-slate-600">Clique no <strong className="text-[#2462EB]">+</strong> para criar sua<br />primeira atividade</p>
+          <div className="mt-5 flex justify-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-6 rounded-full bg-[#2462EB]" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /></div>
+        </div>
+      )}
+      <OnboardingActivityModal
+        isOpen={isGuidedTrip && onboardingStep === "form"}
+        types={itineraryTypes}
+        isSubmitting={isSubmittingItinerary}
+        onSubmit={createFirstActivity}
+      />
+      {onboardingStep === "complete" && (
+        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/10 px-5 pb-20">
+          <section className="w-full max-w-[380px] rounded-3xl bg-white p-7 text-center shadow-2xl">
+            <h2 className="text-[25px] leading-9 font-extrabold text-[#0A2342]">Seu roteiro já está<br />ganhando vida!</h2>
+            <p className="mt-4 text-[20px] leading-8 text-slate-600">Explore todas as funcionalidades e continue personalizando sua viagem.</p>
+            <button onClick={() => setOnboardingStep("hint")} className="mt-6 rounded-xl bg-[#2462EB] px-6 py-3 text-sm font-bold text-white">Continuar</button>
+          </section>
+        </div>
+      )}
       <SyncIndicator
         pendingCount={pendingCount}
         isSyncing={isSyncing}

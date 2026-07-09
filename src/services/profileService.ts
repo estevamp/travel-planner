@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 
 import type {
   LanguageCode,
+  OnboardingStatus,
   UserSettings,
 } from "../types";
 
@@ -11,6 +12,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   default_currency: "BRL",
   language_code: "pt-BR",
   spouse_user_id: null,
+  onboarding_status: "completed",
+  onboarding_trip_id: null,
 };
 
 export async function loadUserSettings(
@@ -24,7 +27,9 @@ export async function loadUserSettings(
       dark_mode,
       default_currency,
       language_code,
-      spouse_user_id
+      spouse_user_id,
+      onboarding_status,
+      onboarding_trip_id
     `)
     .eq("user_id", userId)
     .single();
@@ -55,6 +60,14 @@ export async function loadUserSettings(
     spouse_user_id:
       (data.spouse_user_id as string | null)
       || null,
+
+    onboarding_status:
+      (data.onboarding_status as OnboardingStatus | null)
+      || DEFAULT_SETTINGS.onboarding_status,
+
+    onboarding_trip_id:
+      (data.onboarding_trip_id as string | null)
+      || null,
   };
 }
 
@@ -81,6 +94,7 @@ export async function syncProfile(
       .from("profiles")
       .update({
         language_code: preferredLanguage,
+        onboarding_status: "active",
       })
       .eq("user_id", userId);
   }
@@ -102,6 +116,19 @@ export async function updateLanguage(
         onConflict: "user_id",
       }
     );
+
+  return !error;
+}
+
+export async function updateOnboarding(
+  userId: string,
+  status: OnboardingStatus,
+  tripId: string | null
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ onboarding_status: status, onboarding_trip_id: tripId })
+    .eq("user_id", userId);
 
   return !error;
 }

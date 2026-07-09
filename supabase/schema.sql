@@ -138,6 +138,20 @@ alter table public.profiles add column if not exists default_currency text not n
 alter table public.profiles add column if not exists language_code text not null default 'pt-BR';
 alter table public.profiles add column if not exists budget_limit numeric(12,2) not null default 0;
 alter table public.profiles add column if not exists spouse_user_id uuid references auth.users(id) on delete set null;
+alter table public.profiles add column if not exists onboarding_status text;
+alter table public.profiles add column if not exists onboarding_trip_id uuid references public.trips(id) on delete set null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_onboarding_status_chk'
+  ) then
+    alter table public.profiles
+      add constraint profiles_onboarding_status_chk
+      check (onboarding_status is null or onboarding_status in ('active', 'skipped', 'completed'));
+  end if;
+end
+$$;
 alter table public.itinerary add column if not exists created_by_member_id uuid references public.trip_members(id) on delete cascade;
 alter table public.itinerary add column if not exists type_id uuid references public.itinerary_types(id) on delete set null;
 alter table public.itinerary add column if not exists visibility text not null default 'public' check (visibility in ('public', 'private'));

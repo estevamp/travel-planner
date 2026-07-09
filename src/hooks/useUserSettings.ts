@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 import type {
   LanguageCode,
+  OnboardingStatus,
   UserSettings,
 } from "../types";
 
@@ -11,6 +12,7 @@ import {
   loadUserSettings,
   syncProfile,
   updateLanguage,
+  updateOnboarding,
 } from "../services/profileService";
 
 const LANGUAGE_STORAGE_KEY =
@@ -22,6 +24,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   default_currency: "BRL",
   language_code: "pt-BR",
   spouse_user_id: null,
+  onboarding_status: "completed",
+  onboarding_trip_id: null,
 };
 
 /**
@@ -87,6 +91,23 @@ export function useUserSettings() {
     }
   };
 
+  const handleOnboardingChange = async (
+    status: OnboardingStatus,
+    tripId: string | null
+  ) => {
+    if (!session?.user?.id) return false;
+
+    const success = await updateOnboarding(session.user.id, status, tripId);
+    if (success) {
+      setUserSettings((current) => ({
+        ...current,
+        onboarding_status: status,
+        onboarding_trip_id: tripId,
+      }));
+    }
+    return success;
+  };
+
   /**
    * Reage a login/logout
    */
@@ -149,6 +170,7 @@ export function useUserSettings() {
     setUserSettings,
     hasProfile,
     handleLanguageChange,
+    handleOnboardingChange,
   };
 }
 

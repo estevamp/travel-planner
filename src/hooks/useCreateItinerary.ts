@@ -13,7 +13,7 @@ interface CreateItineraryParams {
 }
 
 interface UseCreateItineraryReturn {
-  create: (params: CreateItineraryParams) => Promise<void>;
+  create: (params: CreateItineraryParams) => Promise<boolean>;
   isSubmitting: boolean;
 }
 
@@ -28,8 +28,8 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
   const { trip, setTrip, tripId, currentMember, itineraryTypes, settings } = useTripContext();
   const { enqueue, isOnline } = deps;
 
-  const create = async ({ form, allDay, onClose }: CreateItineraryParams) => {
-    if (!tripId || !currentMember) return;
+  const create = async ({ form, allDay, onClose }: CreateItineraryParams): Promise<boolean> => {
+    if (!tripId || !currentMember) return false;
 
     setIsSubmitting(true);
     try {
@@ -120,7 +120,7 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
         enqueue({ id: itineraryId, tripId, type: "insert", table: "itinerary", payload: itineraryPayload });
         toast("Atividade salva offline — será sincronizada ao reconectar.", "info");
         onClose();
-        return;
+        return true;
       }
       // ── FIM OFFLINE GUARD ──
 
@@ -144,8 +144,10 @@ export function useCreateItinerary(deps: UseCreateItineraryDeps): UseCreateItine
 
       if (error) {
         toast(getErrorMessage(error), "error");
+        return false;
       } else {
         onClose();
+        return true;
       }
     } finally {
       setIsSubmitting(false);
