@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { Session } from "@supabase/supabase-js";
 import {
   ChevronRight, CircleHelp, Compass, FileText, LogOut, MapPin,
   Plus, Settings, SlidersHorizontal, UserRound, X,
@@ -11,6 +12,7 @@ import { useToast } from "../hooks/useToast";
 import { useI18n, usePageTitle } from "../i18n/I18nProvider";
 
 interface LandingPageProps {
+  session: Session | null;
   settings: UserSettings;
   onLanguageChange: (language: LanguageCode) => void | Promise<void>;
   onOnboardingChange: (status: OnboardingStatus, tripId: string | null) => Promise<boolean>;
@@ -29,6 +31,7 @@ const INTRO_IMAGES = [
 ] as const;
 
 export function LandingPage({
+  session,
   settings,
   onLanguageChange,
   onOnboardingChange,
@@ -43,17 +46,19 @@ export function LandingPage({
   const [destination, setDestination] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [introImage] = useState(
     () => INTRO_IMAGES[Math.floor(Math.random() * INTRO_IMAGES.length)]
   );
 
   const screen = useMemo<LandingScreen>(() => {
+    if (!session) return "intro";
     if (settings.onboarding_status === "active" && !settings.onboarding_trip_id) return "intro";
     if (settings.onboarding_status === "active" && settings.onboarding_trip_id) return "created";
     return "trips";
-  }, [settings.onboarding_status, settings.onboarding_trip_id]);
+  }, [session, settings.onboarding_status, settings.onboarding_trip_id]);
   const [requestedScreen, setRequestedScreen] = useState<LandingScreen | null>(null);
-  const activeScreen = requestedScreen ?? screen;
+  const activeScreen = session ? (requestedScreen ?? screen) : "intro";
 
   usePageTitle(t("app.name"));
 
@@ -67,7 +72,14 @@ export function LandingPage({
     setLoadingTrips(false);
   };
 
-  useEffect(() => { void loadTrips(); }, []);
+  useEffect(() => {
+    if (!session) {
+      setTrips([]);
+      setLoadingTrips(false);
+      return;
+    }
+    void loadTrips();
+  }, [session]);
 
   const copy = language === "en" ? {
     introTitle: "Your next adventure starts here",
@@ -122,6 +134,18 @@ export function LandingPage({
   const openTrip = (trip: TripSummary) => navigate(`/trip/${trip.id}`);
   const startCreate = () => setRequestedScreen("create");
 
+  const startGoogleSignIn = async () => {
+    setSigningIn(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      toast(getErrorMessage(error), "error");
+      setSigningIn(false);
+    }
+  };
+
   if (activeScreen === "intro") {
     return (
       <main className="min-h-screen bg-white px-5 py-8 flex flex-col items-center text-[#0A2342]">
@@ -136,8 +160,8 @@ export function LandingPage({
           <h1 className="mt-3 max-w-[330px] text-center text-[28px] leading-[1.12] font-extrabold tracking-[-0.04em]">{copy.introTitle}</h1>
           <p className="mt-3 max-w-[320px] text-center text-[15px] leading-6 text-slate-600">{copy.introBody}</p>
           <Progress current={1} />
-          <button onClick={() => setRequestedScreen("create")} className="mt-4 w-full rounded-xl bg-[#2462EB] py-4 text-sm font-extrabold tracking-[.12em] text-white shadow-[0_5px_4px_rgba(10,35,66,.25)]">{copy.start}</button>
-          <button onClick={() => void skip()} className="mt-5 text-sm text-slate-500">{copy.skip}</button>
+          <button onClick={() => session ? setRequestedScreen("create") : void startGoogleSignIn()} disabled={signingIn} className="mt-4 w-full rounded-xl bg-[#2462EB] py-4 text-sm font-extrabold tracking-[.12em] text-white shadow-[0_5px_4px_rgba(10,35,66,.25)] disabled:opacity-50">{signingIn ? t("auth.redirecting") : copy.start}</button>
+          {session && <button onClick={() => void skip()} className="mt-5 text-sm text-slate-500">{copy.skip}</button>}
         </div>
       </main>
     );

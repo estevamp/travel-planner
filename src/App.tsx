@@ -4,7 +4,6 @@ import { useUserSettings } from "./hooks/useUserSettings";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 
-import { AuthLanding } from "./components/AuthLanding";
 import { LandingPage } from "./components/LandingPage";
 import { InvitePage } from "./components/InvitePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -54,15 +53,12 @@ export default function App() {
             <Route
               path="/"
               element={
-                session ? (
-                  <LandingPage
-                    settings={userSettings}
-                    onLanguageChange={handleLanguageChange}
-                    onOnboardingChange={handleOnboardingChange}
-                  />
-                ) : (
-                  <AuthLanding />
-                )
+                <LandingPage
+                  session={session}
+                  settings={userSettings}
+                  onLanguageChange={handleLanguageChange}
+                  onOnboardingChange={handleOnboardingChange}
+                />
               }
             />
 
