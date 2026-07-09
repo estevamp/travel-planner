@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Languages, Calendar, HelpCircle } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Languages, Calendar, HelpCircle, LogOut } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
@@ -42,6 +42,7 @@ export function SettingsTab() {
   const [budgetDraft, setBudgetDraft] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmationValue, setDeleteConfirmationValue] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
   
   const settingsAutosaveReadyRef = useRef(false);
   const tripAutosaveReadyRef = useRef(false);
@@ -163,6 +164,18 @@ export function SettingsTab() {
     if (!deleted) return;
     setIsDeleteModalOpen(false);
     setDeleteConfirmationValue("");
+  };
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    setSigningOut(false);
+
+    if (error) {
+      toast(getErrorMessage(error), "error");
+    }
   };
 
   return (
@@ -851,6 +864,23 @@ export function SettingsTab() {
           </div>
         </Card>
       )}
+
+      <Card>
+        <button
+          type="button"
+          onClick={() => void handleSignOut()}
+          disabled={signingOut}
+          className={cn(
+            "w-full px-4 py-3 rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
+            settings.dark_mode
+              ? "border-red-900 text-red-400 hover:bg-red-950/30"
+              : "border-red-200 text-red-600 hover:bg-red-50"
+          )}
+        >
+          <LogOut size={18} />
+          {t("common.signOut")}
+        </button>
+      </Card>
 
       {savingSettings && (
         <div className={cn(
