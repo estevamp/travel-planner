@@ -309,6 +309,24 @@ as $$
   );
 $$;
 
+create or replace function public.is_superuser()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select p.is_superuser
+      from public.profiles p
+      where p.user_id = auth.uid()
+      limit 1
+    ),
+    false
+  );
+$$;
+
 create or replace function public.is_trip_admin(p_trip_id uuid)
 returns boolean
 language sql
@@ -322,7 +340,7 @@ as $$
     where tm.trip_id = p_trip_id
       and tm.user_id = auth.uid()
       and tm.role = 'admin'
-  );
+  ) or public.is_superuser();
 $$;
 
 create or replace function public.can_view_owner_data(p_trip_id uuid, p_owner_member_id uuid)
@@ -337,6 +355,10 @@ declare
   v_current_user uuid;
   v_owner_user uuid;
 begin
+  if public.is_trip_admin(p_trip_id) then
+    return true;
+  end if;
+
   v_current_member := public.current_member_id(p_trip_id);
   if v_current_member is null then
     return false;
@@ -380,6 +402,8 @@ security definer
 set search_path = public
 as $$
   select
+    public.is_trip_admin(p_trip_id)
+    or
     (
       p_visibility = 'public'
       and public.is_trip_member(p_trip_id)
@@ -833,7 +857,7 @@ drop policy if exists trips_select_member on public.trips;
 drop policy if exists trips_update_admin on public.trips;
 drop policy if exists trips_delete_admin on public.trips;
 create policy trips_select_member on public.trips
-for select using (public.is_trip_member(id));
+for select using (public.is_trip_member(id) or public.is_superuser());
 create policy trips_update_admin on public.trips
 for update using (public.is_trip_admin(id))
 with check (public.is_trip_admin(id));
@@ -851,7 +875,7 @@ drop policy if exists trip_members_select_member on public.trip_members;
 drop policy if exists trip_members_update_admin on public.trip_members;
 drop policy if exists trip_members_delete_admin on public.trip_members;
 create policy trip_members_select_member on public.trip_members
-for select using (public.is_trip_member(trip_id));
+for select using (public.is_trip_member(trip_id) or public.is_superuser());
 create policy trip_members_update_admin on public.trip_members
 for update using (public.is_trip_admin(trip_id)) with check (public.is_trip_admin(trip_id));
 create policy trip_members_delete_admin on public.trip_members
@@ -1258,6 +1282,7 @@ for delete using (
 revoke all on function public.sync_my_profile() from public;
 revoke all on function public.current_member_id(uuid) from public;
 revoke all on function public.is_trip_member(uuid) from public;
+revoke all on function public.is_superuser() from public;
 revoke all on function public.is_trip_admin(uuid) from public;
 revoke all on function public.can_view_owner_data(uuid, uuid) from public;
 revoke all on function public.can_view_scoped_data(uuid, uuid, text) from public;
@@ -1272,6 +1297,7 @@ revoke all on function public.budget_owner_user_id(uuid, uuid) from public;
 grant execute on function public.sync_my_profile() to authenticated;
 grant execute on function public.current_member_id(uuid) to authenticated;
 grant execute on function public.is_trip_member(uuid) to authenticated;
+grant execute on function public.is_superuser() to authenticated;
 grant execute on function public.is_trip_admin(uuid) to authenticated;
 grant execute on function public.can_view_owner_data(uuid, uuid) to authenticated;
 grant execute on function public.can_view_scoped_data(uuid, uuid, text) to authenticated;
