@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import {
   ChevronRight, CircleHelp, Compass, FileText, LogOut, MapPin,
@@ -37,6 +37,7 @@ export function LandingPage({
   onOnboardingChange,
 }: LandingPageProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { t, language } = useI18n();
   const [trips, setTrips] = useState<TripSummary[]>([]);
@@ -58,7 +59,9 @@ export function LandingPage({
     return "trips";
   }, [session, settings.onboarding_status, settings.onboarding_trip_id]);
   const [requestedScreen, setRequestedScreen] = useState<LandingScreen | null>(null);
-  const activeScreen = session ? (requestedScreen ?? screen) : "intro";
+  const activeScreen = session
+    ? (searchParams.get("new") === "trip" ? "create" : (requestedScreen ?? screen))
+    : "intro";
 
   usePageTitle(t("app.name"));
 

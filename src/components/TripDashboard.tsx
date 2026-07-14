@@ -4,7 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
-import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
+import { cn, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
 import { getThemeStyles } from "../utils/theme";
 import { useSwipeTabs } from "../hooks/useSwipeTabs";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
@@ -37,7 +37,6 @@ import { Modal } from "./Modal";
 import { CurrencySelector } from "./CurrencySelector";
 import { PayerSelector } from "./PayerSelector";
 import { SplitSelector } from "./SplitSelector";
-import { CreateTripModal } from "./CreateTripModal";
 import { OnboardingActivityModal } from "./OnboardingActivityModal";
 import { useI18n } from "../i18n/I18nProvider";
 
@@ -92,7 +91,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     settings, tripId, tripBudget
   } = useTripContext();
   
-  const { tripOptions, createTripFromSidebar, creatingTripFromSidebar } = useTripList();
+  const { tripOptions } = useTripList();
   const { toast } = useToast();
   
   // Estado local apenas para UI
@@ -142,7 +141,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   }, [activeTab, tripId]);
 
   const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
-  const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
   const isGuidedTrip = settings.onboarding_status === "active" && settings.onboarding_trip_id === tripId;
@@ -312,12 +310,11 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
           </div>
           <button
             type="button"
-            onClick={() => setShowCreateTripModal(true)}
-            disabled={creatingTripFromSidebar}
-            className="mt-3 w-full px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center justify-center gap-2 text-sm hover:bg-[var(--sidebar-hover)] disabled:opacity-60"
+            onClick={() => navigate("/?new=trip")}
+            className="mt-3 w-full px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center justify-center gap-2 text-sm hover:bg-[var(--sidebar-hover)]"
           >
             <Plus size={14} />
-            {creatingTripFromSidebar ? t("landing.creating") : t("dashboard.addTrip")}
+            {t("dashboard.addTrip")}
           </button>
         </div>
         <button onClick={() => void supabase.auth.signOut()} className="px-3 py-2 rounded-xl border border-[var(--sidebar-border)] text-[var(--sidebar-text)] flex items-center gap-2 justify-center hover:bg-[var(--sidebar-hover)]">
@@ -468,8 +465,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                   <button
                     type="button"
                     onClick={() => {
-                      setShowMobileTripSelector(false);
-                      setShowCreateTripModal(true);
+                      navigate("/?new=trip");
                     }}
                     className="w-full py-4 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
                   >
@@ -974,19 +970,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         </div>
       </nav>
 
-      <CreateTripModal
-        isOpen={showCreateTripModal}
-        isDark={settings.dark_mode}
-        onClose={() => setShowCreateTripModal(false)}
-        onSubmit={async ({ name, destination }) => {
-          try {
-            const newTripId = await createTripFromSidebar(name, destination);
-            if (newTripId) navigate(`/trip/${newTripId}`);
-          } catch (error) {
-            toast(getErrorMessage(error), 'error');
-          }
-        }}
-      />
       {isGuidedTrip && onboardingStep === "hint" && (
         <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[70] mx-auto w-[min(86vw,360px)] rounded-2xl bg-white p-6 text-center shadow-[0_8px_22px_rgba(0,0,0,.22)] md:bottom-10">
           <p className="text-[16px] leading-6 text-slate-600">Clique no <strong className="text-[#2462EB]">+</strong> para criar sua<br />primeira atividade</p>
