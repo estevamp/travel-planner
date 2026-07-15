@@ -9,6 +9,7 @@ interface FloatingActionButtonProps {
   label?: string;
   position?: "bottom-right" | "bottom-center";
   className?: string;
+  hideOnMobile?: boolean;
 }
 
 export function FloatingActionButton({
@@ -17,6 +18,7 @@ export function FloatingActionButton({
   label,
   position = "bottom-right",
   className,
+  hideOnMobile,
 }: FloatingActionButtonProps) {
   const positionClasses = {
     "bottom-right": "bottom-20 right-4 md:bottom-8 md:right-8",
@@ -33,7 +35,8 @@ export function FloatingActionButton({
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className={cn(
-        "fixed z-40 flex items-center justify-center gap-2",
+        "fixed z-40 items-center justify-center gap-2",
+        hideOnMobile ? "hidden md:flex" : "flex",
         "w-14 h-14 md:w-16 md:h-16",
         "rounded-full shadow-2xl",
         "text-white font-bold",

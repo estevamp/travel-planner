@@ -1130,6 +1130,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
       <FloatingActionButton
         onClick={onOpenModal}
+        hideOnMobile
         className={isGuidedTrip ? "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]" : undefined}
       />
 

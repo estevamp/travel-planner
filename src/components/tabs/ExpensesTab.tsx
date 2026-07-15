@@ -1154,7 +1154,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         </div>        
       </Card>
 
-      <FloatingActionButton onClick={onOpenModal} />
+      <FloatingActionButton onClick={onOpenModal} hideOnMobile />
       {ConfirmDialogNode}
 
       {/* Overflow menu do card (Editar / Visibilidade / Excluir) */}

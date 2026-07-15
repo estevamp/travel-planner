@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
@@ -138,7 +138,11 @@ function CopyLinkModal({
   );
 }
 
-export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
+export interface PeopleTabHandle {
+  openAdd: () => void;
+}
+
+export const PeopleTab = forwardRef<PeopleTabHandle, PeopleTabProps>(function PeopleTab({ onTripUpdate, isOnline }, ref) {
   const {
     tripId, members, invites, currentMember, isAdmin,
     settings, reloadTrip, reloadMembers,
@@ -147,6 +151,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
 
+  const inviteEmailInputRef = useRef<HTMLInputElement | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -158,6 +163,13 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
   const [invitingGuestId, setInvitingGuestId] = useState<string | null>(null);
   const [guestInviteEmail, setGuestInviteEmail] = useState("");
   const [copyModalLink, setCopyModalLink] = useState<string | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    openAdd: () => {
+      inviteEmailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      inviteEmailInputRef.current?.focus();
+    },
+  }));
 
   const reload = async () => {
     if (reloadMembers) await reloadMembers();
@@ -518,6 +530,7 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
           </p>
           <div className="flex gap-2">
             <input
+              ref={inviteEmailInputRef}
               type="email"
               placeholder={t("people.emailPlaceholder")}
               value={inviteEmail}
@@ -590,4 +603,4 @@ export function PeopleTab({ onTripUpdate, isOnline }: PeopleTabProps) {
       )}
     </motion.div>
   );
-}
+});

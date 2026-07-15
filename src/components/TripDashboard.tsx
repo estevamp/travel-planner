@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
@@ -27,8 +27,8 @@ import { useCreateIdea } from "../hooks/useCreateIdea";
 import { ItineraryTab } from "./tabs/ItineraryTab";
 import { ExpensesTab } from "./tabs/ExpensesTab";
 import { IdeasTab } from "./tabs/IdeasTab";
-import { DocumentsTab } from "./tabs/DocumentsTab";
-import { PeopleTab } from "./tabs/PeopleTab";
+import { DocumentsTab, type DocumentsTabHandle } from "./tabs/DocumentsTab";
+import { PeopleTab, type PeopleTabHandle } from "./tabs/PeopleTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 
 // Componentes compartilhados
@@ -148,6 +148,9 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       localStorage.setItem(`activeTab_${tripId}`, activeTab);
     }
   }, [activeTab, tripId]);
+
+  const documentsTabRef = useRef<DocumentsTabHandle>(null);
+  const peopleTabRef = useRef<PeopleTabHandle>(null);
 
   const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -568,8 +571,8 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             {activeTab === "itinerary" && <ItineraryTab onOpenModal={() => isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "expenses"  && <ExpensesTab  onOpenModal={() => openModal('expense')}  onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
             {activeTab === "ideas"     && <IdeasTab     onOpenModal={() => openModal('idea')}     onSetActiveTab={setKnownActiveTab} onTripUpdate={setTrip} isOnline={isOnline} enqueue={enqueue}/>}
-            {activeTab === "documents" && <DocumentsTab onTripUpdate={setTrip} isOnline={isOnline}/>}
-            {activeTab === "people"    && <PeopleTab    onTripUpdate={setTrip} isOnline={isOnline}/>}
+            {activeTab === "documents" && <DocumentsTab ref={documentsTabRef} onTripUpdate={setTrip} isOnline={isOnline}/>}
+            {activeTab === "people"    && <PeopleTab    ref={peopleTabRef}    onTripUpdate={setTrip} isOnline={isOnline}/>}
             {activeTab === "settings"  && <SettingsTab />}
           </motion.div>
         </AnimatePresence>   
@@ -1064,29 +1067,47 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md text-[var(--sidebar-text)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="grid grid-cols-5 h-16">
           {([
-            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary") },
-            { tab: "ideas",      icon: Lightbulb, label: t("common.ideas") },
-            { tab: "expenses",   icon: DollarSign, label: t("common.expenses") },
-            { tab: "documents",  icon: FileText, label: language === "en" ? "Docs" : "Docs" },
-            { tab: "people",     icon: Users, label: t("common.people") },
-          ] as const).map(({ tab, icon: Icon, label }) => {
+            { tab: "ideas",      icon: Lightbulb, label: t("common.ideas"), onAdd: () => openModal('idea') },
+            { tab: "expenses",   icon: DollarSign, label: t("common.expenses"), onAdd: () => openModal('expense') },
+            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
+            { tab: "documents",  icon: FileText, label: language === "en" ? "Docs" : "Docs", onAdd: () => documentsTabRef.current?.openAdd() },
+            { tab: "people",     icon: Users, label: t("common.people"), onAdd: () => peopleTabRef.current?.openAdd() },
+          ] as const).map(({ tab, icon: Icon, label, onAdd }) => {
             const isActive = activeTab === tab;
+
+            if (isActive) {
+              const highlightOnboarding = isGuidedTrip && onboardingStep === "hint" && tab === "itinerary";
+              return (
+                <div key={tab} className="relative flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={onAdd}
+                    aria-label={label}
+                    className={cn(
+                      "absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center w-14 h-14 rounded-full text-white border-4 shadow-lg transition-transform active:scale-95",
+                      highlightOnboarding && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
+                    )}
+                    style={{
+                      borderColor: 'var(--sidebar-bg)',
+                      backgroundColor: 'var(--accent-color)',
+                      backgroundImage: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))',
+                    }}
+                  >
+                    <Plus size={26} />
+                  </button>
+                </div>
+              );
+            }
+
             return (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
                 className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
-                style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+                style={{ color: 'var(--sidebar-text)' }}
               >
-                {/* Indicador ativo */}
-                {isActive && (
-                  <span
-                    className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full transition-all duration-300"
-                    style={{ backgroundColor: 'var(--sidebar-active-bg)' }}
-                  />
-                )}
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                <Icon size={20} strokeWidth={1.8} />
                 <span className="text-[9px] font-medium tracking-wide">{label}</span>
               </button>
             );

@@ -980,7 +980,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
         })}
       </div>
 
-      <FloatingActionButton onClick={onOpenModal} />
+      <FloatingActionButton onClick={onOpenModal} hideOnMobile />
 
       {/* Menu de opções do card (Editar / Visibilidade / Excluir) */}
       {itemMenu && (

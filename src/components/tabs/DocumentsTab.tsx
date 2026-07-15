@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -21,7 +21,11 @@ interface DocumentsTabProps {
   isOnline: boolean;
 }
 
-export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
+export interface DocumentsTabHandle {
+  openAdd: () => void;
+}
+
+export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(function DocumentsTab({ onTripUpdate, isOnline }, ref) {
   const { trip, currentMember, tripId, settings } = useTripContext();
   const isDark = settings.dark_mode;
   const { t } = useI18n();
@@ -42,6 +46,10 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [isSaving, setIsSaving] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    openAdd: () => documentInputRef.current?.click(),
+  }));
 
   const deleteDocument = async (docId: string, docUrl: string, docName: string) => {
     const docToDelete = trip.documents.find((d) => d.id === docId);
@@ -383,4 +391,4 @@ export function DocumentsTab({ onTripUpdate, isOnline }: DocumentsTabProps) {
       {ConfirmDialogNode}
     </motion.div>
   );
-}
+});
