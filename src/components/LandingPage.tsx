@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import {
-  ChevronRight, CircleHelp, Compass, FileText, LogOut, MapPin,
+  ArrowLeft, ChevronRight, CircleHelp, Compass, FileText, LogOut, MapPin,
   Plus, Settings, SlidersHorizontal, UserRound, X,
 } from "lucide-react";
 import { supabase } from "../supabase";
@@ -37,7 +37,7 @@ export function LandingPage({
   onOnboardingChange,
 }: LandingPageProps) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { t, language } = useI18n();
   const [trips, setTrips] = useState<TripSummary[]>([]);
@@ -92,7 +92,7 @@ export function LandingPage({
     suggestions: "Popular suggestions", create: "CREATE TRIP", myTrips: "My Trips",
     tripList: "Your list of planned trips", created: "Your trip was created!",
     createdHint: "Click it to start planning your itinerary", empty: "No trips yet.",
-    profile: "Account", preferences: "Preferences",
+    profile: "Account", preferences: "Preferences", back: "Back",
   } : {
     introTitle: "Sua próxima aventura começa aqui",
     introBody: "Planeje sua viagem sem perder reservas, ideias e atividades.",
@@ -101,7 +101,7 @@ export function LandingPage({
     suggestions: "Sugestões populares", create: "CRIAR VIAGEM", myTrips: "Minhas Viagens",
     tripList: "Sua lista de viagens planejadas", created: "Sua viagem foi criada!",
     createdHint: "Clique nela para começar a planejar seu roteiro", empty: "Nenhuma viagem ainda.",
-    profile: "Conta", preferences: "Preferências",
+    profile: "Conta", preferences: "Preferências", back: "Voltar",
   };
 
   const createTrip = async (event: React.FormEvent) => {
@@ -136,6 +136,13 @@ export function LandingPage({
 
   const openTrip = (trip: TripSummary) => navigate(`/trip/${trip.id}`);
   const startCreate = () => setRequestedScreen("create");
+
+  const cancelCreate = () => {
+    setName("");
+    setDestination("");
+    setRequestedScreen(null);
+    if (searchParams.get("new") === "trip") setSearchParams({}, { replace: true });
+  };
 
   const startGoogleSignIn = async () => {
     setSigningIn(true);
@@ -173,8 +180,13 @@ export function LandingPage({
   if (activeScreen === "create") {
     const suggestions = language === "en" ? ["Fernando de Noronha", "Gramado", "São Paulo"] : ["Fernando de Noronha", "Gramado", "São Paulo"];
     return (
-      <main className="min-h-screen bg-white px-5 py-12 text-[#0A2342]">
-        <form onSubmit={createTrip} className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-[402px] flex-col">
+      <main className="min-h-screen bg-white px-5 py-8 text-[#0A2342]">
+        <div className="mx-auto max-w-[402px]">
+          <button type="button" onClick={cancelCreate} aria-label={copy.back} className="rounded-full bg-white p-2 text-slate-400 shadow-sm">
+            <ArrowLeft size={20} />
+          </button>
+        </div>
+        <form onSubmit={createTrip} className="mx-auto flex min-h-[calc(100vh-6.5rem)] max-w-[402px] flex-col">
           <div className="flex-1">
             <h1 className="text-center text-[28px] leading-8 font-extrabold tracking-[-0.04em]">{copy.createTitle}</h1>
             <p className="mt-5 text-center text-[15px] text-slate-600">{copy.createHint}</p>
