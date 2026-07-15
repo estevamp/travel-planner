@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
   ChevronDown, ChevronRight, MapPin, Lock, Users,
-  AlignLeft, Clock, ImagePlus, Download,
+  AlignLeft, Clock, ImagePlus, Download, MoreVertical, ExternalLink,
 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../../utils";
@@ -269,7 +269,7 @@ interface AgendaViewProps {
   onToggleCompleted: (item: ItineraryItem) => void;
   onStartEdit: (item: ItineraryItem) => void;
   onDelete: (item: ItineraryItem) => void;
-  renderItem: (item: ItineraryItem) => React.ReactNode;
+  renderItem: (item: ItineraryItem, dateKey?: string) => React.ReactNode;
 }
 
 function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
@@ -335,7 +335,7 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
                       borderColor: isDark ? "#27272a" : "#f9fafb",
                     }}
                   />
-                  {renderItem(item)}
+                  {renderItem(item, dateKey)}
                 </div>
               ))}
             </div>
@@ -353,7 +353,7 @@ interface TimelineViewProps {
   isDark: boolean;
   onStartEdit: (item: ItineraryItem) => void;
   onDelete: (item: ItineraryItem) => void;
-  renderItem: (item: ItineraryItem) => React.ReactNode;
+  renderItem: (item: ItineraryItem, dateKey?: string) => React.ReactNode;
 }
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06h–23h
@@ -463,7 +463,7 @@ function TimelineView({ items, isDark, onStartEdit, onDelete, renderItem }: Time
           <p className={cn("text-xs font-bold uppercase tracking-wide", isDark ? "text-zinc-500" : "text-zinc-400")}>
             {language === "en" ? "All day" : "Dia todo"}
           </p>
-          {allDayItems.map((item) => renderItem(item))}
+          {allDayItems.map((item) => renderItem(item, activeKey))}
         </div>
       )}
 
@@ -725,6 +725,9 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
+
+  // Overflow menu (⋯) por card — posicionado via fixed para não ser cortado pelo overflow-hidden do Card
+  const [itemMenu, setItemMenu] = useState<{ item: ItineraryItem; top: number; right: number } | null>(null);
 
   // Onboarding guiado: destaca o FAB acima do balão de dica
   const isGuidedTrip = settings.onboarding_status === "active" && settings.onboarding_trip_id === tripId;
@@ -1004,8 +1007,67 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   const openActivities = trip.itinerary.filter((item) => !item.is_completed);
   const completedActivities = trip.itinerary.filter((item) => item.is_completed);
 
-  // ─── renderItineraryItem (unchanged from original) ─────────────────────────
-  const renderItineraryItem = (item: ItineraryItem) => (
+  // ─── renderItineraryItem ────────────────────────────────────────────────────
+  const renderItineraryItem = (item: ItineraryItem, dateKey?: string) => {
+    // Item que começou em um dia anterior (ex.: voo que cruza a meia-noite) é
+    // renderizado como card compacto de "continuação" no dia de chegada,
+    // em vez de repetir o card completo e parecer duplicado.
+    const isContinuation =
+      Boolean(dateKey) &&
+      dateKey !== "sem-data" &&
+      Boolean(item.start_time) &&
+      (item.start_time as string).slice(0, 10) < (dateKey as string) &&
+      editingItineraryId !== item.id;
+
+    if (isContinuation) {
+      const Icon = (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) || Calendar;
+      const endDate = item.end_time?.slice(0, 10);
+      const badgeLabel = item.is_all_day
+        ? endDate === dateKey
+          ? t("itinerary.lastDay")
+          : t("itinerary.continues")
+        : endDate === dateKey && item.end_time
+        ? t("itinerary.endsAt", { time: item.end_time.slice(11, 16) })
+        : t("itinerary.continues");
+
+      return (
+        <div key={`${item.id}-continuation`}>
+          <Card className={cn("p-0 overflow-hidden", item.is_completed && "opacity-75")}>
+            <div className="px-4 py-3 flex items-center gap-3">
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                  isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-50 text-zinc-400"
+                )}
+              >
+                <Icon size={16} />
+              </div>
+              <p
+                className={cn(
+                  "flex-1 min-w-0 truncate text-sm font-medium",
+                  isDark ? "text-zinc-400" : "text-zinc-500",
+                  item.is_completed && "line-through"
+                )}
+              >
+                {item.title}
+              </p>
+              <span
+                className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--accent-color) 12%, transparent)",
+                  color: "var(--accent-color)",
+                }}
+              >
+                <Clock size={10} />
+                {badgeLabel}
+              </span>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
     <div key={item.id}>
       <Card
         id={`itinerary-item-${item.id}`}
@@ -1250,9 +1312,23 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn("text-xs mt-1 inline-flex items-center gap-1 hover:underline", isDark ? "text-zinc-400" : "text-zinc-500")}
+                  className={cn(
+                    "mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors max-w-full",
+                    isDark
+                      ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  )}
                 >
-                  {item.url}
+                  <ExternalLink size={11} className="flex-shrink-0" />
+                  <span className="truncate">
+                    {(() => {
+                      try {
+                        return new URL(item.url).hostname.replace(/^www\./, "");
+                      } catch {
+                        return t("itinerary.openLink");
+                      }
+                    })()}
+                  </span>
                 </a>
               )}
 
@@ -1314,9 +1390,19 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                             : new Date(item.end_time);
                           
                           if (!isNaN(end.getTime())) {
+                            const startDay = item.start_time.slice(0, 10);
+                            const endDay = item.end_time.slice(0, 10);
                             if (!item.is_all_day) {
-                              res += ` – ${format(end, "HH:mm")}`;
-                            } else if (item.end_time.slice(0, 10) !== item.start_time.slice(0, 10)) {
+                              if (endDay !== startDay) {
+                                const dayDiff = Math.round(
+                                  (new Date(endDay + "T00:00:00").getTime() -
+                                    new Date(startDay + "T00:00:00").getTime()) / 86400000
+                                );
+                                res += ` → ${format(end, "HH:mm")} (+${dayDiff})`;
+                              } else {
+                                res += ` – ${format(end, "HH:mm")}`;
+                              }
+                            } else if (endDay !== startDay) {
                               res += ` – ${format(end, "dd/MM")}`;
                             }
                           }
@@ -1373,25 +1459,31 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             />
             <button
               type="button"
-              onClick={() => startEditItinerary(item)}
-              className="p-2 text-zinc-400 hover:text-zinc-700"
-            >
-              <FilePenLine size={16} />
-            </button>
-            <button
-              onClick={async () => {
-                await deleteItineraryItemHandler(item);
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setItemMenu((cur) =>
+                  cur?.item.id === item.id
+                    ? null
+                    : { item, top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                );
               }}
-              className="p-2 text-zinc-400 hover:text-red-500"
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                isDark
+                  ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                  : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+              )}
+              aria-label={t("common.options")}
             >
-              <Trash2 size={16} />
+              <MoreVertical size={16} />
             </button>
           </div>
         )}
         </div>
       </Card>
     </div>
-  );
+    );
+  };
 
   const VIEW_OPTIONS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
     { id: "agenda", label: "Agenda", icon: <AlignLeft size={14} /> },
@@ -1404,7 +1496,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="space-y-6"
+      className="space-y-6 pb-28"
     >
       {/* ── Header with view switcher and export button ── */}
       <div className="flex items-center justify-between">
@@ -1511,7 +1603,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   exit={{ opacity: 0, height: 0 }}
                   className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden"
                 >
-                  {completedActivities.map(renderItineraryItem)}
+                  {completedActivities.map((item) => renderItineraryItem(item))}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1521,8 +1613,53 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
       <FloatingActionButton
         onClick={onOpenModal}
-        className={isGuidedTrip ? "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(36,98,235,.5)]" : undefined}
+        className={isGuidedTrip ? "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]" : undefined}
       />
+
+      {/* Overflow menu do card (Editar / Excluir) */}
+      {itemMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setItemMenu(null)} />
+          <div
+            className={cn(
+              "fixed z-50 w-40 rounded-xl border shadow-lg py-1 overflow-hidden",
+              isDark ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
+            )}
+            style={{ top: itemMenu.top, right: itemMenu.right }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                startEditItinerary(itemMenu.item);
+                setItemMenu(null);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              <FilePenLine size={15} />
+              {t("common.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = itemMenu.item;
+                setItemMenu(null);
+                void deleteItineraryItemHandler(target);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-red-400 hover:bg-red-950/40" : "text-red-600 hover:bg-red-50"
+              )}
+            >
+              <Trash2 size={15} />
+              {t("common.delete")}
+            </button>
+          </div>
+        </>
+      )}
+
       {ConfirmDialogNode}
 
       <VisibilityBottomSheet

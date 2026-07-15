@@ -36,13 +36,19 @@ export function FloatingActionButton({
         "fixed z-40 flex items-center justify-center gap-2",
         "w-14 h-14 md:w-16 md:h-16",
         "rounded-full shadow-2xl",
-        "bg-gradient-to-br from-blue-500 to-indigo-600",
         "text-white font-bold",
-        "hover:shadow-blue-500/50 transition-all duration-200",
-        "focus:outline-none focus:ring-4 focus:ring-blue-500/30",
+        "hover:brightness-110 transition-all duration-200",
+        "focus:outline-none focus:ring-4",
         positionClasses[position],
         className
       )}
+      style={{
+        backgroundColor: "var(--accent-color)",
+        backgroundImage:
+          "linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))",
+        ["--tw-ring-color" as string]:
+          "color-mix(in srgb, var(--accent-color) 30%, transparent)",
+      }}
       aria-label={label || "Adicionar item"}
     >
       {icon || <Plus size={24} />}
