@@ -641,123 +641,215 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
           })()}
         </div>
         <div className="flex-1 min-w-0">
-          {editingItineraryId === item.id ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <select
-                  value={itineraryDraft.type_id || ""}
-                  onChange={(e) =>
-                    setItineraryDraft((cur) => ({ ...cur, type_id: e.target.value || null }))
-                  }
-                  className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-                >
-                  <option value="">Sem tipo</option>
-                  {itineraryTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
+          {editingItineraryId === item.id ? (() => {
+            const fieldLabelClass = cn(
+              "block text-xs font-semibold mb-1.5",
+              isDark ? "text-zinc-400" : "text-zinc-600"
+            );
+            const fieldIconClass = cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none",
+              isDark ? "text-zinc-500" : "text-zinc-400"
+            );
+            const fieldInputClass = cn(
+              "w-full pl-10 pr-3 py-3 rounded-2xl border text-[15px] transition-all",
+              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
+              isDark
+                ? "border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+                : "border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400"
+            );
+            const fieldTextareaClass = cn(
+              "w-full px-3.5 py-3 rounded-2xl border text-[15px] transition-all resize-none",
+              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
+              isDark
+                ? "border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+                : "border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400"
+            );
+
+            return (
+            <div className="space-y-4">
+              <div>
+                <label className={fieldLabelClass}>Tipo</label>
+                <div className="relative">
+                  <FilePenLine size={16} className={fieldIconClass} />
+                  <select
+                    value={itineraryDraft.type_id || ""}
+                    onChange={(e) =>
+                      setItineraryDraft((cur) => ({ ...cur, type_id: e.target.value || null }))
+                    }
+                    className={fieldInputClass}
+                  >
+                    <option value="">Sem tipo</option>
+                    {itineraryTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <input
-                value={itineraryDraft.title}
-                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, title: e.target.value }))}
-                placeholder="Titulo"
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              />
-              <input
-                value={itineraryDraft.location}
-                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, location: e.target.value }))}
-                placeholder="Local"
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              />
-              <input
-                value={itineraryDraft.url}
-                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, url: e.target.value }))}
-                placeholder="URL"
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              />
-              <div
+
+              <div>
+                <label className={fieldLabelClass}>Nome</label>
+                <div className="relative">
+                  <FilePenLine size={16} className={fieldIconClass} />
+                  <input
+                    value={itineraryDraft.title}
+                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, title: e.target.value }))}
+                    placeholder="Ex: Jantar no restaurante"
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>Local</label>
+                <div className="relative">
+                  <MapPin size={16} className={fieldIconClass} />
+                  <input
+                    value={itineraryDraft.location}
+                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, location: e.target.value }))}
+                    placeholder="Cidade, endereço ou região"
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>Link</label>
+                <div className="relative">
+                  <ExternalLink size={16} className={fieldIconClass} />
+                  <input
+                    value={itineraryDraft.url}
+                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, url: e.target.value }))}
+                    placeholder="Site, reserva ou ingresso"
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>Visibilidade</label>
+                <div
+                  className={cn(
+                    "grid grid-cols-2 gap-1 rounded-2xl border p-1",
+                    isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+                  )}
+                >
+                  {(["public", "private"] as const).map((visibility) => {
+                    const active = itineraryDraft.visibility === visibility;
+                    const Icon = visibility === "public" ? Users : Lock;
+                    return (
+                      <button
+                        key={visibility}
+                        type="button"
+                        onClick={() => setItineraryDraft((cur) => ({ ...cur, visibility }))}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors",
+                          active
+                            ? isDark
+                              ? "bg-zinc-700 text-white"
+                              : "bg-white text-zinc-900 shadow-sm"
+                            : isDark
+                            ? "text-zinc-400 hover:text-zinc-200"
+                            : "text-zinc-500 hover:text-zinc-700"
+                        )}
+                        aria-pressed={active}
+                      >
+                        <Icon size={13} />
+                        {visibility === "public" ? t("common.public") : t("common.private")}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const isChecked = !itineraryDraft.is_all_day;
+                  setItineraryDraft((cur) => {
+                    let newStartTime = cur.start_time;
+                    let newEndTime = cur.end_time;
+                    if (isChecked) {
+                      if (newStartTime && newStartTime.includes("T"))
+                        newStartTime = newStartTime.split("T")[0];
+                      if (newEndTime && newEndTime.includes("T"))
+                        newEndTime = newEndTime.split("T")[0];
+                    } else {
+                      if (newStartTime && !newStartTime.includes("T"))
+                        newStartTime = `${newStartTime}T00:00`;
+                      if (newEndTime && !newEndTime.includes("T"))
+                        newEndTime = `${newEndTime}T00:00`;
+                    }
+                    return { ...cur, is_all_day: isChecked, start_time: newStartTime, end_time: newEndTime };
+                  });
+                }}
                 className={cn(
-                  "grid grid-cols-2 gap-1 rounded-xl border p-1",
+                  "flex items-center gap-2.5 w-full rounded-2xl border px-3.5 py-3 transition-colors",
                   isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
                 )}
+                aria-pressed={itineraryDraft.is_all_day}
               >
-                {(["public", "private"] as const).map((visibility) => {
-                  const active = itineraryDraft.visibility === visibility;
-                  const Icon = visibility === "public" ? Users : Lock;
-                  return (
-                    <button
-                      key={visibility}
-                      type="button"
-                      onClick={() => setItineraryDraft((cur) => ({ ...cur, visibility }))}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors",
-                        active
-                          ? isDark
-                            ? "bg-zinc-700 text-white"
-                            : "bg-white text-zinc-900 shadow-sm"
-                          : isDark
-                          ? "text-zinc-400 hover:text-zinc-200"
-                          : "text-zinc-500 hover:text-zinc-700"
-                      )}
-                      aria-pressed={active}
-                    >
-                      <Icon size={13} />
-                      {visibility === "public" ? t("common.public") : t("common.private")}
-                    </button>
-                  );
-                })}
-              </div>
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={itineraryDraft.is_all_day}
-                  onChange={(e) => {
-                    const isChecked = e.target.checked;
-                    setItineraryDraft((cur) => {
-                      let newStartTime = cur.start_time;
-                      let newEndTime = cur.end_time;
-                      if (isChecked) {
-                        if (newStartTime && newStartTime.includes("T"))
-                          newStartTime = newStartTime.split("T")[0];
-                        if (newEndTime && newEndTime.includes("T"))
-                          newEndTime = newEndTime.split("T")[0];
-                      } else {
-                        if (newStartTime && !newStartTime.includes("T"))
-                          newStartTime = `${newStartTime}T00:00`;
-                        if (newEndTime && !newEndTime.includes("T"))
-                          newEndTime = `${newEndTime}T00:00`;
-                      }
-                      return { ...cur, is_all_day: isChecked, start_time: newStartTime, end_time: newEndTime };
-                    });
+                <span
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                  style={{
+                    backgroundColor: itineraryDraft.is_all_day
+                      ? "var(--accent-color)"
+                      : isDark
+                      ? "#3f3f46"
+                      : "#d4d4d8",
                   }}
+                >
+                  <span
+                    className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: itineraryDraft.is_all_day ? "translateX(18px)" : "translateX(2px)" }}
+                  />
+                </span>
+                <span className={cn("text-sm font-medium", isDark ? "text-zinc-200" : "text-zinc-700")}>
+                  Dia todo
+                </span>
+              </button>
+
+              <div>
+                <label className={fieldLabelClass}>Início</label>
+                <div className="relative">
+                  <Clock size={16} className={fieldIconClass} />
+                  <input
+                    type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
+                    value={itineraryDraft.start_time}
+                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, start_time: e.target.value }))}
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>Término</label>
+                <div className="relative">
+                  <Clock size={16} className={fieldIconClass} />
+                  <input
+                    type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
+                    value={itineraryDraft.end_time}
+                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, end_time: e.target.value }))}
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>Notas</label>
+                <textarea
+                  value={itineraryDraft.description}
+                  onChange={(e) => setItineraryDraft((cur) => ({ ...cur, description: e.target.value }))}
+                  placeholder="Observações, confirmações, lembretes…"
+                  rows={3}
+                  className={fieldTextareaClass}
                 />
-                Dia todo
-              </label>
-              <input
-                type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
-                value={itineraryDraft.start_time}
-                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, start_time: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              />
-              <input
-                type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
-                value={itineraryDraft.end_time}
-                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, end_time: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm"
-              />
-              <textarea
-                value={itineraryDraft.description}
-                onChange={(e) => setItineraryDraft((cur) => ({ ...cur, description: e.target.value }))}
-                placeholder="Notas"
-                rows={2}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm resize-none"
-              />
+              </div>
 
             <div className="flex items-center gap-2 flex-wrap">
               <label className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl border text-sm cursor-pointer w-fit transition-colors",
+                "flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-sm cursor-pointer w-fit transition-colors",
                 item.photo_url
                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"
                   : isDark
@@ -809,7 +901,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   type="button"
                   onClick={() => void removeItineraryPhoto(item)}
                   className={cn(
-                    "px-3 py-2 rounded-xl border text-xs font-medium transition-colors",
+                    "px-3.5 py-2.5 rounded-2xl border text-xs font-medium transition-colors",
                     isDark
                       ? "border-red-900/60 bg-red-950/40 text-red-300 hover:bg-red-950/60"
                       : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
@@ -822,25 +914,31 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
               <div className="flex gap-2 pt-1">
                 <button
-                  onClick={() => void saveItineraryEdit(item.id)}
-                  disabled={isUpdatingItinerary}
-                  className="flex-1 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-                  style={{ backgroundColor: "var(--accent-color)" }}
-                >
-                  {isUpdatingItinerary ? "Salvando…" : "Salvar"}
-                </button>
-                <button
                   onClick={() => setEditingItineraryId(null)}
                   className={cn(
-                    "flex-1 py-2 rounded-xl text-sm font-bold",
-                    isDark ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
+                    "flex-1 py-3 rounded-2xl border text-sm font-bold transition-colors",
+                    isDark
+                      ? "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                      : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"
                   )}
                 >
                   Cancelar
                 </button>
+                <button
+                  onClick={() => void saveItineraryEdit(item.id)}
+                  disabled={isUpdatingItinerary}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-50 transition-shadow"
+                  style={{
+                    backgroundColor: "var(--accent-color)",
+                    boxShadow: "0 8px 20px -8px var(--accent-color)",
+                  }}
+                >
+                  {isUpdatingItinerary ? "Salvando…" : "Salvar"}
+                </button>
               </div>
             </div>
-          ) : (
+            );
+          })() : (
             <div>
               {!hasPhotoOverlay && (
                 <p className="font-semibold text-sm">{item.title}</p>
