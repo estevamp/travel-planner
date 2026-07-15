@@ -785,6 +785,25 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                         </div>
                       </div>
 
+                      <button
+                        type="button"
+                        onClick={() => void convertIdeaToActivity(idea)}
+                        disabled={copyingIdeaId === idea.id}
+                        className={cn(
+                          "flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 text-sm font-bold transition-colors disabled:opacity-50",
+                          isDark
+                            ? "border-emerald-900 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-950/70"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                        )}
+                      >
+                        {copyingIdeaId === idea.id ? (
+                          <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <CalendarPlus size={16} />
+                        )}
+                        {t("ideas.convertAction")}
+                      </button>
+
                       <div className="flex gap-2 pt-1">
                         <button
                           onClick={() => setEditingIdeaId(null)}
@@ -919,26 +938,6 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
                 {!isEditingThis && (
                   <div className="self-stretch flex flex-col items-center justify-between gap-1">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void convertIdeaToActivity(idea);
-                      }}
-                      disabled={copyingIdeaId === idea.id}
-                      className={cn(
-                        "p-2 rounded-lg transition-colors disabled:opacity-50",
-                        isDark ? "text-emerald-400 hover:bg-emerald-950/40" : "text-emerald-600 hover:bg-emerald-50"
-                      )}
-                      aria-label={t("ideas.convertAction")}
-                      title={t("ideas.convertAction")}
-                    >
-                      {copyingIdeaId === idea.id ? (
-                        <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <CalendarPlus size={16} />
-                      )}
-                    </button>
                     {canManage && (
                       <button
                         type="button"
