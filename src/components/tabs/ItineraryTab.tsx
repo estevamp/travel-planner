@@ -726,6 +726,9 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
 
+  // Onboarding guiado: destaca o FAB acima do balão de dica
+  const isGuidedTrip = settings.onboarding_status === "active" && settings.onboarding_trip_id === tripId;
+
   // Edit state
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -1516,7 +1519,10 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
         )}
       </div>
 
-      <FloatingActionButton onClick={onOpenModal} />
+      <FloatingActionButton
+        onClick={onOpenModal}
+        className={isGuidedTrip ? "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(36,98,235,.5)]" : undefined}
+      />
       {ConfirmDialogNode}
 
       <VisibilityBottomSheet

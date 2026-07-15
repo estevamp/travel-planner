@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
@@ -37,7 +38,7 @@ import { Modal } from "./Modal";
 import { CurrencySelector } from "./CurrencySelector";
 import { PayerSelector } from "./PayerSelector";
 import { SplitSelector } from "./SplitSelector";
-import { OnboardingActivityModal } from "./OnboardingActivityModal";
+import { OnboardingActivityModal, OnboardingDots } from "./OnboardingActivityModal";
 import { useI18n } from "../i18n/I18nProvider";
 
 interface TripDashboardProps {
@@ -144,7 +145,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
   const isGuidedTrip = settings.onboarding_status === "active" && settings.onboarding_trip_id === tripId;
-  const [onboardingStep, setOnboardingStep] = useState<"hint" | "form" | "complete">("hint");
+  const [onboardingStep, setOnboardingStep] = useState<"hint" | "form" | "complete" | "done">("hint");
 
   // Custom hooks para CRUD
   const { create: createItinerary, isSubmitting: isSubmittingItinerary } = useCreateItinerary({
@@ -222,9 +223,14 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   };
 
   const createFirstActivity = async (form: FormData) => {
+    // Sem campo de data no formulário guiado: agenda para hoje (dia todo)
+    // para o item aparecer agrupado sob uma data na Agenda, como no figma.
+    const today = format(new Date(), "yyyy-MM-dd");
+    form.set("start_date", today);
+    form.set("end_date", today);
     const created = await createItinerary({
       form,
-      allDay: false,
+      allDay: true,
       onClose: () => undefined,
     });
     if (created) {
@@ -970,10 +976,14 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         </div>
       </nav>
 
-      {isGuidedTrip && onboardingStep === "hint" && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[70] mx-auto w-[min(86vw,360px)] rounded-2xl bg-white p-6 text-center shadow-[0_8px_22px_rgba(0,0,0,.22)] md:bottom-10">
-          <p className="text-[16px] leading-6 text-slate-600">Clique no <strong className="text-[#2462EB]">+</strong> para criar sua<br />primeira atividade</p>
-          <div className="mt-5 flex justify-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-6 rounded-full bg-[#2462EB]" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /><span className="h-1.5 w-1.5 rounded-full bg-slate-300" /></div>
+      {isGuidedTrip && onboardingStep === "hint" && activeTab === "itinerary" && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-40 z-[70] mx-auto w-[min(86vw,360px)] rounded-2xl bg-white p-6 text-center shadow-[0_8px_22px_rgba(0,0,0,.22)] md:bottom-28">
+          <p className="text-[16px] leading-6 text-slate-600">
+            {language === "en"
+              ? <>Click the <strong className="text-[#2462EB]">+</strong> to create your<br />first activity</>
+              : <>Clique no <strong className="text-[#2462EB]">+</strong> para criar sua<br />primeira atividade</>}
+          </p>
+          <OnboardingDots current={4} />
         </div>
       )}
       <OnboardingActivityModal
@@ -983,11 +993,18 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         onSubmit={createFirstActivity}
       />
       {onboardingStep === "complete" && (
-        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/10 px-5 pb-20">
-          <section className="w-full max-w-[380px] rounded-3xl bg-white p-7 text-center shadow-2xl">
-            <h2 className="text-[25px] leading-9 font-extrabold text-[#0A2342]">Seu roteiro já está<br />ganhando vida!</h2>
-            <p className="mt-4 text-[20px] leading-8 text-slate-600">Explore todas as funcionalidades e continue personalizando sua viagem.</p>
-            <button onClick={() => setOnboardingStep("hint")} className="mt-6 rounded-xl bg-[#2462EB] px-6 py-3 text-sm font-bold text-white">Continuar</button>
+        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/10 px-5 pb-20" onClick={() => setOnboardingStep("done")}>
+          <section className="w-full max-w-[380px] rounded-3xl bg-white p-7 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <h2 className="text-[25px] leading-9 font-extrabold text-[#0A2342]">
+              {language === "en" ? <>Your itinerary is<br />coming to life!</> : <>Seu roteiro já está<br />ganhando vida!</>}
+            </h2>
+            <p className="mt-4 text-[20px] leading-8 text-slate-600">
+              {language === "en"
+                ? "Explore all the features and keep personalizing your trip."
+                : "Explore todas as funcionalidades e continue personalizando sua viagem."}
+            </p>
+            <OnboardingDots current={6} />
+            <button onClick={() => setOnboardingStep("done")} className="mt-6 rounded-xl bg-[#2462EB] px-6 py-3 text-sm font-bold text-white">{language === "en" ? "Continue" : "Continuar"}</button>
           </section>
         </div>
       )}
