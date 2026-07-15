@@ -2,10 +2,10 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
-import { cn, maskCurrency, parseCurrencyToNumber, resizeImage } from "../utils";
+import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../utils";
 import { getThemeStyles } from "../utils/theme";
 import { useSwipeTabs } from "../hooks/useSwipeTabs";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
@@ -191,6 +191,29 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       : settings.theme_palette;
     return getThemeStyles({ ...settings, theme_palette: effectivePalette });
   }, [settings, trip?.theme_palette]);
+
+  const handleExportPdf = () => {
+    if (!trip || !members || !settings) {
+      toast(t("itinerary.exportError"), "error");
+      return;
+    }
+    try {
+      exportItineraryToPdf(
+        trip.name,
+        trip.destination,
+        trip.start_date,
+        trip.end_date,
+        trip.itinerary,
+        itineraryTypes,
+        members,
+        settings.language_code,
+        settings.default_currency
+      );
+      toast(t("itinerary.exportSuccess"), "success");
+    } catch (err) {
+      toast(getErrorMessage(err), "error");
+    }
+  };
 
   // Modal helpers
   const openModal = (type: 'itinerary' | 'expense' | 'idea') => {
@@ -424,15 +447,16 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
               </a>
               <span className="truncate font-medium">{trip.destination}</span>
             </div>
-            <div className="mt-4 md:mt-6">
-              <h3 className="text-lg md:text-xl font-bold text-zinc-800">
-                {activeTab === "itinerary" && t("common.itinerary")}
-                {activeTab === "expenses" && t("common.expenses")}
-                {activeTab === "ideas" && t("common.ideas")}
-                {activeTab === "documents" && t("common.documents")}
-                {activeTab === "people" && t("common.people")}
-                {activeTab === "settings" && t("common.settings")}
-              </h3>
+            <div className="mt-4 md:mt-6 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="text-lg md:text-xl font-bold text-zinc-800">
+                  {activeTab === "itinerary" && t("common.itinerary")}
+                  {activeTab === "expenses" && t("common.expenses")}
+                  {activeTab === "ideas" && t("common.ideas")}
+                  {activeTab === "documents" && t("common.documents")}
+                  {activeTab === "people" && t("common.people")}
+                  {activeTab === "settings" && t("common.settings")}
+                </h3>
                 {activeTab !== "settings" && activeTab !== "itinerary" && (
                   <p className="text-xs text-zinc-400 mt-0.5">
                     {activeTab === "ideas" && t("dashboard.tab.ideas.description")}
@@ -441,6 +465,22 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                     {activeTab === "people" && t("dashboard.tab.people.description")}
                   </p>
                 )}
+              </div>
+              {activeTab === "itinerary" && (
+                <button
+                  onClick={handleExportPdf}
+                  title={t("dashboard.exportToPDF")}
+                  aria-label={t("dashboard.exportToPDF")}
+                  className={cn(
+                    "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
+                    settings.dark_mode
+                      ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  )}
+                >
+                  <Download size={16} />
+                </button>
+              )}
             </div>
           </div>
           <div className="hidden md:flex items-center gap-2">

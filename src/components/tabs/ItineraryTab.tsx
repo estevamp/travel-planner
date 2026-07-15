@@ -4,10 +4,10 @@ import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
   ChevronDown, ChevronRight, MapPin, Lock, Users,
-  Clock, ImagePlus, Download, MoreVertical, ExternalLink,
+  Clock, ImagePlus, MoreVertical, ExternalLink,
 } from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../../utils";
+import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage } from "../../utils";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -359,30 +359,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   }>({ open: false, itemId: null, currentVisibility: "public", onConfirm: null });
 
   const isDark = settings.dark_mode;
-
-  const handleExportPdf = () => {
-    if (!trip || !members || !settings) {
-      toast(t("itinerary.exportError"), "error");
-      return;
-    }
-
-    try {
-      exportItineraryToPdf(
-        trip.name,
-        trip.destination,
-        trip.start_date,
-        trip.end_date,
-        trip.itinerary,
-        itineraryTypes,
-        members,
-        settings.language_code,
-        settings.default_currency
-      );
-      toast(t("itinerary.exportSuccess"), "success");
-    } catch (err) {
-      toast(getErrorMessage(err), "error");
-    }
-  };
 
   useEffect(() => {
     const privatePhotoPaths = trip.itinerary
@@ -967,45 +943,33 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 </a>
               )}
 
-              {(item.type || item.visibility === "private") && (
+              {/* "Público" é o padrão — só sinaliza quando privada; tornar pública fica no menu ⋯.
+                  O tipo da atividade é comunicado pelo ícone colorido, sem chip. */}
+              {item.visibility === "private" && (
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                  {item.type && (
-                    <span
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                      style={{
-                        backgroundColor: `color-mix(in srgb, ${getActivityTypeColor(item.type_id)} 12%, transparent)`,
-                        color: getActivityTypeColor(item.type_id),
-                      }}
-                    >
-                      {item.type.name}
-                    </span>
-                  )}
-                  {/* "Público" é o padrão — só sinaliza quando privada; tornar pública fica no menu ⋯ */}
-                  {item.visibility === "private" && (
-                    <button
-                      onClick={() =>
-                        setVisibilitySheet({
-                          open: true,
-                          itemId: item.id,
-                          currentVisibility: item.visibility,
-                          onConfirm: () => void toggleVisibility(item),
-                        })
-                      }
-                      className={cn(
-                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
-                        isDark
-                          ? "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                          : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-                      )}
-                    >
-                      <Lock size={10} /> {t("common.private")}
-                    </button>
-                  )}
+                  <button
+                    onClick={() =>
+                      setVisibilitySheet({
+                        open: true,
+                        itemId: item.id,
+                        currentVisibility: item.visibility,
+                        onConfirm: () => void toggleVisibility(item),
+                      })
+                    }
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
+                      isDark
+                        ? "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                    )}
+                  >
+                    <Lock size={10} /> {t("common.private")}
+                  </button>
                 </div>
               )}
 
-              <div className="flex items-center justify-between mt-1.5 gap-2">
-                {item.start_time && (
+              {item.start_time && (
+                <div className="mt-1.5">
                   <span className={cn("text-xs whitespace-nowrap font-medium", isDark ? "text-zinc-400" : "text-zinc-500")}>
                     {(() => {
                       try {
@@ -1046,28 +1010,13 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                       }
                     })()}
                   </span>
-                )}
-                {/* Autor como mini-avatar; irrelevante quando só há um participante */}
-                {item.created_by_member_id && members.length > 1 && (() => {
-                  const creatorName = getCreatorName(item.created_by_member_id);
-                  return (
-                    <span
-                      title={creatorName}
-                      aria-label={creatorName}
-                      className="ml-auto flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                      // Cor determinística por membro (mesmo hash usado para categorias)
-                      style={{ backgroundColor: getActivityTypeColor(item.created_by_member_id) }}
-                    >
-                      {(creatorName.trim()[0] ?? "?").toUpperCase()}
-                    </span>
-                  );
-                })()}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
         {editingItineraryId !== item.id && (
-          <div className="flex flex-col items-center gap-1">
+          <div className="self-stretch flex flex-col items-center justify-between gap-1">
             {/* Photo upload */}
             <input
               ref={(el) => { photoInputRefs.current[item.id] = el; }}
@@ -1120,6 +1069,21 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             >
               <MoreVertical size={16} />
             </button>
+            {/* Autor como mini-avatar no canto inferior direito; irrelevante quando só há um participante */}
+            {item.created_by_member_id && members.length > 1 && (() => {
+              const creatorName = getCreatorName(item.created_by_member_id);
+              return (
+                <span
+                  title={creatorName}
+                  aria-label={creatorName}
+                  className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                  // Cor determinística por membro (mesmo hash usado para categorias)
+                  style={{ backgroundColor: getActivityTypeColor(item.created_by_member_id) }}
+                >
+                  {(creatorName.trim()[0] ?? "?").toUpperCase()}
+                </span>
+              );
+            })()}
           </div>
         )}
         </div>
@@ -1136,23 +1100,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       exit={{ opacity: 0, y: -10 }}
       className="space-y-6 pb-28"
     >
-      {/* ── Header with export button ── */}
-      <div className="flex items-center justify-end">
-        <button
-          onClick={handleExportPdf}
-          title={t("dashboard.exportToPDF")}
-          aria-label={t("dashboard.exportToPDF")}
-          className={cn(
-            "flex items-center justify-center w-9 h-9 rounded-xl transition-all",
-            isDark
-              ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-          )}
-        >
-          <Download size={16} />
-        </button>
-      </div>
-
       {/* ── Content area ── */}
       <div className="space-y-4">
         <AgendaView
