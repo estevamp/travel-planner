@@ -749,13 +749,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             className={cn(
               "flex-1 py-2 text-sm font-semibold rounded-lg transition-all",
               expenseSubTab === tab
-                ? settings.dark_mode
-                  ? "bg-zinc-700 text-white shadow"
-                  : "bg-white text-zinc-900 shadow"
+                ? "text-white shadow-sm"
                 : settings.dark_mode
                 ? "text-zinc-400 hover:text-zinc-200"
                 : "text-zinc-500 hover:text-zinc-700"
             )}
+            style={expenseSubTab === tab ? { backgroundColor: "var(--accent-color)" } : undefined}
           >
             {tab === "relatorio" ? t("expenses.subtab.report") : t("expenses.subtab.payments")}
           </button>
@@ -768,12 +767,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       {expenseSubTab === "relatorio" && (
         <>
           {!isRatesLoading && (
-            <Card className={cn(
-              "border-2",
-              settings.dark_mode
-                ? "bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border-zinc-700"
-                : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
-            )}>
+            <Card>
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div>
@@ -809,7 +803,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                       "w-full flex items-center justify-center gap-2 py-1 transition-colors border-t mt-2",
                       settings.dark_mode
                         ? "text-zinc-500 hover:text-zinc-300 border-zinc-700"
-                        : "text-zinc-400 hover:text-zinc-600 border-blue-100"
+                        : "text-zinc-400 hover:text-zinc-600 border-zinc-100"
                     )}
                   >
                     <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -880,9 +874,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           )}
 
-          {/* Desktop table */}
-          <div className="w-full sm:w-72">
-              <label className={cn("mb-1 block text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
+          <Card className="w-full sm:w-72 space-y-1">
+              <label className={cn("block text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
                 {t("expenses.sort.label")}
               </label>
               <select
@@ -900,7 +893,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 <option value="descriptionAsc">{t("expenses.sort.descriptionAsc")}</option>
                 <option value="descriptionDesc">{t("expenses.sort.descriptionDesc")}</option>
               </select>
-            </div>
+            </Card>
 
           {/* Desktop table */}
           <Card className="p-0 overflow-hidden hidden md:block">
@@ -1063,13 +1056,12 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                       <div
                         key={m.id}
                         className={cn(
-                          "p-3 rounded-xl border",
-                          isCredit
-                            ? settings.dark_mode ? "bg-emerald-950/30 border-emerald-800/50" : "bg-emerald-50 border-emerald-200"
-                            : isDebt
-                            ? settings.dark_mode ? "bg-red-950/30 border-red-800/50" : "bg-red-50 border-red-200"
-                            : settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-200"
+                          "p-3 rounded-xl border border-l-4",
+                          settings.dark_mode ? "bg-zinc-800/60 border-zinc-700" : "bg-zinc-50 border-zinc-200"
                         )}
+                        style={{
+                          borderLeftColor: isCredit ? "#10B981" : isDebt ? "#EF4444" : "var(--card-border)",
+                        }}
                       >
                         <p className={cn("text-sm font-bold mb-2", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>{m.name}</p>
                         <div className="flex flex-wrap gap-3">

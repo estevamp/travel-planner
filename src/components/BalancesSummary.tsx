@@ -3,6 +3,7 @@ import { TripMember } from "../types";
 import { MemberBalance, Settlement } from "../types/splitting";
 import { formatCurrency, simplifyDebts, mergeSpouseTransfers, GroupedTransfer } from "../utils/splitting";
 import { maskCurrency, parseCurrencyToNumber, cn } from "../utils";
+import { getDeterministicColor } from "../utils/colors";
 import { useI18n } from "../i18n/I18nProvider";
 
 
@@ -230,13 +231,13 @@ export function BalancesSummary({
               ? "V"
               : transfer.from_display_name.charAt(0).toUpperCase();
 
-            const chipColor = isCurrentUserDebtor
-              ? "bg-red-600 text-white"
-              : isCurrentUserCreditor
-              ? "bg-green-600 text-white"
-              : isDark
-              ? "bg-slate-600 text-white"
-              : "bg-slate-400 text-white";
+            // Cor do avatar: determinística por pessoa (mesmo padrão da aba Atividades),
+            // com um anel indicando a direção da dívida (vermelho = você deve, verde = te devem).
+            const avatarMemberId = isCurrentUserDebtor
+              ? myId || spouseId || transfer.from_member_ids[0] || null
+              : transfer.from_member_ids[0] ?? null;
+            const avatarColor = getDeterministicColor(avatarMemberId);
+            const avatarRingColor = isCurrentUserDebtor ? "#EF4444" : isCurrentUserCreditor ? "#10B981" : undefined;
 
             const key = transferKey(transfer);
             const isPaymentOpen = openPaymentKey === key;
@@ -258,7 +259,13 @@ export function BalancesSummary({
                 <div className="p-4">
                   {/* Linha 1: avatar + texto (sem competição com botões) */}
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${chipColor}`}>
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 text-white"
+                      style={{
+                        backgroundColor: avatarColor,
+                        boxShadow: avatarRingColor ? `0 0 0 2px ${avatarRingColor}` : undefined,
+                      }}
+                    >
                       {fromInitial}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -301,8 +308,9 @@ export function BalancesSummary({
                             "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors",
                             isPaymentOpen
                               ? isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
-                              : isDark ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                              : "text-white"
                           )}
+                          style={!isPaymentOpen ? { backgroundColor: "var(--accent-color)" } : undefined}
                         >
                           {isPaymentOpen ? "Cancelar" : "Registrar pagamento"}
                         </button>
@@ -377,21 +385,19 @@ export function BalancesSummary({
                         onChange={(e) => setPaymentAmount(maskCurrency(e.target.value, language))}
                         placeholder="0,00"
                         className={cn(
-                          "flex-1 px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2",
+                          "flex-1 px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/30 focus:border-[var(--accent-color)]",
                           isDark
-                            ? "bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500"
-                            : "bg-white border-slate-200 text-slate-900 focus:ring-blue-400"
+                            ? "bg-slate-700 border-slate-600 text-slate-100"
+                            : "bg-white border-slate-200 text-slate-900"
                         )}
                       />
                       <button
                         type="button"
                         onClick={() => void submitPayment(transfer)}
                         disabled={savingKey === key}
+                        style={{ backgroundColor: "var(--accent-color)" }}
                         className={cn(
-                          "px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50",
-                          isDark
-                            ? "bg-blue-600 hover:bg-blue-500 text-white"
-                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                          "px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 text-white"
                         )}
                       >
                         {savingKey === key ? "Salvando..." : "Confirmar"}
