@@ -135,9 +135,9 @@ export function SplitSelector({
             type="button"
             onClick={() => handleSetSplitType("equal")}
             className={cn(
-              "px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all duration-200",
+              "px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200",
               splitType === "equal"
-                ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)]"
                 : "border-[var(--card-border)] bg-[var(--card-bg)] opacity-60 hover:opacity-100"
             )}
           >
@@ -147,9 +147,9 @@ export function SplitSelector({
             type="button"
             onClick={() => handleSetSplitType("unequal")}
             className={cn(
-              "px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all duration-200",
+              "px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200",
               splitType === "unequal"
-                ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)]"
                 : "border-[var(--card-border)] bg-[var(--card-bg)] opacity-60 hover:opacity-100"
             )}
           >
@@ -167,7 +167,7 @@ export function SplitSelector({
           return (
             <div
               key={member.id}
-              className="flex items-center gap-3 p-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
+              className="flex items-center gap-3 p-3 rounded-xl border text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
               style={{
                 backgroundColor: 'var(--card-bg)',
                 borderColor: 'var(--card-border)',

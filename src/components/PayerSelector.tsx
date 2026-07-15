@@ -49,9 +49,9 @@ export function PayerSelector({
             value={isOtherPersonSelected ? selectedPayerId : ""}
             onChange={(e: ChangeEvent<HTMLSelectElement>) => onSelect(e.target.value)}
             className={cn(
-              "w-full flex-1 px-3 py-2 rounded-xl border-2",
+              "w-full flex-1 px-3 py-2 rounded-xl border",
               "text-sm font-medium",
-              "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20",
+              "focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20",
               "transition-all duration-200",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
