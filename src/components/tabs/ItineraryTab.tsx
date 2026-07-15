@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, MapPin, Lock, Users,
-  Clock, ImagePlus, MoreVertical, ExternalLink,
+  Clock, ImagePlus, MoreVertical, ExternalLink, Camera,
 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage } from "../../utils";
@@ -378,6 +378,31 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     return cachedUrls[photoUrl] || null;
   };
 
+  const uploadItineraryPhoto = async (item: ItineraryItem, file: File) => {
+    if (!currentMember) return;
+    try {
+      const resized = await resizeImage(file, 1200);
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${trip.id}/${currentMember.id}/itinerary/${item.id}.${ext}`;
+      const blob = await (await fetch(resized)).blob();
+      await supabase.storage.from(DOCS_BUCKET).upload(path, blob, { upsert: true });
+      const { data: signedData, error: signedUrlError } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
+      if (signedUrlError || !signedData?.signedUrl) throw signedUrlError || new Error("Falha ao gerar URL da foto");
+      const photo = path;
+      setCachedUrl(path, signedData.signedUrl);
+      onTripUpdate((prev) => ({
+        ...prev,
+        itinerary: prev.itinerary.map((i) =>
+          i.id === item.id ? { ...i, photo_url: photo } : i
+        ),
+      }));
+      await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
+      toast("Foto adicionada!", "success");
+    } catch (err) {
+      toast(getErrorMessage(err), "error");
+    }
+  };
+
   const removeItineraryPhoto = async (item: ItineraryItem) => {
     if (!item.photo_url) return;
     const previousPhotoUrl = item.photo_url;
@@ -625,6 +650,38 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               </div>
             </>
           )}
+          {isEditingThis && (
+            <div className="absolute top-2 right-2 flex gap-1.5">
+              <label
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 text-white backdrop-blur-sm cursor-pointer hover:bg-black/70 transition-colors"
+                title="Trocar foto"
+              >
+                <Camera size={15} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) await uploadItineraryPhoto(item, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeItineraryPhoto(item);
+                }}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-red-600/80 transition-colors"
+                title="Remover foto"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          )}
         </div>
       )}
       <div className="p-5 flex items-start gap-3">
@@ -847,70 +904,27 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 />
               </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            {!item.photo_url && (
               <label className={cn(
-                "flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-sm cursor-pointer w-fit transition-colors",
-                item.photo_url
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : isDark
-                    ? "border-zinc-600 bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                "flex flex-col items-center justify-center gap-1.5 w-full py-6 rounded-2xl border-2 border-dashed cursor-pointer transition-colors",
+                isDark
+                  ? "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-500 hover:bg-zinc-800"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100"
               )}>
-                <ImagePlus size={15} />
-                <span className="text-xs font-medium">
-                  {item.photo_url ? "Trocar foto" : "Adicionar foto"}
-                </span>
-                {item.photo_url && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 ml-1" />
-                )}
+                <ImagePlus size={20} />
+                <span className="text-xs font-medium">Adicionar foto</span>
                 <input
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
-                    if (!file || !currentMember) return;
-                    try {
-                      const resized = await resizeImage(file, 1200);
-                      const ext = file.name.split(".").pop() || "jpg";
-                      const path = `${trip.id}/${currentMember.id}/itinerary/${item.id}.${ext}`;
-                      const blob = await (await fetch(resized)).blob();
-                      await supabase.storage.from(DOCS_BUCKET).upload(path, blob, { upsert: true });
-                      const { data: signedData, error: signedUrlError } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 3600);
-                      if (signedUrlError || !signedData?.signedUrl) throw signedUrlError || new Error("Falha ao gerar URL da foto");
-                      const photo = path;
-                      setCachedUrl(path, signedData.signedUrl);
-                      onTripUpdate((prev) => ({
-                        ...prev,
-                        itinerary: prev.itinerary.map((i) =>
-                          i.id === item.id ? { ...i, photo_url: photo } : i
-                        ),
-                      }));
-                      await supabase.from("itinerary").update({ photo_url: photo }).eq("id", item.id);
-                      toast("Foto adicionada!", "success");
-                    } catch (err) {
-                      toast(getErrorMessage(err), "error");
-                    }
+                    if (file) await uploadItineraryPhoto(item, file);
                     e.target.value = "";
                   }}
                 />
               </label>
-
-              {item.photo_url && (
-                <button
-                  type="button"
-                  onClick={() => void removeItineraryPhoto(item)}
-                  className={cn(
-                    "px-3.5 py-2.5 rounded-2xl border text-xs font-medium transition-colors",
-                    isDark
-                      ? "border-red-900/60 bg-red-950/40 text-red-300 hover:bg-red-950/60"
-                      : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                  )}
-                >
-                  Remover foto
-                </button>
-              )}
-            </div>
+            )}
 
               <div className="flex gap-2 pt-1">
                 <button

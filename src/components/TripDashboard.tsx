@@ -802,13 +802,13 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
               <div>
                 <label className={fieldLabelClass}>{t("dashboard.photo")}</label>
                 <label className={cn(
-                  "flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-sm cursor-pointer w-fit transition-colors",
+                  "flex flex-col items-center justify-center gap-1.5 w-full py-6 rounded-2xl border-2 border-dashed cursor-pointer transition-colors",
                   isSubmittingItinerary ? "opacity-50 cursor-not-allowed pointer-events-none" : "",
                   isDark
-                    ? "border-zinc-600 bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                    ? "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-500 hover:bg-zinc-800"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100"
                 )}>
-                  <ImagePlus size={15} />
+                  <ImagePlus size={20} />
                   <span className="text-xs font-medium">{t("dashboard.addPhoto")}</span>
                   <input
                     type="file"
