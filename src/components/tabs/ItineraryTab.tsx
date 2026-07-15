@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import {
   Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
   ChevronDown, ChevronRight, MapPin, Lock, Users,
-  AlignLeft, Clock, ImagePlus, Download, MoreVertical, ExternalLink,
+  Clock, ImagePlus, Download, MoreVertical, ExternalLink,
 } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../../utils";
@@ -26,8 +26,6 @@ import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ViewMode = "agenda" | "timeline";
-
 interface ItineraryTabProps {
   onOpenModal: () => void;
   onTripUpdate: (updater: (prev: Trip) => Trip) => void;
@@ -36,68 +34,6 @@ enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function timeToMin(t: string): number {
-  const clean = t.replace("+1", "").slice(0, 5);
-  const [h, m] = clean.split(":").map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
-}
-
-function getItemTimelineRange(
-  item: ItineraryItem,
-  activeDate: string
-): { startMin: number; endMin: number; isSpanningDay: boolean } {
-  const startDate = item.start_time?.slice(0, 10) ?? "";
-  const endDate = item.end_time?.slice(0, 10) ?? "";
-
-  // Start time calculation
-  let startMin: number;
-  if (startDate === activeDate) {
-    // Item starts on active day
-    startMin = item.start_time ? timeToMin(item.start_time.slice(11)) : 0;
-  } else if (startDate < activeDate && endDate >= activeDate) {
-    // Item started before, continues through this day - show from start of day (00:00)
-    startMin = 0;
-  } else {
-    startMin = 0;
-  }
-
-  // End time calculation
-  let endMin: number;
-  if (endDate === activeDate) {
-    // Item ends on active day
-    endMin = item.end_time ? timeToMin(item.end_time.slice(11)) : 24 * 60;
-  } else if (endDate > activeDate) {
-    // Item continues past this day - show until end of day (23:59)
-    endMin = 24 * 60;
-  } else {
-    endMin = item.end_time ? timeToMin(item.end_time.slice(11)) : 24 * 60;
-  }
-
-  const isSpanningDay = startDate !== activeDate || endDate !== activeDate;
-
-  // Clamp to Timeline view range (6am to midnight)
-  // But only clamp if the entire item is within the day
-  let displayStartMin = startMin;
-  let displayEndMin = endMin;
-
-  if (!isSpanningDay) {
-    // Only clamp single-day items to the 6am-midnight view
-    displayStartMin = Math.max(startMin, 6 * 60);
-    displayEndMin = Math.min(endMin, 24 * 60);
-  } else {
-    // For spanning items, show the full range even if outside 6am-midnight
-    // but clamp to 0 and 1440
-    displayStartMin = Math.max(startMin, 0);
-    displayEndMin = Math.min(endMin, 24 * 60);
-  }
-
-  return {
-    startMin: displayStartMin,
-    endMin: displayEndMin,
-    isSpanningDay,
-  };
-}
 
 function groupByDate(items: ItineraryItem[]): Record<string, ItineraryItem[]> {
   return items.reduce<Record<string, ItineraryItem[]>>((acc, item) => {
@@ -172,103 +108,11 @@ function getActivityTypeColor(typeId: string | null | undefined): string {
   return TYPE_COLORS[index];
 }
 
-interface TimelineItemLayout {
-  itemId: string;
-  column: number;
-  totalColumns: number;
-}
-
-function calculateTimelinePositions(
-  items: ItineraryItem[],
-  activeDate: string
-): Map<string, TimelineItemLayout> {
-  const positions = new Map<string, TimelineItemLayout>();
-  if (items.length === 0) return positions;
-
-  // Helper to get effective range clamped to visible area (6am–midnight)
-  const getEffectiveRange = (item: ItineraryItem) => {
-    const { startMin, endMin } = getItemTimelineRange(item, activeDate);
-    const clampedStart = Math.max(startMin, 6 * 60);
-    const clampedEnd = Math.min(endMin, 24 * 60);
-    const duration = Math.max(clampedEnd - clampedStart, 30);
-    return { start: clampedStart, end: clampedStart + duration };
-  };
-
-  // 1. Sort items by start time, then by duration (longer first)
-  const sortedItems = [...items].sort((a, b) => {
-    const aRange = getEffectiveRange(a);
-    const bRange = getEffectiveRange(b);
-    if (aRange.start !== bRange.start) return aRange.start - bRange.start;
-    return (bRange.end - bRange.start) - (aRange.end - aRange.start);
-  });
-
-  // 2. Group into clusters of overlapping items
-  const clusters: ItineraryItem[][] = [];
-  let currentCluster: ItineraryItem[] = [];
-  let clusterEnd = -1;
-
-  sortedItems.forEach(item => {
-    const { start, end } = getEffectiveRange(item);
-    if (start >= clusterEnd) {
-      if (currentCluster.length > 0) clusters.push(currentCluster);
-      currentCluster = [item];
-      clusterEnd = end;
-    } else {
-      currentCluster.push(item);
-      clusterEnd = Math.max(clusterEnd, end);
-    }
-  });
-  if (currentCluster.length > 0) clusters.push(currentCluster);
-
-  // 3. Process each cluster to assign columns
-  clusters.forEach(cluster => {
-    const columns: ItineraryItem[][] = [];
-    
-    cluster.forEach(item => {
-      const { start } = getEffectiveRange(item);
-      
-      // Find the first column where this item fits
-      let placed = false;
-      for (let i = 0; i < columns.length; i++) {
-        const lastItemInColumn = columns[i][columns[i].length - 1];
-        const { end: lastEnd } = getEffectiveRange(lastItemInColumn);
-        
-        if (start >= lastEnd) {
-          columns[i].push(item);
-          placed = true;
-          break;
-        }
-      }
-      
-      if (!placed) {
-        columns.push([item]);
-      }
-    });
-
-    // Assign positions based on the number of columns in this cluster
-    const totalCols = columns.length;
-    columns.forEach((colItems, colIndex) => {
-      colItems.forEach(item => {
-        positions.set(item.id, {
-          itemId: item.id,
-          column: colIndex,
-          totalColumns: totalCols
-        });
-      });
-    });
-  });
-
-  return positions;
-}
-
 // ─── AgendaView ───────────────────────────────────────────────────────────────
 
 interface AgendaViewProps {
   items: ItineraryItem[];
   isDark: boolean;
-  onToggleCompleted: (item: ItineraryItem) => void;
-  onStartEdit: (item: ItineraryItem) => void;
-  onDelete: (item: ItineraryItem) => void;
   renderItem: (item: ItineraryItem, dateKey?: string) => React.ReactNode;
 }
 
@@ -450,358 +294,6 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
   );
 }
 
-// ─── TimelineView ─────────────────────────────────────────────────────────────
-
-interface TimelineViewProps {
-  items: ItineraryItem[];
-  isDark: boolean;
-  onStartEdit: (item: ItineraryItem) => void;
-  onDelete: (item: ItineraryItem) => void;
-  renderItem: (item: ItineraryItem, dateKey?: string) => React.ReactNode;
-}
-
-const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06h–23h
-const PX_PER_MIN = 1.2; // pixels per minute
-const VISIBLE_START_MIN = 6 * 60; // 6am in minutes
-const VISIBLE_END_MIN = 24 * 60;  // midnight in minutes
-
-function TimelineView({ items, isDark, onStartEdit, onDelete, renderItem }: TimelineViewProps) {
-  const { language } = useI18n();
-  const grouped = groupByDate(items);
-  const keys = sortedDateKeys(grouped);
-  const [activeKey, setActiveKey] = useState<string>(keys[0] ?? "sem-data");
-
-  if (keys.length === 0) {
-    return (
-      <div className={cn("text-center py-16 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
-        {language === "en" ? "No activities planned yet." : "Nenhuma atividade planejada ainda."}
-      </div>
-    );
-  }
-
-  const dayItems = [...(grouped[activeKey] ?? [])].sort((a, b) =>
-    (a.start_time ?? "").localeCompare(b.start_time ?? "")
-  );
-  const allDayItems = dayItems.filter((i) => i.is_all_day || !i.start_time);
-
-  // All timed items (not all-day)
-  const allTimedItems = dayItems.filter((i) => i.start_time && !i.is_all_day);
-
-  // Items that cover the entire visible day (start before 6am AND end after midnight)
-  // are shown as thin strips — they shouldn't compete with regular items for columns
-  const fullDaySpanningItems = allTimedItems.filter((i) => {
-    const { startMin, endMin } = getItemTimelineRange(i, activeKey);
-    return startMin <= VISIBLE_START_MIN && endMin >= VISIBLE_END_MIN;
-  });
-  const fullDaySpanningIds = new Set(fullDaySpanningItems.map((i) => i.id));
-
-  // Regular items: have a meaningful time range within the visible day
-  const regularTimedItems = allTimedItems.filter((i) => !fullDaySpanningIds.has(i.id));
-
-  // Calculate side-by-side positions only for regular items
-  const positions = calculateTimelinePositions(regularTimedItems, activeKey);
-  const spanningItems = fullDaySpanningItems;
-
-  const totalHeight = HOURS.length * 60 * PX_PER_MIN;
-
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const nowInRange = nowMin >= 6 * 60 && nowMin < 24 * 60;
-  const isToday = activeKey === now.toISOString().slice(0, 10);
-
-  return (
-    <div>
-      {/* Day tabs — stopPropagation prevents the parent swipe-tabs hook from firing */}
-      <div
-        className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-hide"
-        onTouchStart={(e) => e.stopPropagation()}
-        onTouchEnd={(e) => e.stopPropagation()}
-      >
-        {keys.map((key) => {
-          const isActive = key === activeKey;
-          const label =
-            key === "sem-data"
-              ? (language === "en" ? "No date" : "Sem data")
-              : (() => {
-                  const d = new Date(key + "T00:00:00");
-                  return isNaN(d.getTime()) ? key : d.toLocaleDateString(language, {
-                    day: "2-digit",
-                    month: "2-digit",
-                  });
-                })();
-          return (
-            <button
-              key={key}
-              onClick={() => setActiveKey(key)}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0",
-                isActive
-                  ? "text-white shadow-sm"
-                  : isDark
-                  ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-              )}
-              style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
-            >
-              {label}
-              <span
-                className={cn(
-                  "ml-1.5 px-1.5 py-0.5 rounded-full text-[10px]",
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : isDark
-                    ? "bg-zinc-700 text-zinc-400"
-                    : "bg-zinc-200 text-zinc-500"
-                )}
-              >
-                {(grouped[key] ?? []).length}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* All-day items */}
-      {allDayItems.length > 0 && (
-        <div className="mb-4 space-y-2">
-          <p className={cn("text-xs font-bold uppercase tracking-wide", isDark ? "text-zinc-500" : "text-zinc-400")}>
-            {language === "en" ? "All day" : "Dia todo"}
-          </p>
-          {allDayItems.map((item) => renderItem(item, activeKey))}
-        </div>
-      )}
-
-      {/* Hourly grid */}
-      {allTimedItems.length === 0 && allDayItems.length === 0 ? (
-        <div className={cn("text-center py-12 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
-          {language === "en" ? "No activities on this day." : "Nenhuma atividade neste dia."}
-        </div>
-      ) : (
-        <div className="flex gap-0 relative" style={{ height: totalHeight }}>
-          {/* Hour axis */}
-          <div className="w-10 flex-shrink-0 relative">
-            {HOURS.map((h) => (
-              <div
-                key={h}
-                style={{ position: "absolute", top: (h - 6) * 60 * PX_PER_MIN - 8 }}
-                className={cn("text-[10px] font-semibold w-full text-right pr-2", isDark ? "text-zinc-600" : "text-zinc-400")}
-              >
-                {String(h).padStart(2, "0")}h
-              </div>
-            ))}
-          </div>
-
-          {/* Grid column */}
-          <div className="flex-1 relative ml-2">
-            {/* Hour lines */}
-            {HOURS.map((h) => (
-              <div
-                key={h}
-                style={{ position: "absolute", top: (h - 6) * 60 * PX_PER_MIN, left: 0, right: 0, height: 1 }}
-                className={cn(isDark ? "bg-zinc-800" : "bg-zinc-100")}
-              />
-            ))}
-
-            {/* Current time indicator — only shown when viewing today */}
-            {isToday && nowInRange && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: (nowMin - 6 * 60) * PX_PER_MIN,
-                  left: 0,
-                  right: 0,
-                  height: 2,
-                  backgroundColor: "#ef4444",
-                  zIndex: 10,
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    left: -4,
-                    top: -3,
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    backgroundColor: "#ef4444",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Spanning items — rendered as thin strips on the left edge */}
-            {spanningItems.map((item, idx) => {
-              const { startMin, endMin } = getItemTimelineRange(item, activeKey);
-              const visibleStart = Math.max(startMin, VISIBLE_START_MIN);
-              const visibleEnd = Math.min(endMin, VISIBLE_END_MIN);
-              const top = (visibleStart - VISIBLE_START_MIN) * PX_PER_MIN;
-              const height = Math.max((visibleEnd - visibleStart) * PX_PER_MIN, 36);
-              const typeColor = getActivityTypeColor(item.type_id);
-
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    position: "absolute",
-                    top,
-                    left: idx * 8,
-                    width: 6,
-                    height,
-                    backgroundColor: typeColor,
-                    borderRadius: 3,
-                    opacity: item.is_completed ? 0.4 : 0.7,
-                    zIndex: 5,
-                  }}
-                  title={item.title}
-                />
-              );
-            })}
-
-            {/* Regular timed activity blocks — side-by-side when overlapping */}
-            {regularTimedItems.map((item) => {
-              const { startMin, endMin, isSpanningDay } = getItemTimelineRange(item, activeKey);
-
-              // Clamp to visible range
-              const visibleStart = Math.max(startMin, VISIBLE_START_MIN);
-              const visibleEnd = Math.min(endMin, VISIBLE_END_MIN);
-              const visibleDuration = Math.max(visibleEnd - visibleStart, 30);
-
-              const top = (visibleStart - VISIBLE_START_MIN) * PX_PER_MIN;
-              const height = visibleDuration * PX_PER_MIN;
-
-              const Icon =
-                (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) ||
-                Calendar;
-
-              const layout = positions.get(item.id);
-              const column = layout?.column ?? 0;
-              const totalColumns = layout?.totalColumns ?? 1;
-              // Pixel offset for spanning strips: each strip is 6px + 2px gap
-              const stripPx = spanningItems.length * 8;
-              const typeColor = getActivityTypeColor(item.type_id);
-              // Each column gets equal share of remaining width (after strip offset)
-
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    position: "absolute",
-                    top,
-                    left: `calc(${stripPx}px + (100% - ${stripPx}px) * ${column} / ${totalColumns} + 1px)`,
-                    width: `calc((100% - ${stripPx}px) / ${totalColumns} - 2px)`,
-                    height: Math.max(height, 36),
-                    backgroundColor: isDark ? "rgba(39, 39, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
-                    backdropFilter: "blur(8px)",
-                    borderLeft: `4px solid ${typeColor}`,
-                    borderRadius: "6px",
-                    overflow: "hidden",
-                    padding: "4px 8px",
-                    boxShadow: isDark
-                      ? "0 2px 8px rgba(0,0,0,0.5)"
-                      : "0 2px 8px rgba(0,0,0,0.1)",
-                    opacity: item.is_completed ? 0.6 : 1,
-                    zIndex: 10 + column,
-                    border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(0,0,0,0.1)",
-                    borderLeftWidth: "4px",
-                    borderLeftColor: typeColor,
-                  }}
-                >
-                  <div className="flex items-start gap-1.5 h-full overflow-hidden">
-                    <Icon
-                      size={12}
-                      className="flex-shrink-0 mt-0.5"
-                      style={{ color: typeColor }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          "text-xs font-bold truncate leading-tight",
-                          isDark ? "text-zinc-200" : "text-zinc-800"
-                        )}
-                      >
-                        {item.title}
-                      </p>
-                      {height >= 50 && item.location && (
-                        <p className={cn("text-[10px] truncate", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                          {item.location}
-                        </p>
-                      )}
-                      {height >= 68 && (
-                        <p className={cn("text-[10px]", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                          {isSpanningDay ? (
-                            <>
-                              {item.start_time?.slice(0, 10) === activeKey
-                                ? `${item.start_time?.slice(11, 16)} →`
-                                : `← ${item.start_time?.slice(11, 16)}`}
-                              {item.end_time ? ` ${item.end_time.slice(11, 16)}` : ""}
-                              {item.start_time?.slice(0, 10) !== item.end_time?.slice(0, 10) && (
-                                <span className="block text-[9px] opacity-75">
-                                  {item.end_time?.slice(0, 10) === activeKey ? "ends" : "continues"}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              {item.start_time?.slice(11, 16)}
-                              {item.end_time ? ` – ${item.end_time.slice(11, 16)}` : ""}
-                            </>
-                          )}
-                        </p>
-                      )}
-                    </div>
-                    {/* Edit / Delete buttons */}
-                    <div
-                      className="flex flex-col items-center gap-1 flex-shrink-0 ml-auto"
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onStartEdit(item);
-                        }}
-                        className={cn(
-                          "p-2 rounded-lg transition-colors active:scale-95",
-                          isDark
-                            ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"
-                            : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"
-                        )}
-                      >
-                        <FilePenLine size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onDelete(item);
-                        }}
-                        className={cn(
-                          "p-2 rounded-lg transition-colors active:scale-95",
-                          isDark
-                            ? "text-zinc-400 hover:text-red-400 hover:bg-red-950/40"
-                            : "text-zinc-500 hover:text-red-500 hover:bg-red-50"
-                        )}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Component ────────────────────────────────────────────────────────────
 export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: ItineraryTabProps) {
   const { trip, tripId, currentMember, settings, itineraryTypes, members } = useTripContext();
@@ -826,9 +318,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     isOnline,
     onSuccess: undefined,
   });
-
-  // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>("agenda");
 
   // Overflow menu (⋯) por card — posicionado via fixed para não ser cortado pelo overflow-hidden do Card
   const [itemMenu, setItemMenu] = useState<{ item: ItineraryItem; top: number; right: number } | null>(null);
@@ -952,16 +441,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
   };
 
   const startEditItinerary = (item: ItineraryItem) => {
-    if (viewMode === "timeline") {
-      setViewMode("agenda");
-      // Give a small delay for the view to switch and the element to be rendered
-      setTimeout(() => {
-        const element = document.getElementById(`itinerary-item-${item.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 100);
-    }
     setEditingItineraryId(item.id);
     const isAllDay = item.is_all_day || false;
     setItineraryDraft({
@@ -1234,7 +713,13 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             </>
           )}
         </button>
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-50 text-zinc-600")}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${getActivityTypeColor(item.type_id)} 12%, transparent)`,
+            color: getActivityTypeColor(item.type_id),
+          }}
+        >
           {(() => {
             const Icon = (item.type?.icon && ACTIVITY_ICON_COMPONENTS[item.type.icon]) || Calendar;
             return <Icon size={20} />;
@@ -1482,44 +967,42 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 </a>
               )}
 
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {item.type && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
-                      isDark ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
-                    )}
-                  >
-                    {item.type.name}
-                  </span>
-                )}
-                <button
-                  onClick={() =>
-                    setVisibilitySheet({
-                      open: true,
-                      itemId: item.id,
-                      currentVisibility: item.visibility,
-                      onConfirm: () => void toggleVisibility(item),
-                    })
-                  }
-                  className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
-                    item.visibility === "public"
-                      ? isDark
-                        ? "bg-emerald-900/40 text-emerald-400"
-                        : "bg-emerald-50 text-emerald-600"
-                      : isDark
-                      ? "bg-zinc-700 text-zinc-400"
-                      : "bg-zinc-100 text-zinc-500"
+              {(item.type || item.visibility === "private") && (
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {item.type && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${getActivityTypeColor(item.type_id)} 12%, transparent)`,
+                        color: getActivityTypeColor(item.type_id),
+                      }}
+                    >
+                      {item.type.name}
+                    </span>
                   )}
-                >
-                  {item.visibility === "public" ? (
-                    <><Users size={10} /> {t("common.public")}</>
-                  ) : (
-                    <><Lock size={10} /> {t("common.private")}</>
+                  {/* "Público" é o padrão — só sinaliza quando privada; tornar pública fica no menu ⋯ */}
+                  {item.visibility === "private" && (
+                    <button
+                      onClick={() =>
+                        setVisibilitySheet({
+                          open: true,
+                          itemId: item.id,
+                          currentVisibility: item.visibility,
+                          onConfirm: () => void toggleVisibility(item),
+                        })
+                      }
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
+                        isDark
+                          ? "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                          : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                      )}
+                    >
+                      <Lock size={10} /> {t("common.private")}
+                    </button>
                   )}
-                </button>
-              </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between mt-1.5 gap-2">
                 {item.start_time && (
@@ -1564,11 +1047,21 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                     })()}
                   </span>
                 )}
-                {item.created_by_member_id && (
-                  <span className={cn("text-[10px] ml-auto", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                    {getCreatorName(item.created_by_member_id)}
-                  </span>
-                )}
+                {/* Autor como mini-avatar; irrelevante quando só há um participante */}
+                {item.created_by_member_id && members.length > 1 && (() => {
+                  const creatorName = getCreatorName(item.created_by_member_id);
+                  return (
+                    <span
+                      title={creatorName}
+                      aria-label={creatorName}
+                      className="ml-auto flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                      // Cor determinística por membro (mesmo hash usado para categorias)
+                      style={{ backgroundColor: getActivityTypeColor(item.created_by_member_id) }}
+                    >
+                      {(creatorName.trim()[0] ?? "?").toUpperCase()}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -1635,11 +1128,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     );
   };
 
-  const VIEW_OPTIONS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
-    { id: "agenda", label: "Agenda", icon: <AlignLeft size={14} /> },
-    { id: "timeline", label: "Timeline", icon: <Clock size={14} /> },
-  ];
-
   return (
     <motion.div
       key="itinerary"
@@ -1648,37 +1136,8 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       exit={{ opacity: 0, y: -10 }}
       className="space-y-6 pb-28"
     >
-      {/* ── Header with view switcher and export button ── */}
-      <div className="flex items-center justify-between">
-        <div
-          className={cn(
-            "flex gap-1 p-1 rounded-xl",
-            isDark ? "bg-zinc-800" : "bg-zinc-100"
-          )}
-        >
-          {VIEW_OPTIONS.map((opt) => {
-            const isActive = viewMode === opt.id;
-            return (
-              <button
-                key={opt.id}
-                onClick={() => setViewMode(opt.id)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  isActive
-                    ? "text-white shadow-sm"
-                    : isDark
-                    ? "text-zinc-500 hover:text-zinc-300"
-                    : "text-zinc-500 hover:text-zinc-700"
-                )}
-                style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-
+      {/* ── Header with export button ── */}
+      <div className="flex items-center justify-end">
         <button
           onClick={handleExportPdf}
           title={t("dashboard.exportToPDF")}
@@ -1696,42 +1155,11 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
       {/* ── Content area ── */}
       <div className="space-y-4">
-        <AnimatePresence mode="wait">
-          {viewMode === "agenda" && (
-            <motion.div
-              key="agenda"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <AgendaView
-                items={openActivities}
-                isDark={isDark}
-                onToggleCompleted={toggleCompleted}
-                onStartEdit={startEditItinerary}
-                onDelete={deleteItineraryItemHandler}
-                renderItem={renderItineraryItem}
-              />
-            </motion.div>
-          )}
-
-          {viewMode === "timeline" && (
-            <motion.div
-              key="timeline"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <TimelineView
-                items={openActivities}
-                isDark={isDark}
-                onStartEdit={startEditItinerary}
-                onDelete={deleteItineraryItemHandler}
-                renderItem={renderItineraryItem}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <AgendaView
+          items={openActivities}
+          isDark={isDark}
+          renderItem={renderItineraryItem}
+        />
 
         {/* Completed section */}
         {completedActivities.length > 0 && (
@@ -1791,6 +1219,29 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             >
               <FilePenLine size={15} />
               {t("common.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = itemMenu.item;
+                setItemMenu(null);
+                setVisibilitySheet({
+                  open: true,
+                  itemId: target.id,
+                  currentVisibility: target.visibility,
+                  onConfirm: () => void toggleVisibility(target),
+                });
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              {itemMenu.item.visibility === "public" ? (
+                <><Lock size={15} /> {t("itinerary.makePrivate")}</>
+              ) : (
+                <><Users size={15} /> {t("itinerary.makePublic")}</>
+              )}
             </button>
             <button
               type="button"
