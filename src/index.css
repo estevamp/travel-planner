@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Esconde a barra de rolagem mantendo o scroll (chips de dias, tabs da timeline) */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   :root {
     --bg-color: #F8F9FA;

@@ -118,6 +118,14 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   const [swipeDirection, setSwipeDirection] = useState(0); // -1 esq, 1 dir
   const { onTouchStart, onTouchEnd, direction } = useSwipeTabs(activeTab, setActiveTab);
 
+  // Header compacto ao rolar (mobile): aparece quando o header completo sai da tela
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setHeaderCollapsed(window.scrollY > 96);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   // variants para slide horizontal
   const tabVariants = {
     enter: (dir: number) => ({
@@ -263,7 +271,8 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-hidden bg-[var(--bg-color)]" style={themedStyles}>
+    // overflow-x-clip (e não hidden) para não quebrar position:sticky dos descendentes
+    <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-clip bg-[var(--bg-color)]" style={themedStyles}>
       {/* Tab Progress Indicator — mobile only */}
       <div className="fixed top-0 inset-x-0 z-[60] md:hidden flex gap-1 px-4 pt-1 pointer-events-none">
         {VALID_TABS.map((tab) => (
@@ -279,6 +288,31 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
           />
         ))}
       </div>
+
+      {/* Header compacto — mobile, visível apenas após rolar além do header completo */}
+      <AnimatePresence>
+        {headerCollapsed && (
+          <motion.div
+            initial={{ y: -48, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -48, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed top-0 inset-x-0 z-50 md:hidden flex items-center gap-2 h-12 px-4 border-b border-[var(--sidebar-border)] bg-[var(--bg-color)]/95 backdrop-blur-md"
+          >
+            <p className="font-bold text-sm truncate text-[var(--accent-color)]">{trip.name}</p>
+            <span className="text-xs opacity-40 flex-shrink-0">·</span>
+            <p className="text-xs font-medium opacity-60 truncate flex-shrink-0">
+              {activeTab === "itinerary" && t("common.itinerary")}
+              {activeTab === "expenses" && t("common.expenses")}
+              {activeTab === "ideas" && t("common.ideas")}
+              {activeTab === "documents" && t("common.documents")}
+              {activeTab === "people" && t("common.people")}
+              {activeTab === "settings" && t("common.settings")}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
         {/* Sidebar Desktop */}
       <aside className="w-64 border-r p-6 hidden md:flex flex-col flex-shrink-0 gap-8 bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] text-[var(--sidebar-text)]">
         <button type="button" onClick={() => setActiveTab("itinerary")} className="flex items-center gap-2 px-2 text-left">
@@ -329,7 +363,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:p-10 relative"
+      <main className="flex-1 min-w-0 overflow-x-clip p-4 pb-24 md:p-10 relative"
         style={{ WebkitOverflowScrolling: 'touch' }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -399,9 +433,8 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                 {activeTab === "people" && t("common.people")}
                 {activeTab === "settings" && t("common.settings")}
               </h3>
-                {activeTab !== "settings" && (
+                {activeTab !== "settings" && activeTab !== "itinerary" && (
                   <p className="text-xs text-zinc-400 mt-0.5">
-                    {activeTab === "itinerary" && t("dashboard.tab.itinerary.description")}
                     {activeTab === "ideas" && t("dashboard.tab.ideas.description")}
                     {activeTab === "expenses" && t("dashboard.tab.expenses.description")}
                     {activeTab === "documents" && t("dashboard.tab.documents.description")}

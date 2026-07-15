@@ -276,6 +276,31 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
   const { language } = useI18n();
   const grouped = groupByDate(items);
   const keys = sortedDateKeys(grouped);
+  const keysSignature = keys.join("|");
+
+  // Dia atualmente visível no scroll — destaca o chip correspondente
+  const [visibleDay, setVisibleDay] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (keys.length < 2) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setVisibleDay((entry.target as HTMLElement).dataset.dateKey ?? null);
+          }
+        }
+      },
+      // Faixa de detecção logo abaixo do header compacto + chips
+      { rootMargin: "-120px 0px -60% 0px" }
+    );
+    keys.forEach((key) => {
+      const el = document.getElementById(`agenda-day-${key}`);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keysSignature]);
 
   if (keys.length === 0) {
     return (
@@ -285,8 +310,68 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
     );
   }
 
+  const chipLabel = (key: string): string => {
+    if (key === "sem-data") return language === "en" ? "No date" : "Sem data";
+    const d = new Date(key + "T00:00:00");
+    if (isNaN(d.getTime())) return key;
+    const weekday = d.toLocaleDateString(language, { weekday: "short" }).replace(".", "");
+    return `${weekday} ${key.slice(8, 10)}`;
+  };
+
+  // Rótulo da coluna de horário à esquerda do card (mobile)
+  const timeLabel = (item: ItineraryItem, dateKey: string): string => {
+    if (item.is_all_day) return language === "en" ? "All day" : "Dia todo";
+    if (!item.start_time) return "—";
+    if (item.start_time.slice(0, 10) < dateKey) {
+      // Continuação de dia anterior: mostra o horário em que termina neste dia
+      return item.end_time && item.end_time.slice(0, 10) === dateKey
+        ? item.end_time.slice(11, 16)
+        : "—";
+    }
+    return item.start_time.slice(11, 16);
+  };
+
+  const activeChip = visibleDay ?? keys[0];
+
   return (
     <div className="space-y-8">
+      {/* Chips de navegação por dia — sticky abaixo do header compacto */}
+      {keys.length > 1 && (
+        <div className="sticky top-12 md:top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 py-2 bg-[var(--bg-color)]/90 backdrop-blur-md">
+          <div
+            className="flex gap-1.5 overflow-x-auto scrollbar-hide"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            {keys.map((key) => {
+              const isActive = key === activeChip;
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setVisibleDay(key);
+                    document
+                      .getElementById(`agenda-day-${key}`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap capitalize transition-all flex-shrink-0",
+                    isActive
+                      ? "text-white shadow-sm"
+                      : isDark
+                      ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                      : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                  )}
+                  style={isActive ? { backgroundColor: "var(--accent-color)" } : undefined}
+                >
+                  {chipLabel(key)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {keys.map((dateKey) => {
         const dayItems = [...(grouped[dateKey] ?? [])].sort((a, b) =>
           (a.start_time ?? "").localeCompare(b.start_time ?? "")
@@ -295,7 +380,12 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
         const dayNum = dateKey !== "sem-data" ? dateKey.slice(8, 10) : "?";
 
         return (
-          <div key={dateKey}>
+          <div
+            key={dateKey}
+            id={`agenda-day-${dateKey}`}
+            data-date-key={dateKey}
+            className="scroll-mt-28 md:scroll-mt-4"
+          >
             {/* Day header */}
             <div className="flex items-center gap-3 mb-4">
               <div
@@ -316,28 +406,42 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
               </div>
             </div>
 
-            {/* Items with left timeline bar */}
-            <div
-              className={cn(
-                "pl-4 space-y-3 border-l-2 sm:grid sm:grid-cols-2 sm:gap-4 sm:pl-0 sm:space-y-0 sm:border-l-0",
-                isDark ? "border-zinc-700" : "border-zinc-200"
-              )}
-            >
-              {dayItems.map((item) => (
-                <div key={item.id} className="relative">
-                  {/* Dot on the timeline */}
-                  <div
-                    className="absolute -left-[21px] top-5 w-3 h-3 rounded-full border-2 flex-shrink-0 sm:hidden"
-                    style={{
-                      backgroundColor: item.is_completed
-                        ? "#10b981"
-                        : "var(--accent-color)",
-                      borderColor: isDark ? "#27272a" : "#f9fafb",
-                    }}
-                  />
-                  {renderItem(item, dateKey)}
-                </div>
-              ))}
+            {/* Itens com coluna de horário à esquerda (mobile) */}
+            <div className="relative">
+              {/* Trilho vertical conectando as atividades do dia */}
+              <div
+                className={cn(
+                  "absolute left-[54px] top-3 bottom-3 w-[2px] rounded-full sm:hidden",
+                  isDark ? "bg-zinc-800" : "bg-zinc-200"
+                )}
+              />
+              <div className="space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
+                {dayItems.map((item) => (
+                  <div key={item.id} className="relative flex sm:block">
+                    <div className="w-12 flex-shrink-0 pt-[18px] pr-1 text-right sm:hidden">
+                      <span
+                        className={cn(
+                          "block text-[11px] font-bold tabular-nums leading-tight",
+                          isDark ? "text-zinc-400" : "text-zinc-500"
+                        )}
+                      >
+                        {timeLabel(item, dateKey)}
+                      </span>
+                    </div>
+                    {/* Nó no trilho, colorido pela categoria da atividade */}
+                    <div
+                      className="absolute left-[50px] top-[19px] w-[10px] h-[10px] rounded-full border-2 sm:hidden"
+                      style={{
+                        backgroundColor: item.is_completed
+                          ? "#10b981"
+                          : getActivityTypeColor(item.type_id),
+                        borderColor: "var(--bg-color)",
+                      }}
+                    />
+                    <div className="flex-1 min-w-0 pl-5 sm:pl-0">{renderItem(item, dateKey)}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -1067,24 +1171,68 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       );
     }
 
+    const photoSrc = getItineraryPhotoSrc(item.photo_url);
+    const isEditingThis = editingItineraryId === item.id;
+    // Com foto, título e local ficam sobrepostos na imagem em vez de repetidos no corpo
+    const hasPhotoOverlay = Boolean(photoSrc) && !isEditingThis;
+
     return (
     <div key={item.id}>
       <Card
         id={`itinerary-item-${item.id}`}
         className={cn("group p-0 overflow-hidden transition-opacity", item.is_completed && "opacity-75")}
       >
-      {getItineraryPhotoSrc(item.photo_url) && (
-        <img src={getItineraryPhotoSrc(item.photo_url) ?? undefined} alt={item.title} className="w-full h-40 object-cover" />
+      {photoSrc && (
+        <div className="relative h-44 w-full">
+          <img
+            src={photoSrc}
+            alt={item.title}
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          {hasPhotoOverlay && (
+            <>
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 px-4 py-3">
+                <p
+                  className={cn(
+                    "text-white font-bold text-base leading-tight drop-shadow-sm",
+                    item.is_completed && "line-through"
+                  )}
+                >
+                  {item.title}
+                </p>
+                {item.location && (
+                  <p className="text-white/85 text-xs mt-0.5 flex items-center gap-1 drop-shadow-sm">
+                    <MapPin size={10} className="flex-shrink-0" />
+                    <span className="truncate">{item.location}</span>
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       )}
       <div className="p-5 flex items-start gap-3">
         <button
           onClick={() => void toggleCompleted(item)}
+          title={item.is_completed ? t("itinerary.markNotCompleted") : t("itinerary.markCompleted")}
+          aria-label={item.is_completed ? t("itinerary.markNotCompleted") : t("itinerary.markCompleted")}
+          aria-pressed={item.is_completed}
           className={cn(
-            "mt-1 flex-shrink-0 transition-colors",
-            item.is_completed ? "text-emerald-500" : "text-zinc-300 hover:text-zinc-400"
+            "group/check mt-0.5 -m-1.5 p-1.5 flex-shrink-0 rounded-full transition-colors",
+            item.is_completed ? "text-emerald-500" : "text-zinc-300 hover:text-emerald-400"
           )}
         >
-          {item.is_completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+          {item.is_completed ? (
+            <CheckCircle2 size={20} />
+          ) : (
+            <>
+              {/* No hover, o círculo vira um check — antecipa a ação de concluir */}
+              <Circle size={20} className="group-hover/check:hidden" />
+              <CheckCircle2 size={20} className="hidden group-hover/check:block" />
+            </>
+          )}
         </button>
         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-50 text-zinc-600")}>
           {(() => {
@@ -1294,15 +1442,17 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             </div>
           ) : (
             <div>
-              <p className={cn("font-semibold text-sm", item.is_completed && "line-through")}>
-                {item.title}
-              </p>
+              {!hasPhotoOverlay && (
+                <p className={cn("font-semibold text-sm", item.is_completed && "line-through")}>
+                  {item.title}
+                </p>
+              )}
               {item.description && (
                 <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-400" : "text-zinc-500")}>
                   {item.description}
                 </p>
               )}
-              {item.location && (
+              {item.location && !hasPhotoOverlay && (
                 <p className={cn("text-xs mt-1 flex items-center gap-1", isDark ? "text-zinc-500" : "text-zinc-400")}>
                   <MapPin size={10} /> {item.location}
                 </p>
@@ -1531,15 +1681,16 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
         <button
           onClick={handleExportPdf}
+          title={t("dashboard.exportToPDF")}
+          aria-label={t("dashboard.exportToPDF")}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all",
+            "flex items-center justify-center w-9 h-9 rounded-xl transition-all",
             isDark
               ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
               : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
           )}
         >
-          <Download size={14} />
-          {t("dashboard.exportToPDF")}
+          <Download size={16} />
         </button>
       </div>
 
