@@ -867,30 +867,24 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                 </span>
               </button>
 
-              <div>
+              <div className="min-w-0">
                 <label className={fieldLabelClass}>Início</label>
-                <div className="relative">
-                  <Clock size={16} className={fieldIconClass} />
-                  <input
-                    type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
-                    value={itineraryDraft.start_time}
-                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, start_time: e.target.value }))}
-                    className={fieldInputClass}
-                  />
-                </div>
+                <input
+                  type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
+                  value={itineraryDraft.start_time}
+                  onChange={(e) => setItineraryDraft((cur) => ({ ...cur, start_time: e.target.value }))}
+                  className={cn(fieldInputClass, "pl-3 min-w-0 max-w-full")}
+                />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label className={fieldLabelClass}>Término</label>
-                <div className="relative">
-                  <Clock size={16} className={fieldIconClass} />
-                  <input
-                    type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
-                    value={itineraryDraft.end_time}
-                    onChange={(e) => setItineraryDraft((cur) => ({ ...cur, end_time: e.target.value }))}
-                    className={fieldInputClass}
-                  />
-                </div>
+                <input
+                  type={itineraryDraft.is_all_day ? "date" : "datetime-local"}
+                  value={itineraryDraft.end_time}
+                  onChange={(e) => setItineraryDraft((cur) => ({ ...cur, end_time: e.target.value }))}
+                  className={cn(fieldInputClass, "pl-3 min-w-0 max-w-full")}
+                />
               </div>
 
               <div>

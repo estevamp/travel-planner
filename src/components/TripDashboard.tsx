@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings, FilePenLine, ExternalLink, Clock } from "lucide-react";
+import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings, FilePenLine, ExternalLink } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../utils";
@@ -744,48 +744,42 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                 </span>
               </button>
 
-              <div>
+              <div className="min-w-0">
                 <label className={fieldLabelClass}>{t("dashboard.start")}</label>
-                <div className="relative">
-                  <Clock size={16} className={fieldIconClass} />
-                  {itineraryAllDay ? (
-                    <input
-                      type="date"
-                      name="start_date"
-                      disabled={isSubmittingItinerary}
-                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
-                    />
-                  ) : (
-                    <input
-                      type="datetime-local"
-                      name="start_time"
-                      disabled={isSubmittingItinerary}
-                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
-                    />
-                  )}
-                </div>
+                {itineraryAllDay ? (
+                  <input
+                    type="date"
+                    name="start_date"
+                    disabled={isSubmittingItinerary}
+                    className={cn(fieldInputClass, "pl-3 min-w-0 max-w-full appearance-none", isDark && "color-scheme-dark")}
+                  />
+                ) : (
+                  <input
+                    type="datetime-local"
+                    name="start_time"
+                    disabled={isSubmittingItinerary}
+                    className={cn(fieldInputClass, "pl-3 min-w-0 max-w-full appearance-none", isDark && "color-scheme-dark")}
+                  />
+                )}
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label className={fieldLabelClass}>{t("dashboard.end")}</label>
-                <div className="relative">
-                  <Clock size={16} className={fieldIconClass} />
-                  {itineraryAllDay ? (
-                    <input
-                      type="date"
-                      name="end_date"
-                      disabled={isSubmittingItinerary}
-                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
-                    />
-                  ) : (
-                    <input
-                      type="datetime-local"
-                      name="end_time"
-                      disabled={isSubmittingItinerary}
-                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
-                    />
-                  )}
-                </div>
+                {itineraryAllDay ? (
+                  <input
+                    type="date"
+                    name="end_date"
+                    disabled={isSubmittingItinerary}
+                    className={cn(fieldInputClass, "pl-3 min-w-0 max-w-full appearance-none", isDark && "color-scheme-dark")}
+                  />
+                ) : (
+                  <input
+                    type="datetime-local"
+                    name="end_time"
+                    disabled={isSubmittingItinerary}
+                    className={cn(fieldInputClass, "pl-3 min-w-0 max-w-full appearance-none", isDark && "color-scheme-dark")}
+                  />
+                )}
               </div>
 
               <div>
