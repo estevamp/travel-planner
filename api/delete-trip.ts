@@ -112,7 +112,10 @@ export default async function handler(req: any, res: any) {
 
   if (userError || !user) {
     console.error("[delete-trip] Invalid user token", userError);
-    return json(res, 401, { error: "Invalid user token" });
+    return json(res, 401, {
+      error: "Invalid user token",
+      details: userError?.message || "auth.getUser returned no user",
+    });
   }
 
   const [{ data: membership, error: membershipError }, { data: profile, error: profileError }] = await Promise.all([

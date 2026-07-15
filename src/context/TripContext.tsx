@@ -143,7 +143,7 @@ export function TripProvider({
       let errorMessage = t("trip.deleteError");
       try {
         const payload = await response.json();
-        errorMessage = payload?.error || payload?.details || errorMessage;
+        errorMessage = [payload?.error, payload?.details].filter(Boolean).join(": ") || errorMessage;
       } catch {
         // Ignore JSON parsing errors and keep fallback message.
       }
