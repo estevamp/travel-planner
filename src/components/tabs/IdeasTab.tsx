@@ -1,11 +1,14 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CalendarPlus, ImagePlus, X, Users } from "lucide-react";
+import {
+  FilePenLine, Trash2, Lock, MapPin, LinkIcon, Paperclip, CalendarPlus,
+  ImagePlus, X, Users, MoreVertical, Camera,
+} from "lucide-react";
 import { supabase } from "../../supabase";
-import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber } from "../../utils";
+import { cn, getErrorMessage } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
 import type { Trip, Idea, IdeaLink, IdeaAsset, Visibility } from "../../types";
 import { Card } from "../Card";
@@ -26,13 +29,29 @@ interface IdeasTabProps {
   enqueue: (op: Omit<QueuedOperation, "timestamp">) => void;
 }
 
+// Paleta usada para o avatar do autor — mesmo conceito de cor determinística usado em ItineraryTab
+const MEMBER_COLORS = [
+  "#3B82F6", "#EC4899", "#10B981", "#F59E0B", "#8B5CF6",
+  "#06B6D4", "#EF4444", "#14B8A6", "#6366F1", "#D97706",
+];
+
+function getMemberColor(memberId: string): string {
+  let hash = 0;
+  for (let i = 0; i < memberId.length; i++) {
+    hash = (hash << 5) - hash + memberId.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
+}
+
 export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, enqueue }: IdeasTabProps) {
   const { trip, currentMember, isAdmin, settings, members } = useTripContext();
   const { t } = useI18n();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
-  const { update: updateIdea } = useUpdateIdea({ enqueue, isOnline, onSuccess: undefined });
+  const { update: updateIdea, isSubmitting: isUpdatingIdea } = useUpdateIdea({ enqueue, isOnline, onSuccess: undefined });
   const { deleteItem: deleteIdea } = useDeleteIdea({ enqueue, isOnline, onSuccess: undefined });
+  const isDark = settings.dark_mode;
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [copyingIdeaId, setCopyingIdeaId] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
@@ -40,6 +59,8 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
   const { getSignedUrl, cachedUrls, setCachedUrl } = useSignedUrlCache(DOCS_BUCKET);
   const { toggleVisibility } = useOptimisticVisibility<Idea>("ideas", "ideas", onTripUpdate);
+  // Menu (⋯) por card — posicionado via fixed para não ser cortado pelo overflow-hidden do Card
+  const [itemMenu, setItemMenu] = useState<{ idea: Idea; top: number; right: number } | null>(null);
   const [ideaDraft, setIdeaDraft] = useState<{
     title: string;
     notes: string;
@@ -81,6 +102,19 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     }
     return map;
   }, [trip.idea_assets]);
+
+  // Pré-carrega a URL assinada da foto de capa (primeira foto) de cada ideia
+  useEffect(() => {
+    const coverPaths = trip.ideas
+      .map((idea) => (ideaAssetsByIdeaId.get(idea.id) || []).find((asset) => asset.asset_type === "photo"))
+      .filter((asset): asset is IdeaAsset => Boolean(asset))
+      .map((asset) => asset.url);
+
+    for (const path of coverPaths) {
+      if (cachedUrls[path]) continue;
+      void getSignedUrl(path).catch(() => undefined);
+    }
+  }, [trip.ideas, ideaAssetsByIdeaId, cachedUrls, getSignedUrl]);
 
   const startEditIdea = (idea: Idea) => {
     setEditingIdeaId(idea.id);
@@ -153,7 +187,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
       isDark: settings.dark_mode,
     });
     if (!confirmed) return;
-  
+
     // Optimistic update — só executa após confirmação do usuário
     onTripUpdate((prev) => ({
       ...prev,
@@ -161,7 +195,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
       idea_links: (prev.idea_links || []).filter((l) => l.idea_id !== idea.id),
       idea_assets: (prev.idea_assets || []).filter((a) => a.idea_id !== idea.id),
     }));
-  
+
     await deleteIdea({
       ideaId: idea.id,
       title: idea.title,
@@ -183,7 +217,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     if (!confirmed) return;
 
     setCopyingIdeaId(idea.id);
-    
+
     const itineraryId = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -310,7 +344,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   const handleAddLink = async (ideaId: string) => {
     const url = newLink.url.trim();
     if (!url) return;
-    
+
     const linkId = crypto.randomUUID();
     const linkData: IdeaLink = {
       id: linkId,
@@ -354,7 +388,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
       isDark: settings.dark_mode
     });
     if (!confirmed) return;
-    
+
     const linkToDelete = (trip.idea_links || []).find((l) => l.id === linkId);
     if (!linkToDelete) return;
 
@@ -410,8 +444,25 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
     }
   };
 
+  const fieldLabelClass = cn("block text-xs font-semibold mb-1.5", isDark ? "text-zinc-400" : "text-zinc-600");
+  const fieldIconClass = cn("absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none", isDark ? "text-zinc-500" : "text-zinc-400");
+  const fieldInputClass = cn(
+    "w-full pl-10 pr-3 py-3 rounded-2xl border text-[15px] transition-all",
+    "focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
+    isDark
+      ? "border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+      : "border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400"
+  );
+  const fieldTextareaClass = cn(
+    "w-full px-3.5 py-3 rounded-2xl border text-[15px] transition-all resize-none",
+    "focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
+    isDark
+      ? "border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+      : "border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400"
+  );
+
   return (
-    <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+    <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6 pb-28">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {trip.ideas.length === 0 && (
           <Card className="sm:col-span-2">
@@ -423,246 +474,217 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
           const assets = ideaAssetsByIdeaId.get(idea.id) || [];
           const attachments = assets.filter((asset) => asset.asset_type === "attachment");
           const photos = assets.filter((asset) => asset.asset_type === "photo");
+          const coverPhoto = photos[0] ?? null;
+          const extraPhotos = photos.slice(1);
+          const coverSrc = coverPhoto ? cachedUrls[coverPhoto.url] || null : null;
           const canManage = currentMember?.id === idea.created_by_member_id || isAdmin;
-          
+          const isEditingThis = editingIdeaId === idea.id;
+
           return (
-            <Card key={idea.id} className="space-y-2 p-4">
-              {editingIdeaId === idea.id ? (
-                <div className="space-y-2">
-                  <div className="space-y-2">
-                    <input
-                      value={ideaDraft.title}
-                      onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
-                      placeholder={t("ideas.titlePlaceholder")}
-                      className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
+            <Card
+              key={idea.id}
+              onClick={isEditingThis ? undefined : () => startEditIdea(idea)}
+              className={cn("group p-0 overflow-hidden transition-opacity", !isEditingThis && "cursor-pointer")}
+            >
+              {/* Foto de capa — mesmo conceito de banner com overlay usado em ItineraryTab */}
+              {coverPhoto && (
+                <div className="relative h-32 w-full">
+                  {coverSrc ? (
+                    <img
+                      src={coverSrc}
+                      alt={idea.title}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
-                    <textarea
-                      value={ideaDraft.notes}
-                      onChange={(e) => setIdeaDraft((current) => ({ ...current, notes: e.target.value }))}
-                      placeholder={t("dashboard.notes")}
-                      className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all h-16"
-                    />
-                    <input
-                      value={ideaDraft.maps_url}
-                      onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))}
-                      placeholder={t("ideas.googleMapsPlaceholder")}
-                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-base sm:text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all"
-                    />
-                    
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {showLinkForm === idea.id ? (
-                        <div className="w-full space-y-2 p-3 rounded-xl bg-zinc-50 border border-zinc-200">
-                          <input
-                            value={newLink.label}
-                            onChange={(e) => setNewLink(prev => ({ ...prev, label: e.target.value }))}
-                            placeholder={t("ideas.linkNamePlaceholder")}
-                            className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs"
-                          />
-                          <input
-                            value={newLink.url}
-                            onChange={(e) => setNewLink(prev => ({ ...prev, url: e.target.value }))}
-                            placeholder={t("ideas.linkUrlPlaceholder")}
-                            className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void handleAddLink(idea.id)}
-                              className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--accent-color)] text-white text-xs font-bold"
-                            >
-                              {t("common.add")}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowLinkForm(null)}
-                              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold"
-                            >
-                              {t("common.cancel")}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setShowLinkForm(idea.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors"
-                        >
-                          <LinkIcon size={14} />
-                          {t("ideas.link")}
-                        </button>
-                      )}
-                      <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
-                        <ImagePlus size={14} />
-                        {t("ideas.photo")}
+                  ) : (
+                    <div className={cn("absolute inset-0 flex items-center justify-center", isDark ? "bg-zinc-800" : "bg-zinc-100")}>
+                      <div className="w-6 h-6 border-2 border-zinc-300 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {!isEditingThis ? (
+                    <>
+                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 px-4 py-3">
+                        <p className="text-white font-bold text-base leading-tight drop-shadow-sm break-words">
+                          {idea.title}
+                        </p>
+                        {idea.maps_url && (
+                          <a
+                            href={idea.maps_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-white/85 text-xs mt-0.5 inline-flex items-center gap-1 drop-shadow-sm hover:underline"
+                          >
+                            <MapPin size={10} className="flex-shrink-0" />{t("ideas.googleMapsLabel")}
+                          </a>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="absolute top-2 right-2 flex gap-1.5">
+                      <label
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 text-white backdrop-blur-sm cursor-pointer hover:bg-black/70 transition-colors"
+                        title={t("ideas.addPhoto")}
+                      >
+                        <Camera size={15} />
                         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
                       </label>
-                      <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-medium hover:bg-zinc-200 transition-colors cursor-pointer">
-                        <Paperclip size={14} />
-                        {t("ideas.attachment")}
-                        <input type="file" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
-                      </label>
-                    </div>
-
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void saveIdeaEdit(idea.id)}
-                      className="flex-1 px-4 py-1.5 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold hover:opacity-90 transition-all"
-                    >
-                      {t("expenses.saveChanges")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingIdeaId(null)}
-                      className="flex-1 px-4 py-1.5 rounded-xl border-2 border-zinc-200 text-sm font-bold hover:bg-zinc-50 transition-all"
-                    >
-                      {t("common.cancel")}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold text-sm flex items-center gap-2 flex-wrap">
-                          <span className="break-words">{idea.title}</span>
-                        </p>
-                        <button
-                          onClick={() => setVisibilitySheet({
-                            open: true,
-                            itemId: idea.id,
-                            currentVisibility: idea.visibility,
-                            onConfirm: () => void toggleVisibility(idea),
-                          })}
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
-                            idea.visibility === 'public'
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-zinc-100 text-zinc-500"
-                          )}
-                        >
-                          {idea.visibility === 'public' ? (
-                            <><Users size={10} /> {t("common.public")}</>
-                          ) : (
-                            <><Lock size={10} /> {t("common.private")}</>
-                          )}
-                        </button>
-                      </div>
-                      {editingIdeaId !== idea.id && idea.created_by_member_id && (
-                        <span className={cn(
-                          "inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit",
-                          settings.dark_mode
-                            ? "bg-zinc-700 text-zinc-300"
-                            : "bg-zinc-100 text-zinc-500"
-                        )}>
-                          👤 {getCreatorName(idea.created_by_member_id)}
-                        </span>
-                      )}
-                      {idea.notes && <p className="text-xs text-zinc-600 mt-0.5 whitespace-pre-wrap line-clamp-2">{idea.notes}</p>}
-                      {idea.maps_url && (
-                        <a href={idea.maps_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 inline-flex items-center gap-1 mt-1 hover:underline">
-                          <MapPin size={10} />{t("ideas.googleMapsLabel")}
-                        </a>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1 flex-shrink-0">
                       <button
                         type="button"
-                        onClick={() => void convertIdeaToActivity(idea)}
-                        disabled={copyingIdeaId === idea.id}
-                        className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200 transition-colors disabled:opacity-50"
-                        aria-label={t("ideas.convertAction")}
-                        title={t("ideas.convertAction")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteAsset(coverPhoto);
+                        }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-red-600/80 transition-colors"
+                        title={t("ideas.removePhoto")}
                       >
-                        {copyingIdeaId === idea.id ? (
-                          <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <CalendarPlus size={16} />
-                        )}
+                        <Trash2 size={15} />
                       </button>
-                      {canManage && (
-                        <>
-                          {!editingIdeaId && (
-                            <button
-                              type="button"
-                              onClick={() => startEditIdea(idea)}
-                              className="p-1.5 text-zinc-400 hover:text-zinc-700"
-                              aria-label={t("ideas.editIdea")}
-                            >
-                              <FilePenLine size={14} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => void deleteIdeaHandler(idea)}
-                            className="p-1.5 text-zinc-400 hover:text-red-500"
-                            aria-label={t("ideas.deleteIdea")}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
                     </div>
-                  </div>
+                  )}
+                </div>
+              )}
 
-                  {/* Photo Gallery */}
-                  {photos.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">{t("ideas.photosSection")}</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {photos.map((asset) => (
-                          <div key={asset.id} className="relative aspect-square">
-                            <button
-                              type="button"
-                              onClick={() => void openIdeaAsset(asset)}
-                              className="w-full h-full rounded-lg border border-zinc-200 overflow-hidden bg-zinc-100 hover:opacity-90 transition-opacity"
-                            >
-                              <PhotoThumbnail
-                                asset={asset}
-                                signedUrl={cachedUrls[asset.url] || null}
-                                onUrlLoad={(url) => {
-                                  setCachedUrl(asset.url, url);
-                                }}
-                              />
-                            </button>
-                            {canManage && (
+              <div className="p-5 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  {isEditingThis ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className={fieldLabelClass}>{t("ideas.nameLabel")}</label>
+                        <div className="relative">
+                          <FilePenLine size={16} className={fieldIconClass} />
+                          <input
+                            value={ideaDraft.title}
+                            onChange={(e) => setIdeaDraft((current) => ({ ...current, title: e.target.value }))}
+                            placeholder={t("ideas.titlePlaceholder")}
+                            className={fieldInputClass}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={fieldLabelClass}>{t("ideas.notesLabel")}</label>
+                        <textarea
+                          value={ideaDraft.notes}
+                          onChange={(e) => setIdeaDraft((current) => ({ ...current, notes: e.target.value }))}
+                          placeholder={t("dashboard.notes")}
+                          rows={3}
+                          className={fieldTextareaClass}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={fieldLabelClass}>{t("ideas.googleMapsLabel")}</label>
+                        <div className="relative">
+                          <MapPin size={16} className={fieldIconClass} />
+                          <input
+                            value={ideaDraft.maps_url}
+                            onChange={(e) => setIdeaDraft((current) => ({ ...current, maps_url: e.target.value }))}
+                            placeholder={t("ideas.googleMapsPlaceholder")}
+                            className={fieldInputClass}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={fieldLabelClass}>{t("ideas.visibilityLabel")}</label>
+                        <div
+                          className={cn(
+                            "grid grid-cols-2 gap-1 rounded-2xl border p-1",
+                            isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+                          )}
+                        >
+                          {(["public", "private"] as const).map((visibility) => {
+                            const active = ideaDraft.visibility === visibility;
+                            const Icon = visibility === "public" ? Users : Lock;
+                            return (
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleDeleteAsset(asset);
-                                }}
-                                className="absolute -top-1 -right-1 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                key={visibility}
+                                type="button"
+                                onClick={() => setIdeaDraft((current) => ({ ...current, visibility }))}
+                                className={cn(
+                                  "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors",
+                                  active
+                                    ? isDark
+                                      ? "bg-zinc-700 text-white"
+                                      : "bg-white text-zinc-900 shadow-sm"
+                                    : isDark
+                                    ? "text-zinc-400 hover:text-zinc-200"
+                                    : "text-zinc-500 hover:text-zinc-700"
+                                )}
+                                aria-pressed={active}
+                              >
+                                <Icon size={13} />
+                                {visibility === "public" ? t("common.public") : t("common.private")}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Sem foto de capa ainda — dropzone no mesmo estilo do "Adicionar foto" de ItineraryTab */}
+                      {!coverPhoto && (
+                        <label className={cn(
+                          "flex flex-col items-center justify-center gap-1.5 w-full py-6 rounded-2xl border-2 border-dashed cursor-pointer transition-colors",
+                          isDark
+                            ? "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-500 hover:bg-zinc-800"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100"
+                        )}>
+                          <ImagePlus size={20} />
+                          <span className="text-xs font-medium">{t("ideas.addPhoto")}</span>
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "photo")} />
+                        </label>
+                      )}
+
+                      {/* Fotos extras — mesmo botão de remoção sobreposto (overlay) usado na capa */}
+                      {extraPhotos.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {extraPhotos.map((asset) => (
+                            <div key={asset.id} className="relative aspect-square">
+                              <button
+                                type="button"
+                                onClick={() => void openIdeaAsset(asset)}
+                                className="w-full h-full rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden bg-zinc-100 hover:opacity-90 transition-opacity"
+                              >
+                                <PhotoThumbnail
+                                  asset={asset}
+                                  signedUrl={cachedUrls[asset.url] || null}
+                                  onUrlLoad={(url) => setCachedUrl(asset.url, url)}
+                                />
+                              </button>
+                              <button
+                                onClick={() => void handleDeleteAsset(asset)}
+                                className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-red-600/80 transition-colors"
                               >
                                 <Trash2 size={12} />
                               </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                  {/* Links */}
-                  {links.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">{t("ideas.linksSection")}</p>
-                      <div className="space-y-1">
-                        {links.map((link) => (
-                          <div key={link.id} className="flex items-center justify-between gap-2">
-                            <a
-                              href={link.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block text-sm text-blue-600 break-all hover:underline flex-1"
+                      <div>
+                        <label className={fieldLabelClass}>{t("ideas.linksSection")}</label>
+                        <div className="space-y-2">
+                          {links.map((link) => (
+                            <div
+                              key={link.id}
+                              className={cn(
+                                "flex items-center justify-between gap-2 px-3 py-2 rounded-xl border",
+                                isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+                              )}
                             >
-                              <span className="inline-flex items-center gap-1">
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex-1 min-w-0 text-sm text-blue-500 hover:underline inline-flex items-center gap-1.5"
+                              >
                                 <LinkIcon size={12} className="flex-shrink-0" />
-                                <span className="break-all">{link.label || link.url}</span>
-                              </span>
-                            </a>
-                            {canManage && (
+                                <span className="truncate">{link.label || link.url}</span>
+                              </a>
                               <button
                                 type="button"
                                 onClick={() => void handleDeleteLink(link.id)}
@@ -670,49 +692,363 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
                               >
                                 <Trash2 size={12} />
                               </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Attachments */}
-                  {attachments.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-zinc-100">
-                      <p className="text-xs uppercase font-semibold text-zinc-500">{t("ideas.attachmentsSection")}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {attachments.map((asset) => (
-                          <div key={asset.id} className="relative group/asset">
+                            </div>
+                          ))}
+                          {showLinkForm === idea.id ? (
+                            <div className={cn("space-y-2 p-3 rounded-xl border", isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50")}>
+                              <input
+                                value={newLink.label}
+                                onChange={(e) => setNewLink(prev => ({ ...prev, label: e.target.value }))}
+                                placeholder={t("ideas.linkNamePlaceholder")}
+                                className={cn(
+                                  "w-full px-3 py-1.5 rounded-lg border text-xs",
+                                  isDark ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200 bg-white"
+                                )}
+                              />
+                              <input
+                                value={newLink.url}
+                                onChange={(e) => setNewLink(prev => ({ ...prev, url: e.target.value }))}
+                                placeholder={t("ideas.linkUrlPlaceholder")}
+                                className={cn(
+                                  "w-full px-3 py-1.5 rounded-lg border text-xs",
+                                  isDark ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200 bg-white"
+                                )}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAddLink(idea.id)}
+                                  className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--accent-color)] text-white text-xs font-bold"
+                                >
+                                  {t("common.add")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowLinkForm(null)}
+                                  className={cn(
+                                    "px-3 py-1.5 rounded-lg border text-xs font-bold",
+                                    isDark ? "border-zinc-700 text-zinc-300" : "border-zinc-200"
+                                  )}
+                                >
+                                  {t("common.cancel")}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
                             <button
                               type="button"
-                              onClick={() => void openIdeaAsset(asset)}
-                              className="px-3 py-2 rounded-lg border border-zinc-200 text-xs inline-flex items-center gap-1 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+                              onClick={() => setShowLinkForm(idea.id)}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                                isDark ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                              )}
                             >
-                              <Paperclip size={12} />
-                              <span className="max-w-[150px] truncate">{asset.name}</span>
+                              <LinkIcon size={14} />
+                              {t("ideas.link")}
                             </button>
-                            {canManage && (
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={fieldLabelClass}>{t("ideas.attachmentsSection")}</label>
+                        <div className="flex flex-wrap gap-2">
+                          {attachments.map((asset) => (
+                            <div key={asset.id} className="relative">
+                              <button
+                                type="button"
+                                onClick={() => void openIdeaAsset(asset)}
+                                className={cn(
+                                  "px-3 py-2 rounded-lg border text-xs inline-flex items-center gap-1 transition-colors",
+                                  isDark ? "border-zinc-700 bg-zinc-800 hover:bg-zinc-700" : "border-zinc-200 hover:bg-zinc-50"
+                                )}
+                              >
+                                <Paperclip size={12} />
+                                <span className="max-w-[150px] truncate">{asset.name}</span>
+                              </button>
                               <button
                                 onClick={() => void handleDeleteAsset(asset)}
-                                className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-sm border border-zinc-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-red-600/80 transition-colors"
                               >
-                                <Trash2 size={10} />
+                                <X size={10} />
                               </button>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          ))}
+                          <label className={cn(
+                            "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors",
+                            isDark ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                          )}>
+                            <Paperclip size={14} />
+                            {t("ideas.attachment")}
+                            <input type="file" multiple className="hidden" onChange={(e) => void handleFileUpload(idea.id, e, "attachment")} />
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => setEditingIdeaId(null)}
+                          className={cn(
+                            "flex-1 py-3 rounded-2xl border text-sm font-bold transition-colors",
+                            isDark ? "border-zinc-700 text-zinc-400 hover:bg-zinc-800" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"
+                          )}
+                        >
+                          {t("common.cancel")}
+                        </button>
+                        <button
+                          onClick={() => void saveIdeaEdit(idea.id)}
+                          disabled={isUpdatingIdea}
+                          className="flex-1 py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-50 transition-shadow"
+                          style={{ backgroundColor: "var(--accent-color)", boxShadow: "0 8px 20px -8px var(--accent-color)" }}
+                        >
+                          {isUpdatingIdea ? t("ideas.saving") : t("expenses.saveChanges")}
+                        </button>
                       </div>
                     </div>
+                  ) : (
+                    <div>
+                      {!coverPhoto && (
+                        <p className="font-semibold text-sm break-words">{idea.title}</p>
+                      )}
+                      {idea.notes && (
+                        <p className={cn("text-xs mt-0.5 whitespace-pre-wrap line-clamp-2", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                          {idea.notes}
+                        </p>
+                      )}
+                      {!coverPhoto && idea.maps_url && (
+                        <a
+                          href={idea.maps_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] text-blue-500 inline-flex items-center gap-1 mt-1 hover:underline"
+                        >
+                          <MapPin size={10} />{t("ideas.googleMapsLabel")}
+                        </a>
+                      )}
+
+                      {/* "Público" é o padrão — só sinaliza quando privada, como em ItineraryTab */}
+                      {idea.visibility === "private" && (
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVisibilitySheet({
+                                open: true,
+                                itemId: idea.id,
+                                currentVisibility: idea.visibility,
+                                onConfirm: () => void toggleVisibility(idea),
+                              });
+                            }}
+                            className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
+                              isDark ? "bg-zinc-700 text-zinc-400 hover:bg-zinc-600" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                            )}
+                          >
+                            <Lock size={10} /> {t("common.private")}
+                          </button>
+                        </div>
+                      )}
+
+                      {extraPhotos.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {extraPhotos.map((asset) => (
+                            <button
+                              key={asset.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openIdeaAsset(asset);
+                              }}
+                              className="relative aspect-square rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden bg-zinc-100 hover:opacity-90 transition-opacity"
+                            >
+                              <PhotoThumbnail
+                                asset={asset}
+                                signedUrl={cachedUrls[asset.url] || null}
+                                onUrlLoad={(url) => setCachedUrl(asset.url, url)}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {links.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {links.map((link) => (
+                            <a
+                              key={link.id}
+                              href={link.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="block text-xs text-blue-500 hover:underline"
+                            >
+                              <span className="inline-flex items-center gap-1">
+                                <LinkIcon size={11} className="flex-shrink-0" />
+                                <span className="truncate">{link.label || link.url}</span>
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      {attachments.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {attachments.map((asset) => (
+                            <button
+                              key={asset.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openIdeaAsset(asset);
+                              }}
+                              className={cn(
+                                "px-2.5 py-1 rounded-lg border text-[11px] inline-flex items-center gap-1 transition-colors",
+                                isDark ? "border-zinc-700 text-zinc-300 hover:bg-zinc-800" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                              )}
+                            >
+                              <Paperclip size={11} />
+                              <span className="max-w-[120px] truncate">{asset.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
-                </>
-              )}
+                </div>
+
+                {!isEditingThis && (
+                  <div className="self-stretch flex flex-col items-center justify-between gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void convertIdeaToActivity(idea);
+                      }}
+                      disabled={copyingIdeaId === idea.id}
+                      className={cn(
+                        "p-2 rounded-lg transition-colors disabled:opacity-50",
+                        isDark ? "text-emerald-400 hover:bg-emerald-950/40" : "text-emerald-600 hover:bg-emerald-50"
+                      )}
+                      aria-label={t("ideas.convertAction")}
+                      title={t("ideas.convertAction")}
+                    >
+                      {copyingIdeaId === idea.id ? (
+                        <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <CalendarPlus size={16} />
+                      )}
+                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setItemMenu((cur) =>
+                            cur?.idea.id === idea.id
+                              ? null
+                              : { idea, top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                          );
+                        }}
+                        className={cn(
+                          "p-2 rounded-lg transition-colors",
+                          isDark ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800" : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+                        )}
+                        aria-label={t("common.options")}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    )}
+                    {idea.created_by_member_id && members.length > 1 && (() => {
+                      const creatorName = getCreatorName(idea.created_by_member_id);
+                      return (
+                        <span
+                          title={creatorName}
+                          aria-label={creatorName}
+                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                          style={{ backgroundColor: getMemberColor(idea.created_by_member_id) }}
+                        >
+                          {(creatorName.trim()[0] ?? "?").toUpperCase()}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
             </Card>
           );
         })}
       </div>
-      
+
       <FloatingActionButton onClick={onOpenModal} />
+
+      {/* Menu de opções do card (Editar / Visibilidade / Excluir) */}
+      {itemMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setItemMenu(null)} />
+          <div
+            className={cn(
+              "fixed z-50 w-44 rounded-xl border shadow-lg py-1 overflow-hidden",
+              isDark ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
+            )}
+            style={{ top: itemMenu.top, right: itemMenu.right }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                startEditIdea(itemMenu.idea);
+                setItemMenu(null);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              <FilePenLine size={15} />
+              {t("common.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = itemMenu.idea;
+                setItemMenu(null);
+                setVisibilitySheet({
+                  open: true,
+                  itemId: target.id,
+                  currentVisibility: target.visibility,
+                  onConfirm: () => void toggleVisibility(target),
+                });
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              {itemMenu.idea.visibility === "public" ? (
+                <><Lock size={15} /> {t("ideas.makePrivate")}</>
+              ) : (
+                <><Users size={15} /> {t("ideas.makePublic")}</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = itemMenu.idea;
+                setItemMenu(null);
+                void deleteIdeaHandler(target);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-red-400 hover:bg-red-950/40" : "text-red-600 hover:bg-red-50"
+              )}
+            >
+              <Trash2 size={15} />
+              {t("common.delete")}
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Photo Viewer Modal */}
       {viewingPhotoUrl && (
@@ -785,9 +1121,9 @@ function PhotoThumbnail({ asset, signedUrl, onUrlLoad }: { asset: IdeaAsset; sig
   }
 
   return (
-    <img 
-      src={signedUrl} 
-      alt={asset.name} 
+    <img
+      src={signedUrl}
+      alt={asset.name}
       className="w-full h-full object-cover"
     />
   );
