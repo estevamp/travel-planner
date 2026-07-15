@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { Lock, Unlock, ChevronDown, ChevronUp, Download } from "lucide-react";
+import { Lock, Unlock, ChevronDown, ChevronUp, Download, FilePenLine, Trash2, Users } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, exportExpensesToCsv, exportPaymentsToCsv } from "../../utils";
 import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
@@ -345,6 +345,8 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   }, [visibleExpensesWithSplits, members, convert, settings.default_currency, t]);
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  // Overflow menu (⋯) por card — mesmo padrão usado na aba Atividades
+  const [itemMenu, setItemMenu] = useState<{ exp: Expense; top: number; right: number } | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<{
     description: string;
@@ -967,6 +969,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 onCancel={() => setEditingExpenseId(null)}
                 onDelete={(expense) => void deleteExpenseHandler(expense)}
                 onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
+                onOpenMenu={(expense, rect) =>
+                  setItemMenu((cur) =>
+                    cur?.exp.id === expense.id
+                      ? null
+                      : { exp: expense, top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                  )
+                }
               />
             ))}
           </div>
@@ -1149,6 +1158,67 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
 
       <FloatingActionButton onClick={onOpenModal} />
       {ConfirmDialogNode}
+
+      {/* Overflow menu do card (Editar / Visibilidade / Excluir) */}
+      {itemMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setItemMenu(null)} />
+          <div
+            className={cn(
+              "fixed z-50 w-44 rounded-xl border shadow-lg py-1 overflow-hidden",
+              settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
+            )}
+            style={{ top: itemMenu.top, right: itemMenu.right }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                void openEditExpenseModal(itemMenu.exp);
+                setItemMenu(null);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                settings.dark_mode ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              <FilePenLine size={15} />
+              {t("common.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleToggleExpenseVisibility(itemMenu.exp);
+                setItemMenu(null);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                settings.dark_mode ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              {itemMenu.exp.visibility === "public" ? (
+                <><Lock size={15} /> {t("expenses.makePrivate")}</>
+              ) : (
+                <><Users size={15} /> {t("expenses.makePublic")}</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = itemMenu.exp;
+                setItemMenu(null);
+                void deleteExpenseHandler(target);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                settings.dark_mode ? "text-red-400 hover:bg-red-950/40" : "text-red-600 hover:bg-red-50"
+              )}
+            >
+              <Trash2 size={15} />
+              {t("common.delete")}
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Modal de Quitação */}
       {showSettlement && (

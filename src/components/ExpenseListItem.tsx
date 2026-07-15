@@ -4,10 +4,14 @@ import {
   Circle,
   FilePenLine,
   Lock,
+  MoreVertical,
+  Tag,
   Trash2,
   Users,
 } from "lucide-react";
 import { cn, formatCurrency, maskCurrency, formatDate } from "../utils";
+import { getDeterministicColor } from "../utils/colors";
+import { ACTIVITY_ICON_COMPONENTS } from "../constants/icons";
 import { Card } from "./Card";
 import type {
   Expense,
@@ -17,6 +21,15 @@ import type {
 } from "../types";
 import type { ExpenseWithSplits } from "../types/splitting";
 import { useI18n } from "../i18n/I18nProvider";
+
+function getCategoryColor(category: ExpenseCategory | null | undefined): string {
+  if (category?.color) return category.color;
+  return getDeterministicColor(category?.id ?? null);
+}
+
+function getCategoryIcon(category: ExpenseCategory | null | undefined) {
+  return (category?.icon && ACTIVITY_ICON_COMPONENTS[category.icon]) || Tag;
+}
 
 export interface ExpenseDraft {
   description: string;
@@ -47,6 +60,8 @@ interface ExpenseListItemProps {
   onCancel: () => void;
   onDelete: (exp: Expense) => void;
   onDraftChange: (draft: Partial<ExpenseDraft>) => void;
+  /** Abre o menu de opções (⋯) do card — usado apenas no layout "card". */
+  onOpenMenu?: (exp: Expense, rect: DOMRect) => void;
 }
 
 export function ExpenseListItem({
@@ -68,6 +83,7 @@ export function ExpenseListItem({
   onCancel,
   onDelete,
   onDraftChange,
+  onOpenMenu,
 }: ExpenseListItemProps) {
   const { t } = useI18n();
   const isEditing = editingExpenseId === exp.id;
@@ -89,6 +105,11 @@ export function ExpenseListItem({
     : exp.visibility === "private"
     ? t("expenses.visibilityPrivateTitle")
     : t("expenses.visibilityPublicTitle");
+  // "Público" é o padrão implícito (como na aba Atividades) — só sinalizamos quando é
+  // privado ou parcialmente privado, para não poluir o card com um badge redundante.
+  const showVisibilityPill = isPartiallyPrivate || (!hasSplits && exp.visibility === "private");
+  const categoryColor = getCategoryColor(exp.category);
+  const CategoryIcon = getCategoryIcon(exp.category);
 
   const splitSummary =
     expWithSplits && expWithSplits.splits && expWithSplits.splits.length > 0 && canViewAmount ? (
@@ -289,7 +310,7 @@ export function ExpenseListItem({
               <div className="flex items-center justify-end gap-2">
                 {!editingExpenseId && (
                   <>
-                    {visibilityButton}
+                    {showVisibilityPill && visibilityButton}
                     <button
                       type="button"
                       onClick={() => onEdit(exp)}
@@ -393,7 +414,16 @@ export function ExpenseListItem({
           </div>
         </>
       ) : (
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${categoryColor} 12%, transparent)`,
+              color: categoryColor,
+            }}
+          >
+            <CategoryIcon size={20} />
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-bold truncate">{exp.description}</h4>
@@ -435,27 +465,22 @@ export function ExpenseListItem({
                 {splitSummary}
               </div>
             </div>
+            {/* "Público" é o padrão — só sinaliza quando privada/parcialmente privada, como na aba Atividades */}
+            {showVisibilityPill && <div className="mt-2">{visibilityButton}</div>}
           </div>
-          <div className="flex flex-col items-center gap-1">
-            {!editingExpenseId && (
-              <>
-                {visibilityButton}
-                <button
-                  type="button"
-                  onClick={() => onEdit(exp)}
-                  className="p-2 text-zinc-400 hover:text-zinc-700"
-                >
-                  <FilePenLine size={16} />
-                </button>
-              </>
-            )}
+          {!editingExpenseId && (
             <button
-              onClick={() => onDelete(exp)}
-              className="p-2 text-zinc-400 hover:text-red-500"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenMenu?.(exp, e.currentTarget.getBoundingClientRect());
+              }}
+              className="p-2 -mr-2 -mt-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 flex-shrink-0 transition-colors"
+              aria-label={t("common.options")}
             >
-              <Trash2 size={16} />
+              <MoreVertical size={16} />
             </button>
-          </div>
+          )}
         </div>
       )}
     </Card>

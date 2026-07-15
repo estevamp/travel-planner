@@ -22,6 +22,7 @@ import { useUpdateItinerary } from "../../hooks/useUpdateItinerary";
 import { useDeleteItinerary } from "../../hooks/useDeleteItinerary";
 import { useI18n } from "../../i18n/I18nProvider";
 import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
+import { getDeterministicColor } from "../../utils/colors";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,31 +81,8 @@ function isDirectImageSrc(value: string) {
   return value.startsWith("data:") || value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:");
 }
 
-// Color palette for different activity types (using HSL for consistent saturation/lightness)
-const TYPE_COLORS = [
-  "#3B82F6", // blue
-  "#EC4899", // pink
-  "#10B981", // emerald
-  "#F59E0B", // amber
-  "#8B5CF6", // violet
-  "#06B6D4", // cyan
-  "#EF4444", // red
-  "#14B8A6", // teal
-  "#6366F1", // indigo
-  "#D97706", // orange
-];
-
 function getActivityTypeColor(typeId: string | null | undefined): string {
-  if (!typeId) return "#9CA3AF"; // gray for no type
-  // Generate a deterministic index from the typeId
-  let hash = 0;
-  for (let i = 0; i < typeId.length; i++) {
-    const char = typeId.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  const index = Math.abs(hash) % TYPE_COLORS.length;
-  return TYPE_COLORS[index];
+  return getDeterministicColor(typeId);
 }
 
 // ─── AgendaView ───────────────────────────────────────────────────────────────
