@@ -170,10 +170,10 @@ export function BalancesSummary({
   const textNeutralMain = isDark ? "text-slate-100" : "text-slate-900";
   const textNeutralSub = isDark ? "text-slate-200" : "text-slate-700";
 
-  const lineText = (isCreditor: boolean) =>
+  const lineText = (isPaid: boolean) =>
     isDark
-      ? isCreditor ? "text-green-200" : "text-red-200"
-      : isCreditor ? "text-green-800" : "text-red-800";
+      ? isPaid ? "text-green-200" : "text-red-200"
+      : isPaid ? "text-green-800" : "text-red-800";
 
   return (
     <div className="space-y-4">
@@ -270,10 +270,10 @@ export function BalancesSummary({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className={`font-medium ${textNeutralMain}`}>{fromName}</p>
-                      <p className={`text-sm ${lineText(isCurrentUserCreditor)}`}>
+                      <p className={`text-sm ${lineText(remaining <= 0)}`}>
                         {remaining > 0
                           ? <>deve <strong>{formatCurrency(remaining, currency)}</strong> para <strong>{toName}</strong></>
-                          : <>pagamento total de <strong>{formatCurrency(paidAmount, currency)}</strong> para <strong>{toName}</strong></>}
+                          : <>pagou um total de <strong>{formatCurrency(paidAmount, currency)}</strong> para <strong>{toName}</strong></>}
                       </p>
                     </div>
                   </div>
@@ -297,7 +297,7 @@ export function BalancesSummary({
                               : isDark ? "bg-slate-700 text-slate-400 hover:text-slate-200" : "bg-slate-100 text-slate-500 hover:text-slate-700"
                           )}
                         >
-                          {pairSettlements.length} pago{pairSettlements.length > 1 ? "s" : ""}
+                          {pairSettlements.length} pagamento{pairSettlements.length > 1 ? "s" : ""}
                         </button>
                       )}
                       {canManagePayments && (

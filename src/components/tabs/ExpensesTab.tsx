@@ -1016,19 +1016,22 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           )}
 
-          <button
-            type="button"
-            onClick={handleExportExpenses}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors",
-              settings.dark_mode
-                ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
-            )}
-          >
-            <Download size={16} />
-            {t("expenses.exportCsv")}
-          </button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleExportExpenses}
+              title={t("expenses.exportCsv")}
+              aria-label={t("expenses.exportCsv")}
+              className={cn(
+                "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
+                settings.dark_mode
+                  ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              )}
+            >
+              <Download size={16} />
+            </button>
+          </div>
         </>
       )}
 
@@ -1109,19 +1112,22 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               </Card>
             </>
           )}
-          <button
-            type="button"
-            onClick={handleExportPayments}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors",
-              settings.dark_mode
-                ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
-            )}
-          >
-            <Download size={16} />
-            {t("expenses.exportCsv")}
-          </button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleExportPayments}
+              title={t("expenses.exportCsv")}
+              aria-label={t("expenses.exportCsv")}
+              className={cn(
+                "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
+                settings.dark_mode
+                  ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              )}
+            >
+              <Download size={16} />
+            </button>
+          </div>
         </div>
       )}
 
