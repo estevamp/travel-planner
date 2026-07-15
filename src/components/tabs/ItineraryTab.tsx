@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { format } from "date-fns";
 import {
-  Calendar, FilePenLine, Trash2, CheckCircle2, Circle,
-  ChevronDown, ChevronRight, MapPin, Lock, Users,
+  Calendar, FilePenLine, Trash2, MapPin, Lock, Users,
   Clock, ImagePlus, MoreVertical, ExternalLink,
 } from "lucide-react";
 import { supabase } from "../../supabase";
@@ -276,9 +275,7 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
                     <div
                       className="absolute left-[50px] top-[19px] w-[10px] h-[10px] rounded-full border-2 sm:hidden"
                       style={{
-                        backgroundColor: item.is_completed
-                          ? "#10b981"
-                          : getActivityTypeColor(item.type_id),
+                        backgroundColor: getActivityTypeColor(item.type_id),
                         borderColor: "var(--bg-color)",
                       }}
                     />
@@ -327,7 +324,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
   // Edit state
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
   const [itineraryDraft, setItineraryDraft] = useState<{
     type_id: string | null;
     title: string;
@@ -529,42 +525,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     });
   };
 
-  const toggleCompleted = async (item: ItineraryItem) => {
-    const nextStatus = !item.is_completed;
-    onTripUpdate((prev) => ({
-      ...prev,
-      itinerary: prev.itinerary.map((i) =>
-        i.id === item.id ? { ...i, is_completed: nextStatus } : i
-      ),
-    }));
-
-    if (!isOnline) {
-      enqueue({
-        id: item.id,
-        tripId: trip.id,
-        type: "update",
-        table: "itinerary",
-        payload: { id: item.id, is_completed: nextStatus },
-      });
-      return; // optimistic update já aplicou na UI
-    }    
-    const { error } = await supabase
-      .from("itinerary")
-      .update({ is_completed: nextStatus })
-      .eq("id", item.id);
-    if (error) {
-      toast(getErrorMessage(error), "error");
-      onTripUpdate((prev) => ({
-        ...prev,
-        itinerary: prev.itinerary.map((i) =>
-          i.id === item.id ? { ...i, is_completed: !nextStatus } : i
-        ),
-      }));
-    }
-  };
-
-  const openActivities = trip.itinerary.filter((item) => !item.is_completed);
-  const completedActivities = trip.itinerary.filter((item) => item.is_completed);
+  const activities = trip.itinerary;
 
   // ─── renderItineraryItem ────────────────────────────────────────────────────
   const renderItineraryItem = (item: ItineraryItem, dateKey?: string) => {
@@ -591,7 +552,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
 
       return (
         <div key={`${item.id}-continuation`}>
-          <Card className={cn("p-0 overflow-hidden", item.is_completed && "opacity-75")}>
+          <Card className="p-0 overflow-hidden">
             <div className="px-4 py-3 flex items-center gap-3">
               <div
                 className={cn(
@@ -604,8 +565,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               <p
                 className={cn(
                   "flex-1 min-w-0 truncate text-sm font-medium",
-                  isDark ? "text-zinc-400" : "text-zinc-500",
-                  item.is_completed && "line-through"
+                  isDark ? "text-zinc-400" : "text-zinc-500"
                 )}
               >
                 {item.title}
@@ -635,10 +595,14 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
     <div key={item.id}>
       <Card
         id={`itinerary-item-${item.id}`}
-        className={cn("group p-0 overflow-hidden transition-opacity", item.is_completed && "opacity-75")}
+        onClick={isEditingThis ? undefined : () => startEditItinerary(item)}
+        className={cn(
+          "group p-0 overflow-hidden transition-opacity",
+          !isEditingThis && "cursor-pointer"
+        )}
       >
       {photoSrc && (
-        <div className="relative h-44 w-full">
+        <div className="relative h-32 w-full">
           <img
             src={photoSrc}
             alt={item.title}
@@ -647,14 +611,9 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
           />
           {hasPhotoOverlay && (
             <>
-              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 px-4 py-3">
-                <p
-                  className={cn(
-                    "text-white font-bold text-base leading-tight drop-shadow-sm",
-                    item.is_completed && "line-through"
-                  )}
-                >
+                <p className="text-white font-bold text-base leading-tight drop-shadow-sm">
                   {item.title}
                 </p>
                 {item.location && (
@@ -669,26 +628,6 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
         </div>
       )}
       <div className="p-5 flex items-start gap-3">
-        <button
-          onClick={() => void toggleCompleted(item)}
-          title={item.is_completed ? t("itinerary.markNotCompleted") : t("itinerary.markCompleted")}
-          aria-label={item.is_completed ? t("itinerary.markNotCompleted") : t("itinerary.markCompleted")}
-          aria-pressed={item.is_completed}
-          className={cn(
-            "group/check mt-0.5 -m-1.5 p-1.5 flex-shrink-0 rounded-full transition-colors",
-            item.is_completed ? "text-emerald-500" : "text-zinc-300 hover:text-emerald-400"
-          )}
-        >
-          {item.is_completed ? (
-            <CheckCircle2 size={20} />
-          ) : (
-            <>
-              {/* No hover, o círculo vira um check — antecipa a ação de concluir */}
-              <Circle size={20} className="group-hover/check:hidden" />
-              <CheckCircle2 size={20} className="hidden group-hover/check:block" />
-            </>
-          )}
-        </button>
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
@@ -904,14 +843,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
           ) : (
             <div>
               {!hasPhotoOverlay && (
-                <p className={cn("font-semibold text-sm", item.is_completed && "line-through")}>
-                  {item.title}
-                </p>
-              )}
-              {item.description && (
-                <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-400" : "text-zinc-500")}>
-                  {item.description}
-                </p>
+                <p className="font-semibold text-sm">{item.title}</p>
               )}
               {item.location && !hasPhotoOverlay && (
                 <p className={cn("text-xs mt-1 flex items-center gap-1", isDark ? "text-zinc-500" : "text-zinc-400")}>
@@ -923,6 +855,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className={cn(
                     "mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors max-w-full",
                     isDark
@@ -948,14 +881,15 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
               {item.visibility === "private" && (
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   <button
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setVisibilitySheet({
                         open: true,
                         itemId: item.id,
                         currentVisibility: item.visibility,
                         onConfirm: () => void toggleVisibility(item),
-                      })
-                    }
+                      });
+                    }}
                     className={cn(
                       "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors",
                       isDark
@@ -1052,6 +986,7 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
             <button
               type="button"
               onClick={(e) => {
+                e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
                 setItemMenu((cur) =>
                   cur?.item.id === item.id
@@ -1103,38 +1038,10 @@ export function ItineraryTab({ onOpenModal, onTripUpdate, isOnline, enqueue }: I
       {/* ── Content area ── */}
       <div className="space-y-4">
         <AgendaView
-          items={openActivities}
+          items={activities}
           isDark={isDark}
           renderItem={renderItineraryItem}
         />
-
-        {/* Completed section */}
-        {completedActivities.length > 0 && (
-          <div className="pt-4">
-            <button
-              onClick={() => setShowCompleted(!showCompleted)}
-              className={cn(
-                "flex items-center gap-2 text-sm font-bold transition-colors mb-4",
-                isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-400 hover:text-zinc-600"
-              )}
-            >
-              {showCompleted ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              {t("itinerary.completed")} ({completedActivities.length})
-            </button>
-            <AnimatePresence>
-              {showCompleted && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden"
-                >
-                  {completedActivities.map((item) => renderItineraryItem(item))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
       </div>
 
       <FloatingActionButton
