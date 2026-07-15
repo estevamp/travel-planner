@@ -8,12 +8,17 @@ import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { getDeterministicColor } from "../../utils/colors";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
-import type { Trip, UserSettings } from "../../types";
+import type { Trip, ThemePalette, UserSettings } from "../../types";
+import type { TranslationKey } from "../../i18n/translations";
 import { Card } from "../Card";
 import { Modal } from "../Modal";
 import { ACTIVITY_ICON_COMPONENTS } from '../../constants/icons';
 import { useOfflineQueue } from "../../hooks/useOfflineQueue";
 import { useI18n } from "../../i18n/I18nProvider";
+
+// Deriva a lista de temas direto de THEME_PALETTES — evita manter duas fontes
+// da verdade (array de chaves + THEME_PALETTES) que podem ficar fora de sincronia.
+const THEME_KEYS = Object.keys(THEME_PALETTES) as ThemePalette[];
 
 interface SettingsTabProps {
   // Nenhuma prop necessária — tudo vem do contexto
@@ -383,25 +388,16 @@ export function SettingsTab() {
           {/* Tema da Viagem */}
           <div className="space-y-3">
             <label className="text-sm font-semibold block">{t("settings.tripTheme")}</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-              {(["default", "ocean", "coastal", "sunset", "lavender", "rose", "tropic", "candy", "galaxy", "jade", "peach", "explorer"] as const).map((theme) => {
+            <div
+              className="flex gap-3 overflow-x-auto scrollbar-hide pt-2 pb-1 -mx-1 px-1"
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
+              {THEME_KEYS.map((theme) => {
                 const palette = THEME_PALETTES[theme];
                 const isActive = (trip?.theme_palette || 'default') === theme;
-                const themeNames: Record<string, string> = {
-                  default: t("settings.theme.default"),
-                  ocean: t("settings.theme.ocean"),
-                  coastal: t("settings.theme.coastal"),
-                  sunset: t("settings.theme.sunset"),
-                  lavender: t("settings.theme.lavender"),
-                  rose: t("settings.theme.rose"),
-                  tropic: t("settings.theme.tropic"),
-                  candy: t("settings.theme.candy"),
-                  galaxy: t("settings.theme.galaxy"),
-                  jade: t("settings.theme.jade"),
-                  peach: t("settings.theme.peach"),
-                  explorer: t("settings.theme.explorer"),
-                };
-                
+                const themeName = t(`settings.theme.${theme}` as TranslationKey);
+
                 return (
                   <button
                     key={theme}
@@ -425,19 +421,19 @@ export function SettingsTab() {
                     }}
                     disabled={isActive}
                     className={cn(
-                      "relative p-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
+                      "relative flex-shrink-0 w-24 p-3 rounded-2xl border-2 transition-all duration-200 hover:scale-105 disabled:cursor-default",
                       isActive
                         ? "border-[var(--accent-color)] shadow-lg ring-2 ring-offset-2 ring-[var(--accent-color)]/30"
                         : cn(
                             "shadow-sm",
-                            settings.dark_mode
+                            settingsDraft.dark_mode
                               ? "border-zinc-700 hover:border-zinc-600"
                               : "border-zinc-200 hover:border-zinc-300"
                           )
                     )}
                   >
                     <div className="space-y-2">
-                      <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
+                      <div className="flex gap-1 h-7 rounded-lg overflow-hidden">
                         <div
                           className="flex-1"
                           style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkAccent : palette.lightAccent }}
@@ -447,7 +443,7 @@ export function SettingsTab() {
                           style={{ backgroundColor: settingsDraft.dark_mode ? palette.darkBg : palette.lightBg }}
                         />
                       </div>
-                      <p className="text-xs font-semibold text-center">{themeNames[theme]}</p>
+                      <p className="text-xs font-semibold text-center truncate">{themeName}</p>
                     </div>
                     {isActive && (
                       <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--accent-color)] flex items-center justify-center shadow-lg">
