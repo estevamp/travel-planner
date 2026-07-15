@@ -3,9 +3,10 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Languages, Calendar, HelpCircle, LogOut } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Languages, Calendar, HelpCircle, LogOut, Tag } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
+import { getDeterministicColor } from "../../utils/colors";
 import { THEME_PALETTES, ACTIVITY_ICONS } from "../../constants";
 import type { Trip, UserSettings } from "../../types";
 import { Card } from "../Card";
@@ -38,6 +39,10 @@ export function SettingsTab() {
   const [editTypeName, setEditTypeName] = useState("");
   const [editTypeIcon, setEditTypeIcon] = useState("Calendar");
   const [savingType, setSavingType] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryIcon, setEditCategoryIcon] = useState("ShoppingBag");
+  const [savingCategory, setSavingCategory] = useState(false);
   const [savingBudget, setSavingBudget] = useState(false);
   const [budgetDraft, setBudgetDraft] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -473,13 +478,14 @@ export function SettingsTab() {
         </div>
         <div className="space-y-4">
           <form
-            className="flex gap-3"
+            className="space-y-3"
             onSubmit={async (e) => {
               e.preventDefault();
               const form = new FormData(e.currentTarget);
               const name = (form.get("name") as string).trim();
+              const icon = (form.get("icon") as string) || "ShoppingBag";
               if (!name) return;
-              const { data, error } = await supabase.from("expense_categories").insert({ name }).select().single();
+              const { data, error } = await supabase.from("expense_categories").insert({ name, icon }).select().single();
               if (error) {
                 toast(getErrorMessage(error), 'error');
               } else {
@@ -488,65 +494,209 @@ export function SettingsTab() {
               }
             }}
           >
-            <div className="flex-1 space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("settings.categoryName")}</label>
-              <input
-                name="name"
-                required
-                placeholder={t("settings.categoryPlaceholder")}
-                className={cn(
-                  "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
-                  settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-                )}
-              />
-            </div>
-            <div className="flex items-end">
-              <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2">
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1">
+                <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("settings.categoryName")}</label>
+                <input
+                  name="name"
+                  required
+                  placeholder={t("settings.categoryPlaceholder")}
+                  className={cn(
+                    "w-full px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
+                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                  )}
+                />
+              </div>
+              <button className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2 self-end">
                 <Plus size={16} />
                 {t("common.add")}
               </button>
             </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-zinc-400 px-1">{t("settings.icon")}</label>
+              <div className={cn(
+                "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
+                settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
+              )}>
+                {ACTIVITY_ICONS.map((iconName) => {
+                  const Icon = ACTIVITY_ICON_COMPONENTS[iconName] || Tag;
+                  return (
+                    <label key={iconName} className="cursor-pointer group">
+                      <input type="radio" name="icon" value={iconName} className="hidden peer" defaultChecked={iconName === "ShoppingBag"} />
+                      <div className={cn(
+                        "p-2 rounded-lg border-2 border-transparent peer-checked:border-[var(--accent-color)] peer-checked:bg-[var(--accent-color)]/5 transition-all",
+                        settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50"
+                      )}>
+                        <Icon size={20} className={cn(settings.dark_mode ? "text-zinc-400 group-hover:text-zinc-200" : "text-zinc-600 group-hover:text-zinc-900")} />
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {categories.map((cat) => (
-              <div
-                key={cat.id}
-                className={cn(
-                  "flex items-center justify-between px-4 py-3 rounded-xl border-2",
-                  settings.dark_mode ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-100 bg-zinc-50/50"
-                )}
-              >
-                <span className="text-sm font-medium">{cat.name}</span>
-                <button
-                  onClick={async () => {
-                    const confirmed = await confirm({
-                      title: t("settings.deleteCategoryTitle"),
-                      message: t("settings.deleteCategoryMessage", { name: cat.name }),
-                      variant: 'danger',
-                      isDark: settings.dark_mode
-                    });
-                    if (!confirmed) return;
+            {categories.map((cat) => {
+              const CatIcon = (cat.icon && ACTIVITY_ICON_COMPONENTS[cat.icon]) || Tag;
+              const catColor = getDeterministicColor(cat.id);
+              const isEditingCat = editingCategoryId === cat.id;
 
-                    // Optimistic update
-                    setCategories(categories.filter(c => c.id !== cat.id));
+              if (isEditingCat) {
+                return (
+                  <div
+                    key={cat.id}
+                    className="sm:col-span-2 p-4 rounded-xl border-2 border-[var(--accent-color)] bg-[var(--accent-color)]/5 space-y-4"
+                  >
+                    <div className="flex gap-3">
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("settings.categoryName")}</label>
+                        <input
+                          value={editCategoryName}
+                          onChange={(e) => setEditCategoryName(e.target.value)}
+                          className={cn(
+                            "w-full px-4 py-2 rounded-lg border-2 text-sm focus:border-[var(--accent-color)] transition-all",
+                            settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                          )}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("settings.icon")}</label>
+                      <div className={cn(
+                        "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
+                        settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
+                      )}>
+                        {ACTIVITY_ICONS.map((iconName) => {
+                          const IconComp = ACTIVITY_ICON_COMPONENTS[iconName] || Tag;
+                          return (
+                            <button
+                              key={iconName}
+                              type="button"
+                              onClick={() => setEditCategoryIcon(iconName)}
+                              className={cn(
+                                "p-2 rounded-lg border-2 transition-all",
+                                editCategoryIcon === iconName
+                                  ? "border-[var(--accent-color)] bg-[var(--accent-color)]/5"
+                                  : cn("border-transparent", settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50")
+                              )}
+                            >
+                              <IconComp size={20} className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-600")} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setEditingCategoryId(null)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl border-2 text-sm font-bold",
+                          settings.dark_mode ? "border-zinc-700 text-zinc-300" : "border-zinc-200 text-zinc-600"
+                        )}
+                      >
+                        {t("common.cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingCategory}
+                        onClick={async () => {
+                          if (!editCategoryName.trim() || savingCategory) return;
+                          setSavingCategory(true);
 
-                    const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
-                    if (error) {
-                      toast(getErrorMessage(error), 'error');
-                      // Rollback
-                      setCategories(categories);
-                    }
-                  }}
+                          // Optimistic update
+                          setCategories(categories.map(c =>
+                            c.id === editingCategoryId ? { ...c, name: editCategoryName.trim(), icon: editCategoryIcon } : c
+                          ));
+
+                          const { error } = await supabase
+                            .from("expense_categories")
+                            .update({ name: editCategoryName.trim(), icon: editCategoryIcon })
+                            .eq("id", editingCategoryId);
+
+                          setSavingCategory(false);
+                          if (error) {
+                            toast(getErrorMessage(error), 'error');
+                            setCategories(categories);
+                          } else {
+                            setEditingCategoryId(null);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] text-sm font-bold disabled:opacity-50"
+                      >
+                        {savingCategory ? t("common.saving") : t("expenses.saveChanges")}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={cat.id}
                   className={cn(
-                    "text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg",
-                    settings.dark_mode ? "hover:bg-red-950/30" : "hover:bg-red-50"
+                    "flex items-center justify-between px-4 py-3 rounded-xl border-2",
+                    settings.dark_mode ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-100 bg-zinc-50/50"
                   )}
                 >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${catColor} 12%, transparent)`,
+                        color: catColor,
+                      }}
+                    >
+                      <CatIcon size={16} />
+                    </div>
+                    <span className="text-sm font-medium">{cat.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingCategoryId(cat.id);
+                        setEditCategoryName(cat.name);
+                        setEditCategoryIcon(cat.icon || "ShoppingBag");
+                      }}
+                      className={cn(
+                        "text-zinc-400 hover:text-blue-500 transition-colors p-1 rounded-lg",
+                        settings.dark_mode ? "hover:bg-zinc-800" : "hover:bg-zinc-50"
+                      )}
+                    >
+                      <FileText size={16} />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: t("settings.deleteCategoryTitle"),
+                          message: t("settings.deleteCategoryMessage", { name: cat.name }),
+                          variant: 'danger',
+                          isDark: settings.dark_mode
+                        });
+                        if (!confirmed) return;
+
+                        // Optimistic update
+                        setCategories(categories.filter(c => c.id !== cat.id));
+
+                        const { error } = await supabase.from("expense_categories").delete().eq("id", cat.id);
+                        if (error) {
+                          toast(getErrorMessage(error), 'error');
+                          // Rollback
+                          setCategories(categories);
+                        }
+                      }}
+                      className={cn(
+                        "text-zinc-400 hover:text-red-500 transition-colors p-1 rounded-lg",
+                        settings.dark_mode ? "hover:bg-red-950/30" : "hover:bg-red-50"
+                      )}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
             {categories.length === 0 && (
               <div className={cn(
                 "sm:col-span-2 text-center py-8 px-4 rounded-xl border-2 border-dashed",
@@ -636,6 +786,7 @@ export function SettingsTab() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {itineraryTypes.map((type) => {
               const Icon = ACTIVITY_ICON_COMPONENTS[type.icon] || Calendar;
+              const typeColor = getDeterministicColor(type.id);
               const isEditing = editingTypeId === type.id;
 
               if (isEditing) {
@@ -737,7 +888,15 @@ export function SettingsTab() {
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon size={18} className={cn(settings.dark_mode ? "text-zinc-400" : "text-zinc-600")} />
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
+                        color: typeColor,
+                      }}
+                    >
+                      <Icon size={16} />
+                    </div>
                     <span className="text-sm font-medium">{type.name}</span>
                   </div>
                   <div className="flex items-center gap-1">
