@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings } from "lucide-react";
+import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings, FilePenLine, ExternalLink, Clock } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../utils";
@@ -591,197 +591,248 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             if (created) (e.target as HTMLFormElement).reset();
           }}
         >
-          <select
-            name="type_id"
-            disabled={isSubmittingItinerary}
-            className={cn(
-              "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
-              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-            )}
-          >
-            <option value="">{t("dashboard.noType")}</option>
-            {itineraryTypes.map((type) => (
-              <option key={type.id} value={type.id}>{type.name}</option>
-            ))}
-          </select>
+          {(() => {
+            const isDark = settings.dark_mode;
+            const fieldLabelClass = cn(
+              "block text-xs font-semibold mb-1.5",
+              isDark ? "text-zinc-400" : "text-zinc-600"
+            );
+            const fieldIconClass = cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none",
+              isDark ? "text-zinc-500" : "text-zinc-400"
+            );
+            const fieldInputClass = cn(
+              "w-full pl-10 pr-3 py-3 rounded-2xl border text-[15px] transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
+              isDark
+                ? "border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+                : "border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400"
+            );
+            const fieldTextareaClass = cn(
+              "w-full px-3.5 py-3 rounded-2xl border text-[15px] transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed",
+              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
+              isDark
+                ? "border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+                : "border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400"
+            );
 
-          <input type="hidden" name="visibility" value={itineraryVisibility} />
-
-          <div
-            className={cn(
-              "grid grid-cols-2 gap-1 rounded-xl border p-1",
-              settings.dark_mode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
-            )}
-          >
-            {(["public", "private"] as const).map((visibility) => {
-              const active = itineraryVisibility === visibility;
-              const Icon = visibility === "public" ? Users : Lock;
-              return (
-                <button
-                  key={visibility}
-                  type="button"
-                  disabled={isSubmittingItinerary}
-                  onClick={() => setItineraryVisibility(visibility)}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    active
-                      ? settings.dark_mode
-                        ? "bg-zinc-700 text-white"
-                        : "bg-white text-zinc-900 shadow-sm"
-                      : settings.dark_mode
-                      ? "text-zinc-400 hover:text-zinc-200"
-                      : "text-zinc-500 hover:text-zinc-700"
-                  )}
-                  aria-pressed={active}
-                >
-                  <Icon size={13} />
-                  {visibility === "public" ? t("common.public") : t("common.private")}
-                </button>
-              );
-            })}
-          </div>
-          
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1 required-indicator">{t("dashboard.title")}</label>
-            <input
-              name="title"
-              disabled={isSubmittingItinerary}
-              required
-              placeholder={t("dashboard.titlePlaceholder")}
-              className={cn(
-                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-              )}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.location")}</label>
-            <input
-              name="location"
-              disabled={isSubmittingItinerary}
-              placeholder={t("dashboard.locationPlaceholder")}
-              className={cn(
-                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-              )}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">URL</label>
-            <input
-              name="url"
-              disabled={isSubmittingItinerary}
-              placeholder="https://example.com"
-              className={cn(
-                "w-full px-3 py-2 rounded-xl border text-base sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed",
-                settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-              )}
-            />
-          </div>
-          
-          <label className="flex items-center gap-2 text-sm">
-            <input 
-              type="checkbox" 
-              disabled={isSubmittingItinerary} 
-              checked={itineraryAllDay}
-              onChange={(e) => setItineraryAllDay(e.target.checked)}
-            />
-            {t("dashboard.allDay")}
-          </label>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.start")}</label>
-              {itineraryAllDay ? (
-                <input 
-                  type="date" 
-                  name="start_date" 
-                  disabled={isSubmittingItinerary} 
-                  className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
-                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
-                  )}
-                />
-              ) : (
-                <input
-                  type="datetime-local"
-                  name="start_time"
-                  disabled={isSubmittingItinerary}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
-                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
-                  )}
-                />
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.end")}</label>
-              {itineraryAllDay ? (
-                <input
-                  type="date"
-                  name="end_date"
-                  disabled={isSubmittingItinerary}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
-                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
-                  )}
-                />
-              ) : (
-                <input
-                  type="datetime-local"
-                  name="end_time"
-                  disabled={isSubmittingItinerary}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-base sm:text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
-                    settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white color-scheme-dark" : "bg-white border-zinc-200"
-                  )}
-                />
-              )}
-            </div>
-          </div>
-          
-          <textarea
-            name="description"
-            disabled={isSubmittingItinerary}
-            placeholder={t("dashboard.notes")}
-            className={cn(
-              "w-full px-3 py-2 rounded-xl border text-base sm:text-sm h-20 disabled:opacity-50 disabled:cursor-not-allowed",
-              settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
-            )}
-          />
-          
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">{t("dashboard.photo")}</label>
-            <label className={cn(
-              "flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all w-fit",
-              isSubmittingItinerary ? "opacity-50 cursor-not-allowed pointer-events-none" : "",
-              settings.dark_mode
-                ? "border-zinc-600 bg-zinc-800 text-zinc-300 hover:border-zinc-400 hover:bg-zinc-700"
-                : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-zinc-400 hover:bg-zinc-100"
-            )}>
-              <span className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-lg",
-                settings.dark_mode ? "bg-zinc-700" : "bg-white shadow-sm"
-              )}>
-                <ImagePlus size={17} className={settings.dark_mode ? "text-zinc-300" : "text-zinc-500"} />
-              </span>
-              <div className="flex flex-col leading-tight">
-                <span className="text-xs font-semibold">{t("dashboard.addPhoto")}</span>
-                <span className="text-[10px] opacity-60">{t("dashboard.photoFormats")}</span>
+            return (
+            <>
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.type")}</label>
+                <div className="relative">
+                  <FilePenLine size={16} className={fieldIconClass} />
+                  <select
+                    name="type_id"
+                    disabled={isSubmittingItinerary}
+                    className={fieldInputClass}
+                  >
+                    <option value="">{t("dashboard.noType")}</option>
+                    {itineraryTypes.map((type) => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <input
-                type="file"
-                name="photo"
-                accept="image/*"
-                className="hidden"
+
+              <input type="hidden" name="visibility" value={itineraryVisibility} />
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.visibility")}</label>
+                <div
+                  className={cn(
+                    "grid grid-cols-2 gap-1 rounded-2xl border p-1",
+                    isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+                  )}
+                >
+                  {(["public", "private"] as const).map((visibility) => {
+                    const active = itineraryVisibility === visibility;
+                    const Icon = visibility === "public" ? Users : Lock;
+                    return (
+                      <button
+                        key={visibility}
+                        type="button"
+                        disabled={isSubmittingItinerary}
+                        onClick={() => setItineraryVisibility(visibility)}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                          active
+                            ? isDark
+                              ? "bg-zinc-700 text-white"
+                              : "bg-white text-zinc-900 shadow-sm"
+                            : isDark
+                            ? "text-zinc-400 hover:text-zinc-200"
+                            : "text-zinc-500 hover:text-zinc-700"
+                        )}
+                        aria-pressed={active}
+                      >
+                        <Icon size={13} />
+                        {visibility === "public" ? t("common.public") : t("common.private")}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className={cn(fieldLabelClass, "required-indicator")}>{t("dashboard.title")}</label>
+                <div className="relative">
+                  <FilePenLine size={16} className={fieldIconClass} />
+                  <input
+                    name="title"
+                    disabled={isSubmittingItinerary}
+                    required
+                    placeholder={t("dashboard.titlePlaceholder")}
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.location")}</label>
+                <div className="relative">
+                  <MapPin size={16} className={fieldIconClass} />
+                  <input
+                    name="location"
+                    disabled={isSubmittingItinerary}
+                    placeholder={t("dashboard.locationPlaceholder")}
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.link")}</label>
+                <div className="relative">
+                  <ExternalLink size={16} className={fieldIconClass} />
+                  <input
+                    name="url"
+                    disabled={isSubmittingItinerary}
+                    placeholder={t("dashboard.linkPlaceholder")}
+                    className={fieldInputClass}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
                 disabled={isSubmittingItinerary}
-              />
-            </label>
-          </div>
-          
-          <button disabled={isSubmittingItinerary} className="w-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
-            {isSubmittingItinerary ? t("common.saving") : t("common.add")}
-          </button>
+                onClick={() => setItineraryAllDay((cur) => !cur)}
+                className={cn(
+                  "flex items-center gap-2.5 w-full rounded-2xl border px-3.5 py-3 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                  isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+                )}
+                aria-pressed={itineraryAllDay}
+              >
+                <span
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                  style={{
+                    backgroundColor: itineraryAllDay
+                      ? "var(--accent-color)"
+                      : isDark
+                      ? "#3f3f46"
+                      : "#d4d4d8",
+                  }}
+                >
+                  <span
+                    className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: itineraryAllDay ? "translateX(18px)" : "translateX(2px)" }}
+                  />
+                </span>
+                <span className={cn("text-sm font-medium", isDark ? "text-zinc-200" : "text-zinc-700")}>
+                  {t("dashboard.allDay")}
+                </span>
+              </button>
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.start")}</label>
+                <div className="relative">
+                  <Clock size={16} className={fieldIconClass} />
+                  {itineraryAllDay ? (
+                    <input
+                      type="date"
+                      name="start_date"
+                      disabled={isSubmittingItinerary}
+                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
+                    />
+                  ) : (
+                    <input
+                      type="datetime-local"
+                      name="start_time"
+                      disabled={isSubmittingItinerary}
+                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.end")}</label>
+                <div className="relative">
+                  <Clock size={16} className={fieldIconClass} />
+                  {itineraryAllDay ? (
+                    <input
+                      type="date"
+                      name="end_date"
+                      disabled={isSubmittingItinerary}
+                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
+                    />
+                  ) : (
+                    <input
+                      type="datetime-local"
+                      name="end_time"
+                      disabled={isSubmittingItinerary}
+                      className={cn(fieldInputClass, "appearance-none", isDark && "color-scheme-dark")}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.notes")}</label>
+                <textarea
+                  name="description"
+                  disabled={isSubmittingItinerary}
+                  placeholder={t("dashboard.notes")}
+                  rows={3}
+                  className={fieldTextareaClass}
+                />
+              </div>
+
+              <div>
+                <label className={fieldLabelClass}>{t("dashboard.photo")}</label>
+                <label className={cn(
+                  "flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-sm cursor-pointer w-fit transition-colors",
+                  isSubmittingItinerary ? "opacity-50 cursor-not-allowed pointer-events-none" : "",
+                  isDark
+                    ? "border-zinc-600 bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                )}>
+                  <ImagePlus size={15} />
+                  <span className="text-xs font-medium">{t("dashboard.addPhoto")}</span>
+                  <input
+                    type="file"
+                    name="photo"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isSubmittingItinerary}
+                  />
+                </label>
+              </div>
+
+              <button
+                disabled={isSubmittingItinerary}
+                className="w-full text-white py-3 rounded-2xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-shadow"
+                style={{
+                  backgroundColor: "var(--accent-color)",
+                  boxShadow: "0 8px 20px -8px var(--accent-color)",
+                }}
+              >
+                {isSubmittingItinerary ? t("common.saving") : t("common.add")}
+              </button>
+            </>
+            );
+          })()}
         </form>
       </Modal>
 
