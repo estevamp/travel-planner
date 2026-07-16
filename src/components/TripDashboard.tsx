@@ -247,6 +247,17 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     setExpenseAmount("0");
   };
 
+  // Bottom navigation mobile: ícones + FAB de adicionar (ausente na aba de Amigos)
+  const mobileNavTabs = [
+    { tab: "ideas" as const,     icon: Lightbulb,       label: t("common.ideas"),     onAdd: () => openModal('idea') },
+    { tab: "expenses" as const,  icon: DollarSign,      label: t("common.expenses"),  onAdd: () => openModal('expense') },
+    { tab: "itinerary" as const, icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
+    { tab: "documents" as const, icon: FileText,        label: "Docs",                onAdd: () => documentsTabRef.current?.openAdd() },
+    { tab: "people" as const,    icon: Users,           label: t("common.people"),    onAdd: null },
+  ];
+  const mobileFabAction = mobileNavTabs.find((item) => item.tab === activeTab)?.onAdd ?? null;
+  const highlightOnboardingFab = isGuidedTrip && onboardingStep === "hint" && activeTab === "itinerary";
+
   // Wrappers para os hooks (adaptam as chamadas dos modais)
   const handleCreateItinerary = async (form: FormData) => {
     return createItinerary({
@@ -1064,54 +1075,54 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       </Modal>
 
       {/* Mobile Navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md text-[var(--sidebar-text)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-5 h-16">
-          {([
-            { tab: "ideas",      icon: Lightbulb, label: t("common.ideas"), onAdd: () => openModal('idea') },
-            { tab: "expenses",   icon: DollarSign, label: t("common.expenses"), onAdd: () => openModal('expense') },
-            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
-            { tab: "documents",  icon: FileText, label: language === "en" ? "Docs" : "Docs", onAdd: () => documentsTabRef.current?.openAdd() },
-            { tab: "people",     icon: Users, label: t("common.people"), onAdd: () => peopleTabRef.current?.openAdd() },
-          ] as const).map(({ tab, icon: Icon, label, onAdd }) => {
-            const isActive = activeTab === tab;
-
-            if (isActive) {
-              const highlightOnboarding = isGuidedTrip && onboardingStep === "hint" && tab === "itinerary";
+      <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="relative border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/75 backdrop-blur-xl text-[var(--sidebar-text)]">
+          <div className="grid grid-cols-6 h-16">
+            {mobileNavTabs.map(({ tab, icon: Icon, label }) => {
+              const isActive = activeTab === tab;
               return (
-                <div key={tab} className="relative flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={onAdd}
-                    aria-label={label}
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
+                  style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+                >
+                  <div
                     className={cn(
-                      "absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center w-14 h-14 rounded-full text-white border-4 shadow-lg transition-transform active:scale-95",
-                      highlightOnboarding && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
+                      "flex items-center justify-center w-9 h-7 rounded-full transition-colors duration-150",
+                      isActive && "bg-[var(--sidebar-active-bg)]/12"
                     )}
-                    style={{
-                      borderColor: 'var(--sidebar-bg)',
-                      backgroundColor: 'var(--accent-color)',
-                      backgroundImage: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))',
-                    }}
                   >
-                    <Plus size={26} />
-                  </button>
-                </div>
+                    <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
+                  </div>
+                  <span className="text-[9px] font-medium tracking-wide">{label}</span>
+                </button>
               );
-            }
+            })}
 
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
-                style={{ color: 'var(--sidebar-text)' }}
-              >
-                <Icon size={20} strokeWidth={1.8} />
-                <span className="text-[9px] font-medium tracking-wide">{label}</span>
-              </button>
-            );
-          })}
+            {/* Coluna reservada para o FAB flutuar sem cobrir nenhuma aba */}
+            <div className="relative">
+              {mobileFabAction && (
+                <button
+                  type="button"
+                  onClick={mobileFabAction}
+                  aria-label={t("common.add")}
+                  className={cn(
+                    "absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center w-14 h-14 rounded-full text-white border-4 shadow-lg transition-transform active:scale-95",
+                    highlightOnboardingFab && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
+                  )}
+                  style={{
+                    borderColor: 'var(--sidebar-bg)',
+                    backgroundColor: 'var(--accent-color)',
+                    backgroundImage: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))',
+                  }}
+                >
+                  <Plus size={26} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </nav>
 
