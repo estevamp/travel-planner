@@ -5,12 +5,12 @@ import type { Session } from "@supabase/supabase-js";
 import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings, FilePenLine, ExternalLink } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
-import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, resizeImage, exportItineraryToPdf } from "../utils";
+import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, exportItineraryToPdf } from "../utils";
 import { getThemeStyles } from "../utils/theme";
 import { useSwipeTabs } from "../hooks/useSwipeTabs";
 import { useOfflineQueue } from "../hooks/useOfflineQueue";
 import { SyncIndicator } from "./SyncIndicator";
-import type { UserSettings, Trip, ItineraryItem, Expense, Idea, CreateExpenseSplitInput, SplitType, Visibility } from "../types";
+import type { UserSettings, CreateExpenseSplitInput, SplitType, Visibility } from "../types";
 
 // Context
 import { TripProvider, useTripContext } from "../context/TripContext";
@@ -89,7 +89,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   // Get data from context
   const {
     trip, setTrip, members, categories, itineraryTypes, currentMember, isAdmin,
-    settings, tripId, tripBudget
+    settings, tripId,
   } = useTripContext();
   
   const { tripOptions } = useTripList();
@@ -115,8 +115,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     }
   }, [tripId]);
 
-  const [swipeDirection, setSwipeDirection] = useState(0); // -1 esq, 1 dir
-  const { onTouchStart, onTouchEnd, direction } = useSwipeTabs(activeTab, setActiveTab);
+  const { onTouchStart, onTouchEnd } = useSwipeTabs(activeTab, setActiveTab);
 
   // Header compacto ao rolar (mobile): aparece quando o header completo sai da tela
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
@@ -125,22 +124,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // variants para slide horizontal
-  const tabVariants = {
-    enter: (dir: number) => ({
-      x: dir === 0 ? 0 : (dir < 0 ? "100%" : "-100%"),
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (dir: number) => ({
-      x: dir === 0 ? 0 : (dir < 0 ? "-100%" : "100%"),
-      opacity: 0,
-    }),
-  };
 
   // Persistir aba atual
   useEffect(() => {
@@ -296,6 +279,42 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     });
   };
 
+  const tabLabels: Record<ActiveTab, string> = {
+    itinerary: t("common.itinerary"),
+    expenses: t("common.expenses"),
+    ideas: t("common.ideas"),
+    documents: t("common.documents"),
+    people: t("common.people"),
+    settings: t("common.settings"),
+  };
+  const tabDescriptions: Partial<Record<ActiveTab, string>> = {
+    ideas: t("dashboard.tab.ideas.description"),
+    expenses: t("dashboard.tab.expenses.description"),
+    documents: t("dashboard.tab.documents.description"),
+    people: t("dashboard.tab.people.description"),
+  };
+
+  const renderNavButton = (tab: ActiveTab, Icon: typeof LayoutDashboard, label: string) => {
+    const isActive = activeTab === tab;
+    return (
+      <button
+        key={tab}
+        type="button"
+        onClick={() => setActiveTab(tab)}
+        aria-label={label}
+        aria-current={isActive ? "page" : undefined}
+        className={cn(
+          "relative flex flex-col items-center justify-center gap-0.5 my-1.5 rounded-2xl transition-all duration-150",
+          isActive ? "bg-[var(--sidebar-active-bg)]/12" : ""
+        )}
+        style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+      >
+        <Icon size={isActive ? 20 : 18} strokeWidth={isActive ? 2.3 : 1.8} />
+        <span className={cn("text-[8px] tracking-wide", isActive ? "font-bold" : "font-medium")}>{label}</span>
+      </button>
+    );
+  };
+
   return (
     // overflow-x-clip (e não hidden) para não quebrar position:sticky dos descendentes
     <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-clip bg-[var(--bg-color)]" style={themedStyles}>
@@ -328,12 +347,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             <p className="font-bold text-sm truncate text-[var(--accent-color)]">{trip.name}</p>
             <span className="text-xs opacity-40 flex-shrink-0">·</span>
             <p className="text-xs font-medium opacity-60 truncate flex-shrink-0">
-              {activeTab === "itinerary" && t("common.itinerary")}
-              {activeTab === "expenses" && t("common.expenses")}
-              {activeTab === "ideas" && t("common.ideas")}
-              {activeTab === "documents" && t("common.documents")}
-              {activeTab === "people" && t("common.people")}
-              {activeTab === "settings" && t("common.settings")}
+              {tabLabels[activeTab]}
             </p>
           </motion.div>
         )}
@@ -441,19 +455,11 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             <div className="mt-4 md:mt-6 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="text-lg md:text-xl font-bold text-zinc-800">
-                  {activeTab === "itinerary" && t("common.itinerary")}
-                  {activeTab === "expenses" && t("common.expenses")}
-                  {activeTab === "ideas" && t("common.ideas")}
-                  {activeTab === "documents" && t("common.documents")}
-                  {activeTab === "people" && t("common.people")}
-                  {activeTab === "settings" && t("common.settings")}
+                  {tabLabels[activeTab]}
                 </h3>
-                {activeTab !== "settings" && activeTab !== "itinerary" && (
+                {tabDescriptions[activeTab] && (
                   <p className="text-xs text-zinc-400 mt-0.5">
-                    {activeTab === "ideas" && t("dashboard.tab.ideas.description")}
-                    {activeTab === "expenses" && t("dashboard.tab.expenses.description")}
-                    {activeTab === "documents" && t("dashboard.tab.documents.description")}
-                    {activeTab === "people" && t("dashboard.tab.people.description")}
+                    {tabDescriptions[activeTab]}
                   </p>
                 )}
               </div>
@@ -1058,25 +1064,10 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       >
         <div className="grid grid-cols-7 h-14 px-1">
           {([
-            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
-            { tab: "ideas",      icon: Lightbulb, label: t("common.ideas"), onAdd: () => openModal('idea') },
-            { tab: "expenses",   icon: DollarSign, label: t("common.expenses"), onAdd: () => openModal('expense') },
-          ] as const).map(({ tab, icon: Icon, label }) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                aria-label={label}
-                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
-                style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                <span className="text-[8px] font-medium tracking-wide">{label}</span>
-              </button>
-            );
-          })}
+            { tab: "itinerary" as const, icon: LayoutDashboard, label: tabLabels.itinerary },
+            { tab: "ideas" as const,     icon: Lightbulb,       label: tabLabels.ideas },
+            { tab: "expenses" as const,  icon: DollarSign,      label: tabLabels.expenses },
+          ]).map(({ tab, icon, label }) => renderNavButton(tab, icon, label))}
 
           {(() => {
             const addHandler: Record<typeof activeTab, (() => void) | null> = {
@@ -1112,25 +1103,10 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
           })()}
 
           {([
-            { tab: "documents",  icon: FileText, label: "Docs" },
-            { tab: "people",     icon: Users, label: t("common.people") },
-            { tab: "settings",   icon: Settings, label: "Config" },
-          ] as const).map(({ tab, icon: Icon, label }) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                aria-label={label}
-                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
-                style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                <span className="text-[8px] font-medium tracking-wide">{label}</span>
-              </button>
-            );
-          })}
+            { tab: "documents" as const, icon: FileText, label: "Docs" },
+            { tab: "people" as const,    icon: Users,    label: tabLabels.people },
+            { tab: "settings" as const,  icon: Settings, label: "Config" },
+          ]).map(({ tab, icon, label }) => renderNavButton(tab, icon, label))}
         </div>
       </nav>
 
