@@ -304,13 +304,13 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         aria-label={label}
         aria-current={isActive ? "page" : undefined}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-0.5 my-1.5 rounded-2xl transition-all duration-150",
+          "relative flex flex-col items-center justify-center gap-1 my-1.5 rounded-2xl transition-all duration-150",
           isActive ? "bg-[var(--sidebar-active-bg)]/12" : ""
         )}
         style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
       >
-        <Icon size={isActive ? 20 : 18} strokeWidth={isActive ? 2.3 : 1.8} />
-        <span className={cn("text-[8px] tracking-wide", isActive ? "font-bold" : "font-medium")}>{label}</span>
+        <Icon size={isActive ? 25 : 23} strokeWidth={isActive ? 2.3 : 1.8} />
+        <span className={cn("text-[9.5px] tracking-wide", isActive ? "font-bold" : "font-medium")}>{label}</span>
       </button>
     );
   };
@@ -1062,7 +1062,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         className="fixed inset-x-3 z-40 md:hidden rounded-full border border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md shadow-lg text-[var(--sidebar-text)]"
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="grid grid-cols-7 h-14 px-1">
+        <div className="grid grid-cols-7 h-[4.5rem] px-1">
           {([
             { tab: "itinerary" as const, icon: LayoutDashboard, label: tabLabels.itinerary },
             { tab: "ideas" as const,     icon: Lightbulb,       label: tabLabels.ideas },
@@ -1088,11 +1088,12 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                   disabled={!onAdd}
                   aria-label={t("common.add")}
                   className={cn(
-                    "-mt-8 rounded-full border-4 border-white bg-[#2462EB] p-3 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)] transition-transform active:scale-95 disabled:opacity-40",
+                    "-mt-9 rounded-full border-4 border-white p-3.5 text-white shadow-[0_8px_14px_rgba(0,0,0,.25)] transition-transform active:scale-95 disabled:opacity-40",
                     highlightOnboarding && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
                   )}
+                  style={{ backgroundColor: 'var(--accent-color)' }}
                 >
-                  <Plus size={29} strokeWidth={3} />
+                  <Plus size={32} strokeWidth={3} />
                 </button>
               </div>
             );
