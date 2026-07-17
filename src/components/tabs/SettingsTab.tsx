@@ -277,7 +277,7 @@ export function SettingsTab() {
         {/* Orçamento da Viagem */}
         <div className="space-y-4">
           <label className="text-sm font-semibold block">{t("settings.budgetLimit")}</label>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               value={maskCurrency(String(Math.round((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100)), settingsDraft.language_code)}
               onChange={(e) => {
@@ -287,7 +287,7 @@ export function SettingsTab() {
               }}
               placeholder="0,00"
               className={cn(
-                "flex-1 px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
+                "flex-1 min-w-0 px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -325,7 +325,7 @@ export function SettingsTab() {
                 }
               }}
               disabled={budgetDraft === null || savingBudget}
-              className="bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
+              className="w-full sm:w-auto shrink-0 bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
             >
               {savingBudget ? t("common.saving") : t("common.confirm")}
             </button>

@@ -247,18 +247,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     setExpenseAmount("0");
   };
 
-  // Bottom navigation mobile: ícones + FAB de adicionar (ausente em Amigos e Configurações)
-  const mobileNavTabs = [
-    { tab: "itinerary" as const, icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
-    { tab: "ideas" as const,     icon: Lightbulb,       label: t("common.ideas"),     onAdd: () => openModal('idea') },
-    { tab: "expenses" as const,  icon: DollarSign,      label: t("common.expenses"),  onAdd: () => openModal('expense') },
-    { tab: "documents" as const, icon: FileText,        label: "Docs",                onAdd: () => documentsTabRef.current?.openAdd() },
-    { tab: "people" as const,    icon: Users,           label: t("common.people"),    onAdd: null },
-    { tab: "settings" as const,  icon: Settings,        label: t("common.settings"),  onAdd: null },
-  ];
-  const mobileFabAction = mobileNavTabs.find((item) => item.tab === activeTab)?.onAdd ?? null;
-  const highlightOnboardingFab = isGuidedTrip && onboardingStep === "hint" && activeTab === "itinerary";
-
   // Wrappers para os hooks (adaptam as chamadas dos modais)
   const handleCreateItinerary = async (form: FormData) => {
     return createItinerary({
@@ -1064,53 +1052,85 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       </Modal>
 
       {/* Mobile Navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="relative border-t border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/75 backdrop-blur-xl text-[var(--sidebar-text)]">
-          <div className="grid grid-cols-6 h-16">
-            {mobileNavTabs.map(({ tab, icon: Icon, label }, index) => {
-              const isActive = activeTab === tab;
-              const isLast = index === mobileNavTabs.length - 1;
-              return (
-                <div key={tab} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className="relative flex flex-col items-center justify-center gap-0.5 w-full h-full transition-colors duration-150"
-                    style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
-                  >
-                    <div
-                      className={cn(
-                        "flex items-center justify-center w-9 h-7 rounded-full transition-colors duration-150",
-                        isActive && "bg-[var(--sidebar-active-bg)]/12"
-                      )}
-                    >
-                      <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
-                    </div>
-                    <span className="text-[9px] font-medium tracking-wide">{label}</span>
-                  </button>
+      <nav
+        className="fixed inset-x-3 z-40 md:hidden rounded-full border border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md shadow-lg text-[var(--sidebar-text)]"
+        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+      >
+        <div className="grid grid-cols-7 h-14 px-1">
+          {([
+            { tab: "ideas",      icon: Lightbulb, label: t("common.ideas"), onAdd: () => openModal('idea') },
+            { tab: "expenses",   icon: DollarSign, label: t("common.expenses"), onAdd: () => openModal('expense') },
+            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
+          ] as const).map(({ tab, icon: Icon, label }) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                aria-label={label}
+                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
+                style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                <span className="text-[8px] font-medium tracking-wide">{label}</span>
+              </button>
+            );
+          })}
 
-                  {isLast && mobileFabAction && (
-                    <button
-                      type="button"
-                      onClick={mobileFabAction}
-                      aria-label={t("common.add")}
-                      className={cn(
-                        "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center justify-center w-14 h-14 rounded-full text-white border-4 shadow-lg transition-transform active:scale-95",
-                        highlightOnboardingFab && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
-                      )}
-                      style={{
-                        borderColor: 'var(--sidebar-bg)',
-                        backgroundColor: 'var(--accent-color)',
-                        backgroundImage: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))',
-                      }}
-                    >
-                      <Plus size={26} />
-                    </button>
+          {(() => {
+            const addHandler: Record<typeof activeTab, (() => void) | null> = {
+              ideas: () => openModal('idea'),
+              expenses: () => openModal('expense'),
+              itinerary: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')),
+              documents: () => documentsTabRef.current?.openAdd(),
+              people: () => peopleTabRef.current?.openAdd(),
+              settings: null,
+            };
+            const onAdd = addHandler[activeTab];
+            const highlightOnboarding = isGuidedTrip && onboardingStep === "hint";
+            return (
+              <div className="relative flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => onAdd?.()}
+                  disabled={!onAdd}
+                  aria-label={t("common.add")}
+                  className={cn(
+                    "flex items-center justify-center w-10 h-10 rounded-full text-white shadow-md transition-transform active:scale-95 disabled:opacity-40",
+                    highlightOnboarding && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
                   )}
-                </div>
-              );
-            })}
-          </div>
+                  style={{
+                    backgroundColor: 'var(--accent-color)',
+                    backgroundImage: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))',
+                  }}
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+            );
+          })()}
+
+          {([
+            { tab: "documents",  icon: FileText, label: "Docs" },
+            { tab: "people",     icon: Users, label: t("common.people") },
+            { tab: "settings",   icon: Settings, label: "Config" },
+          ] as const).map(({ tab, icon: Icon, label }) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                aria-label={label}
+                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
+                style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                <span className="text-[8px] font-medium tracking-wide">{label}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
 
