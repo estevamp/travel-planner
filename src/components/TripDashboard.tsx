@@ -1088,15 +1088,11 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                   disabled={!onAdd}
                   aria-label={t("common.add")}
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full text-white shadow-md transition-transform active:scale-95 disabled:opacity-40",
+                    "-mt-8 rounded-full border-4 border-white bg-[#2462EB] p-3 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)] transition-transform active:scale-95 disabled:opacity-40",
                     highlightOnboarding && "z-[75] ring-4 ring-white shadow-[0_8px_22px_rgba(0,0,0,.35)]"
                   )}
-                  style={{
-                    backgroundColor: 'var(--accent-color)',
-                    backgroundImage: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black))',
-                  }}
                 >
-                  <Plus size={20} />
+                  <Plus size={29} strokeWidth={3} />
                 </button>
               </div>
             );
