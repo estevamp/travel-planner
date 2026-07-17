@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { Plus, FileText, Trash2, Eye, Lock, Users, Pencil, Loader2 } from "lucide-react";
+import { Plus, FileText, Trash2, Eye, Lock, Users, Pencil, Loader2, MoreVertical } from "lucide-react";
 import { supabase } from "../../supabase";
 import { getErrorMessage, resizeImage, cn } from "../../utils";
 import { DOCS_BUCKET } from "../../constants";
@@ -11,6 +11,8 @@ import type { Trip, Visibility, DocumentItem } from "../../types";
 import { Card } from "../Card";
 import { DocumentViewer } from "../DocumentViewer";
 import { Modal } from "../Modal";
+import { FloatingActionButton } from "../FloatingActionButton";
+import { VisibilityBottomSheet } from "../VisibilityBottomSheet";
 import type { QueuedOperation } from "../../hooks/useOfflineQueue";
 import { useSignedUrlCache } from "../../hooks/useSignedUrlCache";
 import { useOptimisticVisibility } from "../../hooks/useOptimisticVisibility";
@@ -46,6 +48,13 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [isSaving, setIsSaving] = useState(false);
+  // Menu (⋯) por card — mesmo padrão usado em IdeasTab/ExpensesTab
+  const [itemMenu, setItemMenu] = useState<{ doc: DocumentItem; top: number; right: number } | null>(null);
+  const [visibilitySheet, setVisibilitySheet] = useState<{
+    open: boolean;
+    currentVisibility: Visibility;
+    onConfirm: (() => void) | null;
+  }>({ open: false, currentVisibility: "private", onConfirm: null });
 
   useImperativeHandle(ref, () => ({
     openAdd: () => documentInputRef.current?.click(),
@@ -166,11 +175,17 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
   };
 
   return (
-    <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Card className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-200 bg-transparent cursor-pointer" onClick={() => documentInputRef.current?.click()}>
-        <Plus className="text-zinc-300 mb-2" size={32} />
-        <p className="text-sm font-medium text-zinc-400">{t("documents.addDocument")}</p>
-        <p className="text-xs text-zinc-300 mt-1">{t("common.private")}</p>
+    <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+      <Card
+        className={cn(
+          "flex flex-col items-center justify-center py-12 border-2 border-dashed bg-transparent cursor-pointer transition-colors",
+          isDark ? "border-zinc-700 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"
+        )}
+        onClick={() => documentInputRef.current?.click()}
+      >
+        <Plus className={cn("mb-2", isDark ? "text-zinc-600" : "text-zinc-300")} size={32} />
+        <p className={cn("text-sm font-medium", isDark ? "text-zinc-500" : "text-zinc-400")}>{t("documents.addDocument")}</p>
+        <p className={cn("text-xs mt-1", isDark ? "text-zinc-600" : "text-zinc-300")}>{t("common.private")}</p>
       </Card>
       <input
         ref={documentInputRef}
@@ -208,96 +223,167 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
         }}
       />
 
-      {trip.documents.map((doc) => (
-        <Card key={doc.id} className="flex items-center gap-4 group relative">
-          <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
-            <FileText size={24} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+      <div className="space-y-3">
+        {trip.documents.map((doc) => (
+          <Card key={doc.id} className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
+              <FileText size={24} />
+            </div>
+            <div className="min-w-0 flex-1">
               <h4 className="font-bold truncate text-sm md:text-base">
                 {doc.description || doc.name}
               </h4>
-              <button
-                onClick={() => void toggleVisibility(doc)}
-                className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0",
-                  doc.visibility === 'public'
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-zinc-100 text-zinc-500"
-                )}
-              >
-                {doc.visibility === 'public' ? (
-                  <><Users size={10} /> {t("common.public")}</>
-                ) : (
-                  <><Lock size={10} /> {t("common.private")}</>
-                )}
-              </button>
+              {doc.description && (
+                <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{doc.name}</p>
+              )}
+              {/* "Público" é o padrão — só sinaliza quando privado, como nas demais abas */}
+              {doc.visibility === "private" && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                      isDark ? "bg-zinc-700 text-zinc-400" : "bg-zinc-100 text-zinc-500"
+                    )}
+                  >
+                    <Lock size={10} /> {t("common.private")}
+                  </span>
+                </div>
+              )}
+              <div className="flex gap-3 mt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const signedUrl = await getSignedUrl(doc.url);
+                      if (signedUrl) {
+                        setSelectedDoc({ name: doc.name, url: signedUrl });
+                      }
+                    } catch (error) {
+                      toast(getErrorMessage(error), 'error');
+                    }
+                  }}
+                  className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1"
+                >
+                  <Eye size={12} />
+                  {t("documents.view")}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const signedUrl = await getSignedUrl(doc.url);
+                      if (signedUrl) {
+                        window.open(signedUrl, "_blank", "noopener,noreferrer");
+                      }
+                    } catch (error) {
+                      toast(getErrorMessage(error), 'error');
+                    }
+                  }}
+                  className="text-xs text-zinc-500 hover:underline"
+                >
+                  {t("documents.openOriginal")}
+                </button>
+              </div>
             </div>
-            {doc.description && (
-              <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{doc.name}</p>
+            <button
+              type="button"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setItemMenu((cur) =>
+                  cur?.doc.id === doc.id ? null : { doc, top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                );
+              }}
+              className={cn(
+                "p-1.5 rounded-lg transition-colors shrink-0",
+                isDark ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800" : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+              )}
+              aria-label={t("common.options")}
+            >
+              <MoreVertical size={18} />
+            </button>
+          </Card>
+        ))}
+      </div>
+
+      {/* Menu de opções do card (Editar / Visibilidade / Excluir) — mesmo padrão de IdeasTab */}
+      {itemMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setItemMenu(null)} />
+          <div
+            className={cn(
+              "fixed z-50 w-44 rounded-xl border shadow-lg py-1 overflow-hidden",
+              isDark ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
             )}
-            <div className="flex gap-3 mt-1">
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const signedUrl = await getSignedUrl(doc.url);
-                    if (signedUrl) {
-                      setSelectedDoc({ name: doc.name, url: signedUrl });
-                    }
-                  } catch (error) {
-                    toast(getErrorMessage(error), 'error');
-                  }
-                }}
-                className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1"
-              >
-                <Eye size={12} />
-                {t("documents.view")}
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const signedUrl = await getSignedUrl(doc.url);
-                    if (signedUrl) {
-                      window.open(signedUrl, "_blank", "noopener,noreferrer");
-                    }
-                  } catch (error) {
-                    toast(getErrorMessage(error), 'error');
-                  }
-                }}
-                className="text-xs text-zinc-500 hover:underline"
-              >
-                {t("documents.openOriginal")}
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
+            style={{ top: itemMenu.top, right: itemMenu.right }}
+          >
             <button
               type="button"
               onClick={() => {
+                const doc = itemMenu.doc;
+                setItemMenu(null);
                 setEditingDoc(doc);
                 setDescription(doc.description || "");
                 setVisibility(doc.visibility);
                 setIsEditModalOpen(true);
               }}
-              className="text-zinc-300 hover:text-blue-500 transition-colors p-1.5"
-              title={t("documents.editDescription")}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
             >
-              <Pencil size={14} />
+              <Pencil size={15} />
+              {t("common.edit")}
             </button>
             <button
               type="button"
-              onClick={() => void deleteDocument(doc.id, doc.url, doc.name)}
-              className="text-zinc-300 hover:text-red-500 transition-colors p-1.5"
-              title={t("documents.deleteDocument")}
+              onClick={() => {
+                const doc = itemMenu.doc;
+                setItemMenu(null);
+                setVisibilitySheet({
+                  open: true,
+                  currentVisibility: doc.visibility,
+                  onConfirm: () => void toggleVisibility(doc),
+                });
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-zinc-200 hover:bg-zinc-700" : "text-zinc-700 hover:bg-zinc-50"
+              )}
             >
-              <Trash2 size={14} />
+              {itemMenu.doc.visibility === "public" ? (
+                <><Lock size={15} /> {t("documents.makePrivate")}</>
+              ) : (
+                <><Users size={15} /> {t("documents.makePublic")}</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const doc = itemMenu.doc;
+                setItemMenu(null);
+                void deleteDocument(doc.id, doc.url, doc.name);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors",
+                isDark ? "text-red-400 hover:bg-red-950/40" : "text-red-600 hover:bg-red-50"
+              )}
+            >
+              <Trash2 size={15} />
+              {t("common.delete")}
             </button>
           </div>
-        </Card>
-      ))}
+        </>
+      )}
+
+      <VisibilityBottomSheet
+        isOpen={visibilitySheet.open}
+        currentVisibility={visibilitySheet.currentVisibility}
+        onConfirm={() => visibilitySheet.onConfirm?.()}
+        onClose={() => setVisibilitySheet((prev) => ({ ...prev, open: false }))}
+        isDark={isDark}
+      />
+
+      <FloatingActionButton onClick={() => documentInputRef.current?.click()} hideOnMobile />
 
       {selectedDoc && (
         <DocumentViewer
@@ -329,7 +415,8 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("documents.descriptionPlaceholder")}
               className={cn(
-                "w-full px-4 py-3 rounded-xl border text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none h-24",
+                "w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all resize-none h-24",
+                "focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)]",
                 isDark ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200 text-zinc-900"
               )}
             />
@@ -343,7 +430,7 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-medium",
                   visibility === "private"
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)]"
                     : isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400" : "border-zinc-100 bg-zinc-50 text-zinc-500"
                 )}
               >
@@ -355,7 +442,7 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-medium",
                   visibility === "public"
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)]"
                     : isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400" : "border-zinc-100 bg-zinc-50 text-zinc-500"
                 )}
               >
@@ -372,7 +459,8 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
           <button
             onClick={isUploadModalOpen ? handleUploadConfirm : handleUpdateDoc}
             disabled={isSaving}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-4 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ backgroundColor: "var(--accent-color)", boxShadow: "0 8px 20px -8px var(--accent-color)" }}
           >
             {!isOnline && (
             <p className="text-xs text-amber-600 mt-1">
