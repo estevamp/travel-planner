@@ -1058,9 +1058,9 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       >
         <div className="grid grid-cols-7 h-14 px-1">
           {([
+            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
             { tab: "ideas",      icon: Lightbulb, label: t("common.ideas"), onAdd: () => openModal('idea') },
             { tab: "expenses",   icon: DollarSign, label: t("common.expenses"), onAdd: () => openModal('expense') },
-            { tab: "itinerary",  icon: LayoutDashboard, label: t("common.itinerary"), onAdd: () => (isGuidedTrip ? setOnboardingStep("form") : openModal('itinerary')) },
           ] as const).map(({ tab, icon: Icon, label }) => {
             const isActive = activeTab === tab;
             return (
