@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { Briefcase, Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, Crown, DollarSign, FileText, Users, Settings, FilePenLine, ExternalLink } from "lucide-react";
+import { Download, HelpCircle, LayoutDashboard, Lightbulb, LogOut, ImagePlus, MapPin, Lock, Unlock, Plus, DollarSign, FileText, Users, Settings, FilePenLine, ExternalLink } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber, exportItineraryToPdf } from "../utils";
@@ -88,7 +88,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   
   // Get data from context
   const {
-    trip, setTrip, members, categories, itineraryTypes, currentMember, isAdmin,
+    trip, setTrip, members, categories, itineraryTypes, currentMember,
     settings, tripId,
   } = useTripContext();
   
@@ -135,7 +135,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   const documentsTabRef = useRef<DocumentsTabHandle>(null);
   const peopleTabRef = useRef<PeopleTabHandle>(null);
 
-  const [showMobileTripSelector, setShowMobileTripSelector] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState<'itinerary' | 'expense' | 'idea' | null>(null);
   const isGuidedTrip = settings.onboarding_status === "active" && settings.onboarding_trip_id === tripId;
@@ -324,22 +323,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
   return (
     // overflow-x-clip (e não hidden) para não quebrar position:sticky dos descendentes
     <div className="min-h-screen flex flex-col md:flex-row max-w-full overflow-x-clip bg-[var(--bg-color)]" style={themedStyles}>
-      {/* Tab Progress Indicator — mobile only */}
-      <div className="fixed top-0 inset-x-0 z-[60] md:hidden flex gap-1 px-4 pt-1 pointer-events-none">
-        {VALID_TABS.map((tab) => (
-          <motion.div
-            key={tab}
-            className="h-[3px] flex-1 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-            animate={{
-              opacity: activeTab === tab ? 1 : 0.3,
-              scaleY: activeTab === tab ? 1 : 0.7,
-            }}
-            transition={{ duration: 0.2 }}
-            style={{ backgroundColor: 'var(--sidebar-active-bg)' }}
-          />
-        ))}
-      </div>
-
       {/* Header compacto — mobile, visível apenas após rolar além do header completo */}
       <AnimatePresence>
         {headerCollapsed && (
@@ -419,22 +402,25 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             <div className="flex items-center gap-3">
               <h2
                 id="tour-trip-name"
-                onClick={() => setActiveTab("itinerary")}
+                onClick={() => navigate("/")}
                 className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
-                {trip.name} {isAdmin && (
-                  <span title={t("dashboard.admin")} aria-label={t("dashboard.admin")}>
-                    <Crown size={14} className="md:hidden text-amber-400 opacity-80" />
-                  </span>
-                )} 
+                {trip.name}
               </h2>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setShowMobileTripSelector(true)}
+                  onClick={() => setActiveTab("people")}
                   className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
-                  aria-label={t("dashboard.switchTrip")}
+                  aria-label={t("common.people")}
                 >
-                  <Briefcase size={20} />
+                  <Users size={20} />
+                </button>
+                <button
+                  onClick={() => setActiveTab("settings")}
+                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  aria-label={t("common.settings")}
+                >
+                  <Settings size={20} />
                 </button>
                 <button
                   onClick={startTour}
@@ -486,79 +472,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
               )}
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-2">
-            {isAdmin && (
-              <span title={t("dashboard.admin")} aria-label={t("dashboard.admin")}>
-                <Crown size={14} className="text-amber-400 opacity-80" />
-              </span>
-            )}
-          </div>
         </header>
-
-        {/* Mobile Trip Selector */}
-        <AnimatePresence>
-          {showMobileTripSelector && (
-            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <motion.div
-                initial={{ opacity: 0, y: 100 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 100 }}
-                className="w-full max-w-[95vw] rounded-3xl overflow-hidden shadow-2xl"
-                style={{ backgroundColor: 'var(--card-bg)' }}
-              >
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold">{t("dashboard.myTrips")}</h3>
-                    <button
-                      onClick={() => setShowMobileTripSelector(false)}
-                      className="p-2 rounded-full transition-colors"
-                      style={{ backgroundColor: 'transparent' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Plus size={20} className="rotate-45" />
-                    </button>
-                  </div>
-                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                    {tripOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => {
-                          navigate(`/trip/${option.id}`);
-                          setShowMobileTripSelector(false);
-                        }}
-                        className={cn(
-                          "w-full text-left rounded-2xl border p-4 transition-all",
-                          option.id === tripId
-                            ? "bg-[var(--sidebar-active-bg)] border-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
-                            : ""
-                        )}
-                        style={option.id !== tripId ? {
-                          backgroundColor: 'var(--card-bg)',
-                          borderColor: 'var(--card-border)'
-                        } : undefined}
-                      >
-                        <p className="font-bold truncate">{option.name}</p>
-                        <p className="text-sm opacity-80 truncate">{option.destination || t("common.destinationMissing")}</p>
-                      </button>
-                    ))}
-                    {tripOptions.length === 0 && <p className="text-center py-8 text-zinc-500">{t("dashboard.noTripsFound")}</p>}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigate("/?new=trip");
-                    }}
-                    className="w-full py-4 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
-                  >
-                    <Plus size={18} />
-                    {t("common.newTrip")}
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
 
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -1071,7 +985,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         )}
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="grid grid-cols-7 h-[4.5rem] px-1">
+        <div className="grid grid-cols-5 h-[4.5rem] px-1">
           {([
             { tab: "itinerary" as const, icon: LayoutDashboard, label: tabLabels.itinerary },
             { tab: "ideas" as const,     icon: Lightbulb,       label: tabLabels.ideas },
@@ -1110,8 +1024,6 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
 
           {([
             { tab: "documents" as const, icon: FileText, label: "Docs" },
-            { tab: "people" as const,    icon: Users,    label: tabLabels.people },
-            { tab: "settings" as const,  icon: Settings, label: "Config" },
           ]).map(({ tab, icon, label }) => renderNavButton(tab, icon, label))}
         </div>
       </nav>
