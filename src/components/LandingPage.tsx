@@ -232,10 +232,10 @@ export function LandingPage({
         </section>
       </div>
       <nav
-        className="fixed inset-x-4 z-40 rounded-[24px] bottom-nav-glass"
+        className="fixed inset-x-4 z-40 rounded-[32px] bottom-nav-glass"
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="flex items-center justify-between h-[4.5rem] px-8 max-w-[410px] mx-auto">
+        <div className="flex items-center justify-between h-16 px-8 max-w-[410px] mx-auto">
           <button onClick={() => setShowSettings(true)} aria-label={copy.preferences} className="text-[#0A2342]"><Settings size={20} /></button>
           <button onClick={startCreate} aria-label={t("common.newTrip")} className="-mt-9 rounded-full border-4 border-white bg-[#2462EB] p-3.5 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)]"><Plus size={32} strokeWidth={3} /></button>
           <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="text-[#0A2342]"><UserRound size={20} /></button>

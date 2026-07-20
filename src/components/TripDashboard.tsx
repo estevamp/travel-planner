@@ -980,16 +980,15 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
       {/* Mobile Navigation — premium glass, estilo Meta (Instagram/Threads) */}
       <nav
         className={cn(
-          "fixed inset-x-4 z-40 md:hidden rounded-[24px] transition-colors duration-200",
+          "fixed inset-x-4 z-40 md:hidden rounded-[32px] transition-colors duration-200",
           settings.dark_mode ? "bottom-nav-glass-dark" : "bottom-nav-glass"
         )}
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="grid grid-cols-5 h-[4.5rem] px-1">
+        <div className="grid grid-cols-5 h-16 px-1">
           {([
             { tab: "itinerary" as const, icon: LayoutDashboard, label: tabLabels.itinerary },
             { tab: "ideas" as const,     icon: Lightbulb,       label: tabLabels.ideas },
-            { tab: "expenses" as const,  icon: DollarSign,      label: tabLabels.expenses },
           ]).map(({ tab, icon, label }) => renderNavButton(tab, icon, label))}
 
           {(() => {
@@ -1023,7 +1022,8 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
           })()}
 
           {([
-            { tab: "documents" as const, icon: FileText, label: "Docs" },
+            { tab: "expenses" as const,  icon: DollarSign, label: tabLabels.expenses },
+            { tab: "documents" as const, icon: FileText,   label: "Docs" },
           ]).map(({ tab, icon, label }) => renderNavButton(tab, icon, label))}
         </div>
       </nav>
