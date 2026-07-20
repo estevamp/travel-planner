@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -189,7 +188,7 @@ export function SettingsTab() {
   };
 
   return (
-    <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+    <div className="space-y-6">
 
       {!isOnline && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
@@ -1130,6 +1129,6 @@ export function SettingsTab() {
         </div>
       </Modal>
       {ConfirmDialogNode}
-    </motion.div>
+    </div>
   );
 }

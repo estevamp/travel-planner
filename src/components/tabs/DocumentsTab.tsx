@@ -1,5 +1,4 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -175,7 +174,7 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
   };
 
   return (
-    <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+    <div className="space-y-6">
       <Card
         className={cn(
           "flex flex-col items-center justify-center py-12 border-2 border-dashed bg-transparent cursor-pointer transition-colors",
@@ -477,6 +476,6 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
       </Modal>
 
       {ConfirmDialogNode}
-    </motion.div>
+    </div>
   );
 });

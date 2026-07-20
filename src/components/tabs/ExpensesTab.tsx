@@ -734,7 +734,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
   const isOverBudget = budgetLimit > 0 && predictedTotal > budgetLimit;
 
   return (
-    <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+    <div className="space-y-6">
 
       {/* ── Sub-abas: Relatório | Pagamentos ── */}
       <div className={cn(
@@ -1425,6 +1425,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         onClose={() => setVisibilitySheet(prev => ({ ...prev, open: false }))}
         isDark={settings.dark_mode}
       />
-    </motion.div>
+    </div>
   );
 }

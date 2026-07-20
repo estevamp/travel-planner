@@ -1,6 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -287,13 +286,7 @@ export const PeopleTab = forwardRef<PeopleTabHandle, PeopleTabProps>(function Pe
   );
 
   return (
-    <motion.div
-      key="people"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       {ConfirmDialogNode}
 
       {!isOnline && (
@@ -601,6 +594,6 @@ export const PeopleTab = forwardRef<PeopleTabHandle, PeopleTabProps>(function Pe
           onClose={() => setCopyModalLink(null)}
         />
       )}
-    </motion.div>
+    </div>
   );
 });

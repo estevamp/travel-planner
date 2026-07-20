@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
@@ -462,7 +461,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
   );
 
   return (
-    <motion.div key="ideas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6 pb-28">
+    <div className="space-y-6 pb-28">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {trip.ideas.length === 0 && (
           <Card className="sm:col-span-2">
@@ -1081,7 +1080,7 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
         onClose={() => setVisibilitySheet(prev => ({ ...prev, open: false }))}
         isDark={settings.dark_mode}
       />
-    </motion.div>
+    </div>
   );
 }
 
