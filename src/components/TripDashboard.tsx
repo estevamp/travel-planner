@@ -985,7 +985,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         )}
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="grid grid-cols-5 h-16 px-1">
+        <div className="grid grid-cols-5 h-14 px-1">
           {([
             { tab: "itinerary" as const, icon: LayoutDashboard, label: tabLabels.itinerary },
             { tab: "ideas" as const,     icon: Lightbulb,       label: tabLabels.ideas },
