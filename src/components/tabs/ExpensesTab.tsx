@@ -542,6 +542,15 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     }
   };
 
+  const handleRefreshRates = async () => {
+    try {
+      await refreshRates();
+      toast("Cotação atualizada", "success");
+    } catch (error) {
+      toast(getErrorMessage(error), "error");
+    }
+  };
+
   // Estados para modal de edição completo (com splits)
   const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -1210,7 +1219,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           </p>
           <button
             type="button"
-            onClick={refreshRates}
+            onClick={() => void handleRefreshRates()}
             disabled={isRatesLoading || isRatesRefreshing}
             title="Atualizar cotação"
             aria-label="Atualizar cotação"
