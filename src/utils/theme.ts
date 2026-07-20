@@ -8,6 +8,7 @@ export function getThemeStyles(settings: UserSettings): React.CSSProperties {
     return {
       backgroundColor: palette.darkBg,
       color: "#F3F4F6",
+      ["--bg-color" as string]: palette.darkBg,
       ["--card-bg" as string]: palette.darkCard,
       ["--card-border" as string]: palette.darkSidebarBorder, // LAYOUT FIX: usa border do tema
       ["--accent-color" as string]: palette.darkAccent,
@@ -26,6 +27,7 @@ export function getThemeStyles(settings: UserSettings): React.CSSProperties {
   return {
     backgroundColor: palette.lightBg,
     color: "#111827",
+    ["--bg-color" as string]: palette.lightBg,
     ["--card-bg" as string]: palette.lightCard,
     ["--card-border" as string]: palette.lightSidebarBorder, // LAYOUT FIX: usa border do tema
     ["--accent-color" as string]: palette.lightAccent,

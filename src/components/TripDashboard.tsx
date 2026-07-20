@@ -460,7 +460,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             </div>
             <div className="mt-4 md:mt-6 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="text-lg md:text-xl font-bold text-zinc-800">
+                <h3 className={cn("text-lg md:text-xl font-bold", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
                   {tabLabels[activeTab]}
                 </h3>
                 {tabDescriptions[activeTab] && (
