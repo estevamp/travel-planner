@@ -3,9 +3,10 @@ import { motion } from "motion/react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { Lock, Unlock, ChevronDown, ChevronUp, Download, FilePenLine, Trash2, Users } from "lucide-react";
+import { Lock, Unlock, ChevronDown, ChevronUp, Download, FilePenLine, Trash2, Users, RefreshCw } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, formatCurrency, maskCurrency, parseCurrencyToNumber, exportExpensesToCsv, exportPaymentsToCsv } from "../../utils";
+import { getDeterministicColor } from "../../utils/colors";
 import type { Trip, Expense, Visibility, CreateExpenseSplitInput, SplitType, ExpenseWithSplits, Settlement, MemberBalance, SimplifiedTransfer } from "../../types";
 import type { ExpenseSplit } from '../../types/splitting';
 import { Card } from "../Card";
@@ -54,7 +55,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     "expenses",
     onTripUpdate
   );
-  const { convert, rates: exchangeRates, isLoading: isRatesLoading } = useCurrencyConversion(settings.default_currency);
+  const { convert, rates: exchangeRates, rateDate, isLoading: isRatesLoading, refresh: refreshRates } = useCurrencyConversion(settings.default_currency);
   
   // Custom hooks para UPDATE e DELETE
   const { update: updateExpense, isSubmitting: isUpdatingExpense } = useUpdateExpense({
@@ -343,6 +344,37 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       .filter(m => m.amount > 0)
       .sort((a, b) => b.amount - a.amount);
   }, [visibleExpensesWithSplits, members, convert, settings.default_currency, t]);
+
+  // Totais por categoria — usados no gráfico de despesas por categoria
+  const categoryTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    visibleExpensesWithSplits.forEach((exp) => {
+      const currency = exp.currency || settings.default_currency;
+      const converted = convert(Number(exp.amount) || 0, currency);
+      const catId = exp.category_id || "__uncategorized__";
+      totals[catId] = (totals[catId] || 0) + converted;
+    });
+
+    const categoryMap = new Map(categories.map((cat) => [cat.id, cat]));
+
+    return Object.entries(totals)
+      .map(([catId, amount]) => {
+        const category = catId === "__uncategorized__" ? null : categoryMap.get(catId);
+        return {
+          id: catId,
+          name: category?.name || t("dashboard.noCategory"),
+          color: category?.color || getDeterministicColor(category?.id ?? null),
+          amount,
+        };
+      })
+      .filter((entry) => entry.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+  }, [visibleExpensesWithSplits, categories, convert, settings.default_currency, t]);
+
+  const categoryTotalSum = useMemo(
+    () => categoryTotals.reduce((sum, entry) => sum + entry.amount, 0),
+    [categoryTotals]
+  );
 
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   // Overflow menu (⋯) por card — mesmo padrão usado na aba Atividades
@@ -1131,8 +1163,68 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
         </div>
       )}
 
+      {categoryTotals.length > 0 && (
+        <Card className="space-y-4">
+          <h3 className="text-sm font-bold">{t("expenses.byCategoryTitle")}</h3>
+          <div className="space-y-3">
+            {categoryTotals.map((entry) => {
+              const pct = categoryTotalSum > 0 ? (entry.amount / categoryTotalSum) * 100 : 0;
+              return (
+                <div key={entry.id} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm gap-2">
+                    <span className={cn("font-medium flex items-center gap-2 min-w-0", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                      <span className="truncate">{entry.name}</span>
+                    </span>
+                    <div className="flex items-center gap-2 text-xs tabular-nums flex-shrink-0">
+                      <span className={cn("font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                        {formatCurrency(entry.amount, settings.default_currency)}
+                      </span>
+                      <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                        ({pct.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
+                    <div
+                      className="absolute h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, backgroundColor: entry.color }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+            {t("expenses.byCategoryFootnote", { currency: settings.default_currency })}
+          </p>
+        </Card>
+      )}
+
       <Card className={cn("p-4", settings.dark_mode ? "bg-zinc-900/70" : "bg-white")}>
-        <div className="space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+            {rateDate
+              ? `Atualizado em ${new Date(`${rateDate}T00:00:00`).toLocaleDateString("pt-BR")}`
+              : "Data da cotação indisponível"}
+          </p>
+          <button
+            type="button"
+            onClick={refreshRates}
+            disabled={isRatesLoading}
+            title="Atualizar cotação"
+            aria-label="Atualizar cotação"
+            className={cn(
+              "flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all disabled:opacity-50",
+              settings.dark_mode
+                ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+            )}
+          >
+            <RefreshCw size={14} className={isRatesLoading ? "animate-spin" : undefined} />
+          </button>
+        </div>
+        <div className="space-y-1 mt-3">
           <p className={cn("text-xs font-semibold uppercase", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
             Cotação atual BRL/USD
           </p>
@@ -1151,7 +1243,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               ? `1 EUR = ${formatCurrency(brlPerEur, "BRL")} · 1 BRL = ${formatCurrency(1 / brlPerEur, "EUR")}`
               : "Cotação indisponível no momento"}
           </p>
-        </div>        
+        </div>
       </Card>
 
       <FloatingActionButton onClick={onOpenModal} hideOnMobile />
