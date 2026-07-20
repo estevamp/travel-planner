@@ -1057,6 +1057,44 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           )}
 
+          {categoryTotals.length > 0 && (
+            <Card className="space-y-4">
+              <h3 className="text-sm font-bold">{t("expenses.byCategoryTitle")}</h3>
+              <div className="space-y-3">
+                {categoryTotals.map((entry) => {
+                  const pct = categoryTotalSum > 0 ? (entry.amount / categoryTotalSum) * 100 : 0;
+                  return (
+                    <div key={entry.id} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm gap-2">
+                        <span className={cn("font-medium flex items-center gap-2 min-w-0", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                          <span className="truncate">{entry.name}</span>
+                        </span>
+                        <div className="flex items-center gap-2 text-xs tabular-nums flex-shrink-0">
+                          <span className={cn("font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
+                            {formatCurrency(entry.amount, settings.default_currency)}
+                          </span>
+                          <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                            ({pct.toFixed(1)}%)
+                          </span>
+                        </div>
+                      </div>
+                      <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
+                        <div
+                          className="absolute h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: entry.color }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                {t("expenses.byCategoryFootnote", { currency: settings.default_currency })}
+              </p>
+            </Card>
+          )}
+
           <div className="flex justify-end">
             <button
               type="button"
@@ -1153,63 +1191,24 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               </Card>
             </>
           )}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleExportPayments}
+              title={t("expenses.exportCsv")}
+              aria-label={t("expenses.exportCsv")}
+              className={cn(
+                "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
+                settings.dark_mode
+                  ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              )}
+            >
+              <Download size={16} />
+            </button>
+          </div>
         </div>
       )}
-
-      {categoryTotals.length > 0 && (
-        <Card className="space-y-4">
-          <h3 className="text-sm font-bold">{t("expenses.byCategoryTitle")}</h3>
-          <div className="space-y-3">
-            {categoryTotals.map((entry) => {
-              const pct = categoryTotalSum > 0 ? (entry.amount / categoryTotalSum) * 100 : 0;
-              return (
-                <div key={entry.id} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm gap-2">
-                    <span className={cn("font-medium flex items-center gap-2 min-w-0", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                      <span className="truncate">{entry.name}</span>
-                    </span>
-                    <div className="flex items-center gap-2 text-xs tabular-nums flex-shrink-0">
-                      <span className={cn("font-semibold", settings.dark_mode ? "text-zinc-300" : "text-zinc-600")}>
-                        {formatCurrency(entry.amount, settings.default_currency)}
-                      </span>
-                      <span className={cn(settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-                        ({pct.toFixed(1)}%)
-                      </span>
-                    </div>
-                  </div>
-                  <div className={cn("relative w-full rounded-full h-2.5 overflow-hidden", settings.dark_mode ? "bg-zinc-700" : "bg-zinc-100")}>
-                    <div
-                      className="absolute h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: entry.color }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className={cn("text-[10px]", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
-            {t("expenses.byCategoryFootnote", { currency: settings.default_currency })}
-          </p>
-        </Card>
-      )}
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleExportPayments}
-          title={t("expenses.exportCsv")}
-          aria-label={t("expenses.exportCsv")}
-          className={cn(
-            "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
-            settings.dark_mode
-              ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-          )}
-        >
-          <Download size={16} />
-        </button>
-      </div>
 
       <Card className={cn("p-4", settings.dark_mode ? "bg-zinc-900/70" : "bg-white")}>
         <div className="flex items-start justify-between gap-2">
