@@ -208,7 +208,7 @@ export function LandingPage({
 
   const highlightedTrip = settings.onboarding_trip_id;
   return (
-    <main className="min-h-screen bg-[#F4F4F4] px-5 py-9 pb-32 text-[#0A2342]">
+    <main className="min-h-screen bg-[#F4F4F4] px-5 py-9 pb-24 text-[#0A2342]">
       <div className="mx-auto max-w-[410px]">
         <header className="flex items-center justify-between">
           <img src="/favicon.svg" alt={t("app.name")} className="h-9 w-9 rounded-lg" />
@@ -231,10 +231,15 @@ export function LandingPage({
           ))}
         </section>
       </div>
-      <nav className="fixed bottom-8 left-1/2 flex h-16 w-[min(88vw,360px)] -translate-x-1/2 items-center justify-between rounded-full bg-white px-8 shadow-[0_16px_22px_rgba(0,0,0,.18)]">
-        <button onClick={() => setShowSettings(true)} aria-label={copy.preferences} className="text-[#0A2342]"><Settings size={20} /></button>
-        <button onClick={startCreate} aria-label={t("common.newTrip")} className="-mt-8 rounded-full border-4 border-white bg-[#2462EB] p-3 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)]"><Plus size={29} strokeWidth={3} /></button>
-        <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="text-[#0A2342]"><UserRound size={20} /></button>
+      <nav
+        className="fixed inset-x-4 z-40 rounded-[24px] bottom-nav-glass"
+        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex items-center justify-between h-[4.5rem] px-8 max-w-[410px] mx-auto">
+          <button onClick={() => setShowSettings(true)} aria-label={copy.preferences} className="text-[#0A2342]"><Settings size={20} /></button>
+          <button onClick={startCreate} aria-label={t("common.newTrip")} className="-mt-9 rounded-full border-4 border-white bg-[#2462EB] p-3.5 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)]"><Plus size={32} strokeWidth={3} /></button>
+          <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="text-[#0A2342]"><UserRound size={20} /></button>
+        </div>
       </nav>
       {showSettings && <AccountSheet title={copy.preferences} onClose={() => setShowSettings(false)}><LanguageButtons language={settings.language_code} onChange={onLanguageChange} /></AccountSheet>}
       {showProfile && <AccountSheet title={copy.profile} onClose={() => setShowProfile(false)}><LanguageButtons language={settings.language_code} onChange={onLanguageChange} /><a href="/terms" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm hover:bg-slate-50"><FileText size={17} />{t("landing.terms")}</a><button onClick={() => void supabase.auth.signOut()} className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm hover:bg-slate-50"><LogOut size={17} />{t("common.signOut")}</button></AccountSheet>}
