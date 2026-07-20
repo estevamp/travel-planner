@@ -1153,22 +1153,6 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               </Card>
             </>
           )}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleExportPayments}
-              title={t("expenses.exportCsv")}
-              aria-label={t("expenses.exportCsv")}
-              className={cn(
-                "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
-                settings.dark_mode
-                  ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-              )}
-            >
-              <Download size={16} />
-            </button>
-          </div>
         </div>
       )}
 
@@ -1209,6 +1193,23 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           </p>
         </Card>
       )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleExportPayments}
+          title={t("expenses.exportCsv")}
+          aria-label={t("expenses.exportCsv")}
+          className={cn(
+            "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
+            settings.dark_mode
+              ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+          )}
+        >
+          <Download size={16} />
+        </button>
+      </div>
 
       <Card className={cn("p-4", settings.dark_mode ? "bg-zinc-900/70" : "bg-white")}>
         <div className="flex items-start justify-between gap-2">
