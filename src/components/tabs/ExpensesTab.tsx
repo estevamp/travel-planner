@@ -55,7 +55,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     "expenses",
     onTripUpdate
   );
-  const { convert, rates: exchangeRates, rateDate, isLoading: isRatesLoading, refresh: refreshRates } = useCurrencyConversion(settings.default_currency);
+  const { convert, rates: exchangeRates, rateDate, isLoading: isRatesLoading, isRefreshing: isRatesRefreshing, refresh: refreshRates } = useCurrencyConversion(settings.default_currency);
   
   // Custom hooks para UPDATE e DELETE
   const { update: updateExpense, isSubmitting: isUpdatingExpense } = useUpdateExpense({
@@ -1211,7 +1211,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           <button
             type="button"
             onClick={refreshRates}
-            disabled={isRatesLoading}
+            disabled={isRatesLoading || isRatesRefreshing}
             title="Atualizar cotação"
             aria-label="Atualizar cotação"
             className={cn(
@@ -1221,7 +1221,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                 : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
             )}
           >
-            <RefreshCw size={14} className={isRatesLoading ? "animate-spin" : undefined} />
+            <RefreshCw size={14} className={(isRatesLoading || isRatesRefreshing) ? "animate-spin" : undefined} />
           </button>
         </div>
         <div className="space-y-1 mt-3">
