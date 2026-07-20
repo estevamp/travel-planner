@@ -1,18 +1,23 @@
 /**
- * Partiu! — Service Worker v2.1
+ * Partiu! — Service Worker v2.2
  * ──────────────────────────────
  * Fix: auth/v1/token agora tem cache próprio para não derrubar operações offline.
+ * Fix: /api/** (ex.: exchange-rates) saiu do cache-first — estava travando a
+ * cotação no primeiro valor cacheado, ignorando qualquer refresh do app.
  *
  * Estratégia por tipo de URL:
  *   /auth/v1/token   → tenta rede, cacheia sucesso, devolve cache se offline
  *   /rest/v1/**      → network-first com fallback de cache 24h
+ *   /api/**          → network-first com fallback de cache 5min
  *   assets do app    → cache-first
  */
 
 const CACHE_APP      = "partiu-app-v3";
 const CACHE_SUPABASE = "partiu-supabase-v3";
 const CACHE_AUTH     = "partiu-auth-v3";
+const CACHE_API      = "partiu-api-v1";
 const SUPABASE_TTL   = 24 * 60 * 60 * 1000;
+const API_TTL        = 5 * 60 * 1000;
 
 const PRECACHE_URLS = ["/", "/index.html", "/manifest.json"];
 
@@ -30,7 +35,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => ![CACHE_APP, CACHE_SUPABASE, CACHE_AUTH].includes(k))
+          .filter((k) => ![CACHE_APP, CACHE_SUPABASE, CACHE_AUTH, CACHE_API].includes(k))
           .map((k) => caches.delete(k))
       )
     )
@@ -65,6 +70,11 @@ self.addEventListener("fetch", (event) => {
 
   if (url.hostname.includes("supabase.co")) {
     event.respondWith(networkFirstSupabase(request));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(networkFirstApi(request));
     return;
   }
 
@@ -126,6 +136,31 @@ async function networkFirstSupabase(request) {
     }
     return new Response(JSON.stringify({ data: null, error: "offline" }), {
       status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+// ─── /api/**: network-first ────────────────────────────────────────────────────
+async function networkFirstApi(request) {
+  const cache = await caches.open(CACHE_API);
+  try {
+    const response = await fetch(request.clone());
+    if (response.ok) {
+      const headers = new Headers(response.headers);
+      headers.set("sw-cached-at", Date.now().toString());
+      const body = await response.clone().arrayBuffer();
+      cache.put(request, new Response(body, { status: response.status, headers }));
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) {
+      const cachedAt = parseInt(cached.headers.get("sw-cached-at") || "0");
+      if (Date.now() - cachedAt < API_TTL) return cached;
+    }
+    return new Response(JSON.stringify({ error: "offline" }), {
+      status: 503,
       headers: { "Content-Type": "application/json" },
     });
   }
