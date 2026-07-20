@@ -296,6 +296,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
 
   const renderNavButton = (tab: ActiveTab, Icon: typeof LayoutDashboard, label: string) => {
     const isActive = activeTab === tab;
+    const inactiveColor = settings.dark_mode ? "#A1A1AA" : "#71717A";
     return (
       <button
         key={tab}
@@ -304,13 +305,18 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         aria-label={label}
         aria-current={isActive ? "page" : undefined}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-1 my-1.5 rounded-2xl transition-all duration-150",
+          "relative flex flex-col items-center justify-center gap-1 my-1.5 rounded-2xl transition-all duration-200",
           isActive ? "bg-[var(--sidebar-active-bg)]/12" : ""
         )}
-        style={{ color: isActive ? 'var(--sidebar-active-bg)' : 'var(--sidebar-text)' }}
+        style={{ color: isActive ? 'var(--sidebar-active-bg)' : inactiveColor }}
       >
-        <Icon size={isActive ? 25 : 23} strokeWidth={isActive ? 2.3 : 1.8} />
-        <span className={cn("text-[9.5px] tracking-wide", isActive ? "font-bold" : "font-medium")}>{label}</span>
+        <Icon
+          size={24}
+          strokeWidth={isActive ? 2.3 : 1.8}
+          className="transition-transform duration-200"
+          style={{ transform: isActive ? 'scale(1.14)' : 'scale(1)' }}
+        />
+        <span className={cn("text-[9.5px] tracking-wide transition-all duration-200", isActive ? "font-bold" : "font-medium")}>{label}</span>
       </button>
     );
   };
@@ -1057,9 +1063,12 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         </form>
       </Modal>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation — premium glass, estilo Meta (Instagram/Threads) */}
       <nav
-        className="fixed inset-x-3 z-40 md:hidden rounded-full border border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]/95 backdrop-blur-md shadow-lg text-[var(--sidebar-text)]"
+        className={cn(
+          "fixed inset-x-4 z-40 md:hidden rounded-[24px] transition-colors duration-200",
+          settings.dark_mode ? "bottom-nav-glass-dark" : "bottom-nav-glass"
+        )}
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
         <div className="grid grid-cols-7 h-[4.5rem] px-1">

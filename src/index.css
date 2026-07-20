@@ -209,6 +209,34 @@
     box-shadow: 0 24px 48px rgba(0, 64, 224, 0.25);
   }
 
+  /* ── Bottom nav: Meta-style premium glass (Instagram/Threads/Facebook) ── */
+  .bottom-nav-glass {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .bottom-nav-glass-dark {
+    background: rgba(20, 20, 20, 0.72);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Fallback for browsers without backdrop-filter support: solid-ish translucency instead of blur */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .bottom-nav-glass {
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .bottom-nav-glass-dark {
+      background: rgba(20, 20, 20, 0.92);
+    }
+  }
+
   /* ── Explorer theme: apply fonts when explorer palette is active ── */
   [data-theme="explorer"] {
     font-family: 'Manrope', sans-serif;
