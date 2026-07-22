@@ -286,7 +286,17 @@ function Field({ label, icon, value, onChange, placeholder }: { label: string; i
 }
 
 function AccountSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return <div className="fixed inset-0 z-50 flex items-end bg-black/25" onClick={onClose}><section className="w-full rounded-t-3xl bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h2 className="font-bold">{title}</h2><button onClick={onClose} aria-label="Fechar"><X size={20} /></button></div>{children}</section></div>;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/25 md:items-stretch md:justify-end" onClick={onClose}>
+      <section
+        className="flex max-h-[90vh] w-full flex-col rounded-t-3xl bg-white p-6 shadow-2xl md:h-full md:max-h-full md:w-full md:max-w-md md:rounded-none md:rounded-l-3xl md:overflow-y-auto"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between"><h2 className="font-bold">{title}</h2><button onClick={onClose} aria-label="Fechar"><X size={20} /></button></div>
+        {children}
+      </section>
+    </div>
+  );
 }
 
 function LanguageButtons({ language, onChange }: { language: LanguageCode; onChange: (language: LanguageCode) => void | Promise<void> }) {
