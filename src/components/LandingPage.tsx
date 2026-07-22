@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import {
   ArrowLeft, ChevronRight, CircleHelp, Compass, FileText, LogOut, MapPin,
-  Plus, Settings, SlidersHorizontal, UserRound, X,
+  Plus, SlidersHorizontal, UserRound, X,
 } from "lucide-react";
 import { supabase } from "../supabase";
 import type { LanguageCode, OnboardingStatus, TripSummary, UserSettings } from "../types";
@@ -45,7 +45,6 @@ export function LandingPage({
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [introImage] = useState(
@@ -228,7 +227,6 @@ export function LandingPage({
           {/* Barra de ações — visível apenas no desktop, substitui a nav flutuante */}
           <div className="hidden md:flex items-center gap-2">
             <a href="/help" className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
-            <button onClick={() => setShowSettings(true)} aria-label={copy.preferences} className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors"><Settings size={19} /></button>
             <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors"><UserRound size={19} /></button>
             <button onClick={startCreate} className="ml-2 flex items-center gap-2 rounded-full bg-[#2462EB] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_14px_rgba(36,98,235,.35)] hover:brightness-110 transition">
               <Plus size={18} strokeWidth={3} />
@@ -265,13 +263,11 @@ export function LandingPage({
         className="fixed inset-x-4 z-40 rounded-[32px] bottom-nav-glass md:hidden"
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="flex items-center justify-between h-20 px-8 max-w-[410px] mx-auto">
-          <button onClick={() => setShowSettings(true)} aria-label={copy.preferences} className="text-[#0A2342]"><Settings size={20} /></button>
+        <div className="flex items-center justify-center gap-16 h-20 px-8 max-w-[410px] mx-auto">
           <button onClick={startCreate} aria-label={t("common.newTrip")} className="-mt-9 rounded-full border-4 border-white bg-[#2462EB] p-3.5 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)]"><Plus size={32} strokeWidth={3} /></button>
           <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="text-[#0A2342]"><UserRound size={20} /></button>
         </div>
       </nav>
-      {showSettings && <AccountSheet title={copy.preferences} onClose={() => setShowSettings(false)}><LanguageButtons language={settings.language_code} onChange={onLanguageChange} /></AccountSheet>}
       {showProfile && <AccountSheet title={copy.profile} onClose={() => setShowProfile(false)}><LanguageButtons language={settings.language_code} onChange={onLanguageChange} /><a href="/terms" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm hover:bg-slate-50"><FileText size={17} />{t("landing.terms")}</a><button onClick={() => void supabase.auth.signOut()} className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm hover:bg-slate-50"><LogOut size={17} />{t("common.signOut")}</button></AccountSheet>}
     </main>
   );
