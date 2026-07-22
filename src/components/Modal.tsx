@@ -54,7 +54,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md", isDark = 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:items-stretch md:justify-end md:p-0">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -64,7 +64,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md", isDark = 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           />
 
-          {/* Modal Content */}
+          {/* Modal Content — dialog centralizado no mobile, side sheet ancorado à direita no desktop */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -74,7 +74,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md", isDark = 
               "relative w-full rounded-3xl shadow-2xl overflow-hidden",
               "max-h-[90vh] flex flex-col",
               sizeClasses[size],
-              "md:max-h-[85vh]",
+              "md:max-h-full md:h-full md:max-w-md md:rounded-none md:rounded-l-3xl",
               isDark ? "text-white" : "text-zinc-900"
             )}
             style={{ backgroundColor: 'var(--card-bg)' }}

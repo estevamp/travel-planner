@@ -1128,6 +1128,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           ) : (
             <>
+              <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start space-y-6 lg:space-y-0">
               <Card className="space-y-4">
                 <h3 className="text-sm font-bold">{t("expenses.summaryByParticipant")}</h3>
                 <div className="space-y-3">
@@ -1189,6 +1190,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                   onUndoPayment={undoPayment}
                 />
               </Card>
+              </div>
             </>
           )}
           <div className="flex justify-end">

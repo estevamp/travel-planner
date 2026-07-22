@@ -158,19 +158,31 @@ export function LandingPage({
 
   if (activeScreen === "intro") {
     return (
-      <main className="min-h-screen bg-white px-5 py-8 flex flex-col items-center text-[#0A2342]">
-        <div className="w-full max-w-[402px] flex-1 flex flex-col items-center justify-center">
-          <div className="w-full aspect-[.72] max-h-[336px] overflow-hidden rounded-[28px] bg-[#f4f8ff]">
+      <main className="min-h-screen bg-white flex flex-col items-center text-[#0A2342] px-5 py-8 md:flex-row md:items-stretch md:px-0 md:py-0">
+        {/* Hero de imagem — visível apenas no desktop, ocupando metade da tela */}
+        <div className="hidden md:block md:w-1/2 lg:w-3/5 relative overflow-hidden">
+          <img
+            src={introImage}
+            alt="Destino de viagem"
+            className="h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A2342]/50 via-[#0A2342]/0 to-transparent" />
+          <div className="absolute left-10 bottom-10 right-10 text-white">
+            <p className="me-label text-sm uppercase tracking-[0.2em] opacity-80">{t("app.name")}</p>
+          </div>
+        </div>
+        <div className="w-full max-w-[402px] flex-1 flex flex-col items-center justify-center md:w-1/2 lg:w-2/5 md:max-w-[440px] md:mx-auto md:px-10">
+          <div className="w-full aspect-[.72] max-h-[336px] overflow-hidden rounded-[28px] bg-[#f4f8ff] md:hidden">
             <img
               src={introImage}
               alt="Destino de viagem"
               className="h-full w-full object-cover object-center"
             />
           </div>
-          <h1 className="mt-3 max-w-[330px] text-center text-[28px] leading-[1.12] font-extrabold tracking-[-0.04em]">{copy.introTitle}</h1>
-          <p className="mt-3 max-w-[320px] text-center text-[15px] leading-6 text-slate-600">{copy.introBody}</p>
+          <h1 className="me-display mt-3 max-w-[330px] text-center text-[28px] leading-[1.12] md:mt-0 md:max-w-[360px] md:text-[34px]">{copy.introTitle}</h1>
+          <p className="mt-3 max-w-[320px] text-center text-[15px] leading-6 text-slate-600 md:max-w-[340px]">{copy.introBody}</p>
           <Progress current={1} />
-          <button onClick={() => session ? setRequestedScreen("create") : void startGoogleSignIn()} disabled={signingIn} className="mt-4 w-full rounded-xl bg-[#2462EB] py-4 text-sm font-extrabold tracking-[.12em] text-white shadow-[0_5px_4px_rgba(10,35,66,.25)] disabled:opacity-50">{signingIn ? t("auth.redirecting") : copy.start}</button>
+          <button onClick={() => session ? setRequestedScreen("create") : void startGoogleSignIn()} disabled={signingIn} className="mt-4 w-full rounded-xl bg-[#2462EB] py-4 text-sm font-extrabold tracking-[.12em] text-white shadow-[0_5px_4px_rgba(10,35,66,.25)] disabled:opacity-50 hover:brightness-110 transition">{signingIn ? t("auth.redirecting") : copy.start}</button>
           {session && <button onClick={() => void skip()} className="mt-5 text-sm text-slate-500">{copy.skip}</button>}
         </div>
       </main>
@@ -180,27 +192,27 @@ export function LandingPage({
   if (activeScreen === "create") {
     const suggestions = language === "en" ? ["Fernando de Noronha", "Gramado", "São Paulo"] : ["Fernando de Noronha", "Gramado", "São Paulo"];
     return (
-      <main className="min-h-screen bg-white px-5 py-8 text-[#0A2342]">
-        <div className="mx-auto max-w-[402px]">
-          <button type="button" onClick={cancelCreate} aria-label={copy.back} className="rounded-full bg-white p-2 text-slate-400 shadow-sm">
+      <main className="min-h-screen bg-white px-5 py-8 text-[#0A2342] md:flex md:flex-col md:items-center md:justify-center md:bg-[#F4F4F4] md:px-10">
+        <div className="mx-auto max-w-[402px] md:max-w-[460px] md:mb-3">
+          <button type="button" onClick={cancelCreate} aria-label={copy.back} className="rounded-full bg-white p-2 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors">
             <ArrowLeft size={20} />
           </button>
         </div>
-        <form onSubmit={createTrip} className="mx-auto flex min-h-[calc(100vh-6.5rem)] max-w-[402px] flex-col">
+        <form onSubmit={createTrip} className="mx-auto flex min-h-[calc(100vh-6.5rem)] max-w-[402px] flex-col md:min-h-0 md:max-w-[460px] md:rounded-3xl md:bg-white md:p-8 md:shadow-xl md:border md:border-slate-100">
           <div className="flex-1">
-            <h1 className="text-center text-[28px] leading-8 font-extrabold tracking-[-0.04em]">{copy.createTitle}</h1>
+            <h1 className="me-display text-center text-[28px] leading-8">{copy.createTitle}</h1>
             <p className="mt-5 text-center text-[15px] text-slate-600">{copy.createHint}</p>
-            <section className="mt-9 rounded-xl bg-white p-4 shadow-[0_4px_6px_rgba(0,0,0,.22)]">
+            <section className="mt-9 rounded-xl bg-white p-4 shadow-[0_4px_6px_rgba(0,0,0,.22)] md:shadow-none md:border md:border-slate-100 md:p-0 md:bg-transparent">
               <Field label={copy.name} icon={<SlidersHorizontal size={17} />} value={name} onChange={setName} placeholder={language === "en" ? "Ex: Summer Vacation 2024" : "Ex: Férias de Verão 2024"} />
               <Field label={copy.destination} icon={<MapPin size={17} />} value={destination} onChange={setDestination} placeholder={language === "en" ? "City, country or region" : "Cidade, país ou região"} />
               <p className="mt-5 text-xs font-bold">{copy.suggestions}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setDestination(suggestion)} className="rounded-full bg-[#E9EDFF] px-3 py-2 text-xs text-slate-600">{suggestion}</button>)}
+                {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setDestination(suggestion)} className="rounded-full bg-[#E9EDFF] px-3 py-2 text-xs text-slate-600 hover:bg-[#dbe4ff] transition-colors">{suggestion}</button>)}
               </div>
             </section>
           </div>
           <Progress current={2} />
-          <button disabled={creating} className="mt-4 w-full rounded-xl bg-[#2462EB] py-4 text-sm font-extrabold tracking-[.12em] text-white shadow-[0_5px_4px_rgba(10,35,66,.25)] disabled:opacity-50">{creating ? t("landing.creating") : copy.create}</button>
+          <button disabled={creating} className="mt-4 w-full rounded-xl bg-[#2462EB] py-4 text-sm font-extrabold tracking-[.12em] text-white shadow-[0_5px_4px_rgba(10,35,66,.25)] disabled:opacity-50 hover:brightness-110 transition">{creating ? t("landing.creating") : copy.create}</button>
         </form>
       </main>
     );
@@ -208,31 +220,49 @@ export function LandingPage({
 
   const highlightedTrip = settings.onboarding_trip_id;
   return (
-    <main className="min-h-screen bg-[#F4F4F4] px-5 py-9 pb-24 text-[#0A2342]">
-      <div className="mx-auto max-w-[410px]">
+    <main className="min-h-screen bg-[#F4F4F4] px-5 py-9 pb-24 text-[#0A2342] md:pb-14">
+      <div className="mx-auto max-w-[410px] md:max-w-5xl">
         <header className="flex items-center justify-between">
           <img src="/favicon.svg" alt={t("app.name")} className="h-9 w-9 rounded-lg" />
-          <a href="/help" className="rounded-full bg-white p-2 text-slate-300 shadow-sm" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
+          <a href="/help" className="rounded-full bg-white p-2 text-slate-300 shadow-sm md:hidden" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
+          {/* Barra de ações — visível apenas no desktop, substitui a nav flutuante */}
+          <div className="hidden md:flex items-center gap-2">
+            <a href="/help" className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
+            <button onClick={() => setShowSettings(true)} aria-label={copy.preferences} className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors"><Settings size={19} /></button>
+            <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors"><UserRound size={19} /></button>
+            <button onClick={startCreate} className="ml-2 flex items-center gap-2 rounded-full bg-[#2462EB] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_14px_rgba(36,98,235,.35)] hover:brightness-110 transition">
+              <Plus size={18} strokeWidth={3} />
+              {t("common.newTrip")}
+            </button>
+          </div>
         </header>
-        <h1 className="mt-20 text-[27px] font-extrabold tracking-[-0.04em]">{copy.myTrips}</h1>
+        <h1 className="me-display mt-20 text-[27px] md:mt-12 md:text-[34px]">{copy.myTrips}</h1>
         <p className="mt-[-2px] text-sm text-slate-400">{copy.tripList}</p>
-        <section className="mt-5 space-y-4">
-          {loadingTrips && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
-          {!loadingTrips && trips.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-sm">{copy.empty}</p>}
+        <section className="mt-5 space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3">
+          {loadingTrips && Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 shadow-sm animate-pulse md:h-[104px] md:flex-col md:items-start md:gap-3 md:p-5">
+              <span className="h-14 w-14 rounded-lg bg-slate-200 md:h-16 md:w-16 md:rounded-2xl" />
+              <span className="min-w-0 flex-1 space-y-2 md:w-full">
+                <span className="block h-3 w-2/3 rounded-full bg-slate-200" />
+                <span className="block h-2.5 w-1/2 rounded-full bg-slate-100" />
+              </span>
+            </div>
+          ))}
+          {!loadingTrips && trips.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-sm md:col-span-full">{copy.empty}</p>}
           {trips.map((trip) => (
             <React.Fragment key={trip.id}>
-              <button onClick={() => openTrip(trip)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm transition-transform hover:-translate-y-0.5">
-                <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#DBE9FD] text-[#2462EB]"><Compass size={25} /></span>
-                <span className="min-w-0 flex-1"><strong className="block text-sm">{trip.name}</strong><small className="text-xs text-slate-500">{trip.destination || t("common.destinationMissing")}</small></span>
-                <ChevronRight className="text-[#c8d6eb]" size={20} />
+              <button onClick={() => openTrip(trip)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm transition-transform hover:-translate-y-0.5 md:h-full md:flex-col md:items-start md:gap-3 md:p-5 md:hover:shadow-md">
+                <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#DBE9FD] text-[#2462EB] md:h-16 md:w-16 md:rounded-2xl"><Compass size={25} /></span>
+                <span className="min-w-0 flex-1 md:w-full"><strong className="block text-sm md:text-base">{trip.name}</strong><small className="text-xs text-slate-500">{trip.destination || t("common.destinationMissing")}</small></span>
+                <ChevronRight className="text-[#c8d6eb] md:hidden" size={20} />
               </button>
-              {activeScreen === "created" && trip.id === highlightedTrip && <section className="rounded-xl bg-white px-6 py-8 text-center shadow-[0_4px_8px_rgba(0,0,0,.2)]"><h2 className="text-[17px] font-extrabold">{copy.created}</h2><p className="mt-5 text-[15px] leading-6 text-slate-600">{copy.createdHint}</p><Progress current={3} /></section>}
+              {activeScreen === "created" && trip.id === highlightedTrip && <section className="rounded-xl bg-white px-6 py-8 text-center shadow-[0_4px_8px_rgba(0,0,0,.2)] md:col-span-full"><h2 className="text-[17px] font-extrabold">{copy.created}</h2><p className="mt-5 text-[15px] leading-6 text-slate-600">{copy.createdHint}</p><Progress current={3} /></section>}
             </React.Fragment>
           ))}
         </section>
       </div>
       <nav
-        className="fixed inset-x-4 z-40 rounded-[32px] bottom-nav-glass"
+        className="fixed inset-x-4 z-40 rounded-[32px] bottom-nav-glass md:hidden"
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-center justify-between h-20 px-8 max-w-[410px] mx-auto">

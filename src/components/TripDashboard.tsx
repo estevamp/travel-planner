@@ -229,6 +229,32 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
     setExpenseAmount("0");
   };
 
+  // Atalho de teclado: "N" abre o formulário de criação da aba ativa (itinerário, despesas ou ideias)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "n" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      const isTypingField = target && (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      );
+      if (isTypingField || showAddModal) return;
+
+      if (activeTab === "itinerary") {
+        isGuidedTrip ? setOnboardingStep("form") : openModal("itinerary");
+      } else if (activeTab === "expenses") {
+        openModal("expense");
+      } else if (activeTab === "ideas") {
+        openModal("idea");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, showAddModal, isGuidedTrip]);
+
   // Wrappers para os hooks (adaptam as chamadas dos modais)
   const handleCreateItinerary = async (form: FormData) => {
     return createItinerary({
@@ -397,42 +423,65 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         >
+        {/* Container com largura máxima: evita conteúdo esticado em telas largas de desktop */}
+        <div className="w-full max-w-6xl xl:max-w-7xl mx-auto">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <h2
                 id="tour-trip-name"
                 onClick={() => navigate("/")}
-                className="text-2xl md:text-4xl font-bold truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
+                className="me-display text-2xl md:text-4xl truncate flex-1 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-color)]/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
               >
                 {trip.name}
               </h2>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveTab("people")}
-                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  className={cn(
+                    "md:hidden flex items-center justify-center w-9 h-9 rounded-xl transition-colors",
+                    settings.dark_mode ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"
+                  )}
                   aria-label={t("common.people")}
                 >
                   <Users size={20} />
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
-                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  className={cn(
+                    "md:hidden flex items-center justify-center w-9 h-9 rounded-xl transition-colors",
+                    settings.dark_mode ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"
+                  )}
                   aria-label={t("common.settings")}
                 >
                   <Settings size={20} />
                 </button>
                 <button
                   onClick={startTour}
-                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  className={cn(
+                    "md:hidden flex items-center justify-center w-9 h-9 rounded-xl transition-colors",
+                    settings.dark_mode ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"
+                  )}
                   title={t("dashboard.appTour")}
                   aria-label={t("dashboard.appTour")}
                 >
                   <HelpCircle size={18} />
                 </button>
+                {/* Toolbar de desktop: ações com rótulo visível, substituindo os ícones do mobile */}
+                <button
+                  onClick={startTour}
+                  className={cn(
+                    "hidden md:flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold transition-colors flex-shrink-0",
+                    settings.dark_mode ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  )}
+                  title={t("dashboard.appTour")}
+                >
+                  <HelpCircle size={15} />
+                  {t("dashboard.appTour")}
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-zinc-500 mt-2 text-sm md:text-base">
+            <div className={cn("flex items-center gap-2 mt-2 text-sm md:text-base", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.destination || "")}`}
                 target="_blank"
@@ -446,11 +495,11 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             </div>
             <div className="mt-4 md:mt-6 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <h3 className={cn("text-lg md:text-xl font-bold", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
+                <h3 className={cn("me-headline text-lg md:text-xl", settings.dark_mode ? "text-zinc-100" : "text-zinc-800")}>
                   {tabLabels[activeTab]}
                 </h3>
                 {tabDescriptions[activeTab] && (
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className={cn("text-xs mt-0.5", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
                     {tabDescriptions[activeTab]}
                   </p>
                 )}
@@ -461,13 +510,14 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
                   title={t("dashboard.exportToPDF")}
                   aria-label={t("dashboard.exportToPDF")}
                   className={cn(
-                    "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all",
+                    "flex items-center justify-center gap-1.5 w-9 h-9 md:w-auto md:px-3 rounded-xl flex-shrink-0 transition-all text-xs font-semibold",
                     settings.dark_mode
                       ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                       : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                   )}
                 >
                   <Download size={16} />
+                  <span className="hidden md:inline">{t("dashboard.exportToPDF")}</span>
                 </button>
               )}
             </div>
@@ -490,6 +540,7 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
             {activeTab === "settings"  && <SettingsTab />}
           </motion.div>
         </AnimatePresence>   
+        </div>
       </main>
 
       {/* Modals */}
