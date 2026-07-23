@@ -223,7 +223,10 @@ export function LandingPage({
       <div className="mx-auto max-w-[410px] md:max-w-5xl">
         <header className="flex items-center justify-between">
           <img src="/favicon.svg" alt={t("app.name")} className="h-9 w-9 rounded-lg" />
-          <a href="/help" className="rounded-full bg-white p-2 text-slate-300 shadow-sm md:hidden" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
+          <div className="flex items-center gap-2 md:hidden">
+            <a href="/help" className="rounded-full bg-white p-2 text-slate-300 shadow-sm" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
+            <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="rounded-full bg-white p-2 text-slate-300 shadow-sm"><UserRound size={19} /></button>
+          </div>
           {/* Barra de ações — visível apenas no desktop, substitui a nav flutuante */}
           <div className="hidden md:flex items-center gap-2">
             <a href="/help" className="rounded-full bg-white p-2.5 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors" aria-label={t("landing.help")}><CircleHelp size={19} /></a>
@@ -263,9 +266,8 @@ export function LandingPage({
         className="fixed inset-x-4 z-40 rounded-[32px] bottom-nav-glass md:hidden"
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="flex items-center justify-center gap-16 h-20 px-8 max-w-[410px] mx-auto">
+        <div className="flex items-center justify-center h-20 px-8 max-w-[410px] mx-auto">
           <button onClick={startCreate} aria-label={t("common.newTrip")} className="-mt-9 rounded-full border-4 border-white bg-[#2462EB] p-3.5 text-white shadow-[0_8px_14px_rgba(36,98,235,.45)]"><Plus size={32} strokeWidth={3} /></button>
-          <button onClick={() => setShowProfile(true)} aria-label={copy.profile} className="text-[#0A2342]"><UserRound size={20} /></button>
         </div>
       </nav>
       {showProfile && <AccountSheet title={copy.profile} onClose={() => setShowProfile(false)}><LanguageButtons language={settings.language_code} onChange={onLanguageChange} /><a href="/terms" className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm hover:bg-slate-50"><FileText size={17} />{t("landing.terms")}</a><button onClick={() => void supabase.auth.signOut()} className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm hover:bg-slate-50"><LogOut size={17} />{t("common.signOut")}</button></AccountSheet>}
