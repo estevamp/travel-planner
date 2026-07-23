@@ -11,17 +11,9 @@ export type SplitType = "equal" | "unequal";
 export type OnboardingStatus = "active" | "skipped" | "completed";
 export type ThemePalette =
   | "default"
-  | "ocean"
-  | "coastal"
   | "sunset"
-  | "lavender"
-  | "rose"
   | "tropic"
-  | "candy"
-  | "galaxy"
-  | "jade"
-  | "peach"
-  | "explorer";
+  | "lavender";
 
 export interface UserSettings {
   theme_palette: ThemePalette;
