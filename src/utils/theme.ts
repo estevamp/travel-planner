@@ -12,7 +12,7 @@ export function getThemeStyles(settings: UserSettings): React.CSSProperties {
       ["--card-bg" as string]: palette.darkCard,
       ["--card-border" as string]: palette.darkSidebarBorder, // LAYOUT FIX: usa border do tema
       ["--accent-color" as string]: palette.darkAccent,
-      ["--card-shadow" as string]: "0 2px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px " + palette.darkSidebarBorder,
+      ["--card-shadow" as string]: "0 2px 10px 0 rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.09)",
       ["--input-border" as string]: palette.darkSidebarBorder,
       ["--input-focus-ring" as string]: palette.darkAccent + "33",
       ["--sidebar-bg" as string]: palette.darkSidebarBg,
