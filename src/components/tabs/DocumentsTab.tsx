@@ -44,6 +44,8 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
   const [pendingFile, setPendingFile] = useState<{ file: File; path: string } | null>(null);
+  const [replacementFile, setReplacementFile] = useState<File | null>(null);
+  const editDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [isSaving, setIsSaving] = useState(false);
@@ -142,29 +144,68 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
   };
 
   const handleUpdateDoc = async () => {
-    if (!editingDoc) return;
+    if (!editingDoc || !tripId || !currentMember) return;
     setIsSaving(true);
     try {
+      let newPath: string | null = null;
+      let newName: string | null = null;
+
+      if (replacementFile) {
+        let fileToUpload: File | Blob = replacementFile;
+        if (replacementFile.type.startsWith("image/")) {
+          try {
+            const resizedDataUrl = await resizeImage(replacementFile);
+            const response = await fetch(resizedDataUrl);
+            fileToUpload = await response.blob();
+          } catch (err) {
+            console.error("Error resizing document image:", err);
+          }
+        }
+
+        const safeName = replacementFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${tripId}/${currentMember.id}/${crypto.randomUUID()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from(DOCS_BUCKET)
+          .upload(path, fileToUpload, { contentType: replacementFile.type || undefined, upsert: false });
+        if (uploadError) throw uploadError;
+
+        newPath = path;
+        newName = replacementFile.name;
+      }
+
       const { error } = await supabase
         .from("documents")
         .update({
           description: description.trim() || null,
-          visibility: visibility
+          visibility: visibility,
+          ...(newPath && newName ? { url: newPath, name: newName } : {}),
         })
         .eq("id", editingDoc.id);
 
       if (error) throw error;
 
+      if (newPath) {
+        await supabase.storage.from(DOCS_BUCKET).remove([editingDoc.url]);
+      }
+
       onTripUpdate((prev) => ({
         ...prev,
         documents: prev.documents.map((d) =>
-          d.id === editingDoc.id ? { ...d, description: description.trim() || null, visibility } : d
+          d.id === editingDoc.id
+            ? {
+                ...d,
+                description: description.trim() || null,
+                visibility,
+                ...(newPath && newName ? { url: newPath, name: newName } : {}),
+              }
+            : d
         ),
       }));
       setIsEditModalOpen(false);
       setEditingDoc(null);
       setDescription("");
       setVisibility("private");
+      setReplacementFile(null);
       toast(t("documents.updatedSuccess"), "success");
     } catch (error) {
       toast(getErrorMessage(error), "error");
@@ -402,11 +443,41 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
           setIsEditModalOpen(false);
           setPendingFile(null);
           setEditingDoc(null);
+          setReplacementFile(null);
         }}
         title={isUploadModalOpen ? t("documents.modalDetailsTitle") : t("documents.modalEditTitle")}
         isDark={isDark}
       >
+        <input
+          ref={editDocumentInputRef}
+          type="file"
+          accept=".pdf,image/png,image/jpeg,image/jpg,text/plain,.doc,.docx"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) setReplacementFile(file);
+            e.target.value = "";
+          }}
+        />
         <div className="space-y-6">
+          {isEditModalOpen && (
+            <div>
+              <label className="block text-sm font-medium mb-2">{t("documents.replaceFile")}</label>
+              <button
+                type="button"
+                onClick={() => editDocumentInputRef.current?.click()}
+                className={cn(
+                  "w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl border text-sm transition-colors",
+                  isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:border-zinc-500" : "bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300"
+                )}
+              >
+                <span className="truncate">{replacementFile ? replacementFile.name : editingDoc?.name}</span>
+                <span className="text-xs font-semibold shrink-0" style={{ color: "var(--accent-color)" }}>
+                  {t("documents.chooseFile")}
+                </span>
+              </button>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-2">{t("documents.descriptionOptional")}</label>
             <textarea
