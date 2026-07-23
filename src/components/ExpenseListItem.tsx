@@ -2,11 +2,9 @@ import React from "react";
 import {
   CheckCircle2,
   Circle,
-  FilePenLine,
   Lock,
   MoreVertical,
   Tag,
-  Trash2,
   Users,
 } from "lucide-react";
 import { cn, formatCurrency, maskCurrency, formatDate } from "../utils";
@@ -313,19 +311,22 @@ export function ExpenseListItem({
                     {showVisibilityPill && visibilityButton}
                     <button
                       type="button"
-                      onClick={() => onEdit(exp)}
-                      className="text-zinc-400 hover:text-zinc-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenMenu?.(exp, e.currentTarget.getBoundingClientRect());
+                      }}
+                      className={cn(
+                        "p-2 -mr-2 rounded-lg flex-shrink-0 transition-colors",
+                        settings.dark_mode
+                          ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                          : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+                      )}
+                      aria-label={t("common.options")}
                     >
-                      <FilePenLine size={16} />
+                      <MoreVertical size={16} />
                     </button>
                   </>
                 )}
-                <button
-                  onClick={() => onDelete(exp)}
-                  className="text-zinc-400 hover:text-red-500"
-                >
-                  <Trash2 size={16} />
-                </button>
               </div>
             </td>
           </>

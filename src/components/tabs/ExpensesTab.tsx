@@ -969,6 +969,13 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                     onCancel={() => setEditingExpenseId(null)}
                     onDelete={(expense) => void deleteExpenseHandler(expense)}
                     onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
+                    onOpenMenu={(expense, rect) =>
+                      setItemMenu((cur) =>
+                        cur?.exp.id === expense.id
+                          ? null
+                          : { exp: expense, top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                      )
+                    }
                   />
                 ))}
               </tbody>
