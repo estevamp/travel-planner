@@ -475,7 +475,12 @@ export function ExpenseListItem({
                 e.stopPropagation();
                 onOpenMenu?.(exp, e.currentTarget.getBoundingClientRect());
               }}
-              className="p-2 -mr-2 -mt-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 flex-shrink-0 transition-colors"
+              className={cn(
+                "p-2 -mr-2 -mt-1 rounded-lg flex-shrink-0 transition-colors",
+                settings.dark_mode
+                  ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                  : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+              )}
               aria-label={t("common.options")}
             >
               <MoreVertical size={16} />

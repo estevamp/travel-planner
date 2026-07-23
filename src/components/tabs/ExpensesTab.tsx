@@ -1266,7 +1266,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
           <div className="fixed inset-0 z-40" onClick={() => setItemMenu(null)} />
           <div
             className={cn(
-              "fixed z-50 w-44 rounded-xl border shadow-lg py-1 overflow-hidden",
+              "fixed z-50 w-40 rounded-xl border shadow-lg py-1 overflow-hidden",
               settings.dark_mode ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
             )}
             style={{ top: itemMenu.top, right: itemMenu.right }}

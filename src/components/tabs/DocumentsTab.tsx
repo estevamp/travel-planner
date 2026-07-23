@@ -423,31 +423,35 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
 
           <div>
             <label className="block text-sm font-medium mb-2">{t("documents.visibility")}</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setVisibility("private")}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-medium",
-                  visibility === "private"
-                    ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)]"
-                    : isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400" : "border-zinc-100 bg-zinc-50 text-zinc-500"
-                )}
-              >
-                <Lock size={18} />
-                {t("documents.visibilityPrivate")}
-              </button>
-              <button
-                onClick={() => setVisibility("public")}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-medium",
-                  visibility === "public"
-                    ? "border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--accent-color)]"
-                    : isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400" : "border-zinc-100 bg-zinc-50 text-zinc-500"
-                )}
-              >
-                <Users size={18} />
-                {t("documents.visibilityPublic")}
-              </button>
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-1 rounded-2xl border p-1",
+                isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"
+              )}
+            >
+              {(["public", "private"] as const).map((option) => {
+                const active = visibility === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setVisibility(option)}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors",
+                      active
+                        ? isDark
+                          ? "bg-zinc-700 text-white"
+                          : "bg-white text-zinc-900 shadow-sm"
+                        : isDark
+                        ? "text-zinc-400 hover:text-zinc-200"
+                        : "text-zinc-500 hover:text-zinc-700"
+                    )}
+                    aria-pressed={active}
+                  >
+                    {option === "public" ? t("common.public") : t("common.private")}
+                  </button>
+                );
+              })}
             </div>
             <p className="text-xs text-zinc-400 mt-2">
               {visibility === "private"
