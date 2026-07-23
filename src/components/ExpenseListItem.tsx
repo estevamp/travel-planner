@@ -282,11 +282,15 @@ export function ExpenseListItem({
                 <span
                   className="flex items-center gap-1"
                   style={{ color: exp.category.color || "inherit" }}
+                  title={exp.category.name}
+                  aria-label={exp.category.name}
                 >
-                  {exp.category.name}
+                  <CategoryIcon size={16} />
                 </span>
               ) : (
-                <span className="text-zinc-400">{t("expenses.generalCategory")}</span>
+                <span className="text-zinc-400" title={t("expenses.generalCategory")}>
+                  <Tag size={16} />
+                </span>
               )}
             </td>
             <td className="px-4 py-3">

@@ -936,56 +936,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               </select>
             </Card>
 
-          {/* Desktop table */}
-          <Card className="p-0 overflow-hidden hidden md:block">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className={settings.dark_mode ? "bg-zinc-800/50" : "bg-zinc-50"}>
-                  <th className="px-4 py-3 text-xs uppercase">{t("expenses.table.description")}</th>
-                  <th className="px-4 py-3 text-xs uppercase">{t("expenses.table.category")}</th>
-                  <th className="px-4 py-3 text-xs uppercase">{t("expenses.table.amount")}</th>
-                  <th className="px-4 py-3 text-xs uppercase text-right">{t("expenses.table.action")}</th>
-                </tr>
-              </thead>
-              <tbody className={cn("divide-y", settings.dark_mode ? "divide-zinc-800" : "divide-zinc-100")}>
-                {sortedExpenses.map((exp) => (
-                  <ExpenseListItem
-                    key={exp.id}
-                    exp={exp}
-                    layout="table"
-                    editingExpenseId={editingExpenseId}
-                    expenseDraft={expenseDraft}
-                    expensesWithSplits={expensesWithSplits}
-                    currentMemberId={currentMember?.id || null}
-                    savingExpense={savingExpense}
-                    categories={categories}
-                    members={members}
-                    settings={settings}
-                    currency={settings.default_currency}
-                    convertedAmount={convertedAmountByExpenseId.get(exp.id) || 0}
-                    onToggleVisibility={handleToggleExpenseVisibility}
-                    onEdit={openEditExpenseModal}
-                    onSave={(expenseId) => void saveExpenseEdit(expenseId)}
-                    onCancel={() => setEditingExpenseId(null)}
-                    onDelete={(expense) => void deleteExpenseHandler(expense)}
-                    onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
-                    onOpenMenu={(expense, rect) =>
-                      setItemMenu((cur) =>
-                        cur?.exp.id === expense.id
-                          ? null
-                          : { exp: expense, top: rect.bottom + 4, right: window.innerWidth - rect.right }
-                      )
-                    }
-                  />
-                ))}
-              </tbody>
-            </table>
-          </Card>
-
-          {/* Mobile cards */}
-          <div className="space-y-3 md:hidden">
+          {/* Despesas em cards (mobile e desktop) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {sortedExpenses.length === 0 && (
-              <Card>
+              <Card className="sm:col-span-2 xl:col-span-3">
                 <p className="text-sm text-zinc-500 text-center">{t("expenses.empty")}</p>
               </Card>
             )}
