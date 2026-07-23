@@ -322,6 +322,37 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     });
   }, [trip.expenses, expenseSort, convertedAmountByExpenseId]);
 
+  // Agrupa despesas consecutivas (após a ordenação atual) pela mesma data de
+  // pagamento, criando separadores por dia como na aba de Atividades.
+  const expenseGroupsByDate = useMemo(() => {
+    const groups: { dateKey: string; expenses: typeof sortedExpenses }[] = [];
+    for (const exp of sortedExpenses) {
+      const dateKey = exp.payment_date || exp.date || "sem-data";
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.dateKey === dateKey) {
+        lastGroup.expenses.push(exp);
+      } else {
+        groups.push({ dateKey, expenses: [exp] });
+      }
+    }
+    return groups;
+  }, [sortedExpenses]);
+
+  const formatExpenseDateHeader = useCallback(
+    (dateKey: string): string => {
+      if (dateKey === "sem-data") return t("expenses.noDateSet");
+      const date = new Date(dateKey.slice(0, 10) + "T00:00:00");
+      if (isNaN(date.getTime())) return dateKey;
+      return date.toLocaleDateString(settings.language_code, {
+        weekday: "long",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    },
+    [t, settings.language_code]
+  );
+
   const payerTotals = useMemo(() => {
     const splitExpenses = visibleExpensesWithSplits.filter(exp => exp.splits && exp.splits.length > 0);
     const totals: Record<string, number> = {};
@@ -936,42 +967,66 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
               </select>
             </Card>
 
-          {/* Despesas em cards (mobile e desktop) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* Despesas em cards com separadores por data de pagamento */}
+          <div className="space-y-6">
             {sortedExpenses.length === 0 && (
-              <Card className="sm:col-span-2 xl:col-span-3">
+              <Card>
                 <p className="text-sm text-zinc-500 text-center">{t("expenses.empty")}</p>
               </Card>
             )}
-            {sortedExpenses.map((exp) => (
-              <ExpenseListItem
-                key={exp.id}
-                exp={exp}
-                layout="card"
-                editingExpenseId={editingExpenseId}
-                expenseDraft={expenseDraft}
-                expensesWithSplits={expensesWithSplits}
-                currentMemberId={currentMember?.id || null}
-                savingExpense={savingExpense}
-                categories={categories}
-                members={members}
-                settings={settings}
-                currency={settings.default_currency}
-                convertedAmount={convertedAmountByExpenseId.get(exp.id) || 0}
-                onToggleVisibility={handleToggleExpenseVisibility}
-                onEdit={openEditExpenseModal}
-                onSave={(expenseId) => void saveExpenseEdit(expenseId)}
-                onCancel={() => setEditingExpenseId(null)}
-                onDelete={(expense) => void deleteExpenseHandler(expense)}
-                onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
-                onOpenMenu={(expense, rect) =>
-                  setItemMenu((cur) =>
-                    cur?.exp.id === expense.id
-                      ? null
-                      : { exp: expense, top: rect.bottom + 4, right: window.innerWidth - rect.right }
-                  )
-                }
-              />
+            {expenseGroupsByDate.map((group) => (
+              <div key={group.dateKey}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                    style={{ backgroundColor: "var(--accent-color)" }}
+                  >
+                    {group.dateKey !== "sem-data" ? group.dateKey.slice(8, 10) : "?"}
+                  </div>
+                  <div>
+                    <p className={cn("text-sm font-bold capitalize", settings.dark_mode ? "text-zinc-200" : "text-zinc-700")}>
+                      {formatExpenseDateHeader(group.dateKey)}
+                    </p>
+                    <p className={cn("text-xs", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                      {group.expenses.length === 1
+                        ? t("expenses.oneExpense")
+                        : t("expenses.multipleExpenses").replace("{count}", String(group.expenses.length))}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {group.expenses.map((exp) => (
+                    <ExpenseListItem
+                      key={exp.id}
+                      exp={exp}
+                      layout="card"
+                      editingExpenseId={editingExpenseId}
+                      expenseDraft={expenseDraft}
+                      expensesWithSplits={expensesWithSplits}
+                      currentMemberId={currentMember?.id || null}
+                      savingExpense={savingExpense}
+                      categories={categories}
+                      members={members}
+                      settings={settings}
+                      currency={settings.default_currency}
+                      convertedAmount={convertedAmountByExpenseId.get(exp.id) || 0}
+                      onToggleVisibility={handleToggleExpenseVisibility}
+                      onEdit={openEditExpenseModal}
+                      onSave={(expenseId) => void saveExpenseEdit(expenseId)}
+                      onCancel={() => setEditingExpenseId(null)}
+                      onDelete={(expense) => void deleteExpenseHandler(expense)}
+                      onDraftChange={(draft) => setExpenseDraft((current) => ({ ...current, ...draft }))}
+                      onOpenMenu={(expense, rect) =>
+                        setItemMenu((cur) =>
+                          cur?.exp.id === expense.id
+                            ? null
+                            : { exp: expense, top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
 
