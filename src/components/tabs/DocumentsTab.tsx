@@ -222,7 +222,7 @@ export const DocumentsTab = forwardRef<DocumentsTabHandle, DocumentsTabProps>(fu
         }}
       />
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {trip.documents.map((doc) => (
           <Card key={doc.id} className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">

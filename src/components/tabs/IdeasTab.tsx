@@ -462,9 +462,9 @@ export function IdeasTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnline, 
 
   return (
     <div className="space-y-6 pb-28">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {trip.ideas.length === 0 && (
-          <Card className="sm:col-span-2">
+          <Card className="sm:col-span-2 xl:col-span-3">
             <p className="text-sm text-zinc-500 text-center py-4">{t("ideas.empty")}</p>
           </Card>
         )}

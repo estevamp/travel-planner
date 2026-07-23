@@ -236,7 +236,7 @@ function AgendaView({ items, isDark, renderItem }: AgendaViewProps) {
                   isDark ? "bg-zinc-800" : "bg-zinc-200"
                 )}
               />
-              <div className="space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
+              <div className="space-y-3 sm:grid sm:grid-cols-2 xl:grid-cols-3 sm:gap-4 sm:space-y-0">
                 {dayItems.map((item) => (
                   <div key={item.id} className="relative flex sm:block">
                     <div className="w-12 flex-shrink-0 pt-[18px] pr-1 text-right sm:hidden">
