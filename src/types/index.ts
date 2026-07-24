@@ -13,7 +13,8 @@ export type ThemePalette =
   | "default"
   | "sunset"
   | "tropic"
-  | "lavender";
+  | "lavender"
+  | "graphite";
 
 export interface UserSettings {
   theme_palette: ThemePalette;

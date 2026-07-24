@@ -392,7 +392,7 @@ export function SettingsTab() {
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
-              {THEME_KEYS.map((theme) => {
+              {THEME_KEYS.filter((theme) => !THEME_PALETTES[theme].darkOnly || settingsDraft.dark_mode).map((theme) => {
                 const palette = THEME_PALETTES[theme];
                 const isActive = (trip?.theme_palette || 'default') === theme;
                 const themeName = t(`settings.theme.${theme}` as TranslationKey);
