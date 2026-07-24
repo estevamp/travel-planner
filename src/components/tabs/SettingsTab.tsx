@@ -188,7 +188,7 @@ export function SettingsTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
 
       {!isOnline && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
@@ -196,6 +196,8 @@ export function SettingsTab() {
           <p>{t("settings.offlineNotice")}</p>
         </div>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
       <Card className="space-y-6">
         <div className="flex items-center gap-3">
@@ -207,22 +209,20 @@ export function SettingsTab() {
             <p className="text-sm text-zinc-500">{t("settings.languageDescription")}</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={cn(
+          "inline-flex w-full rounded-xl p-1 gap-1",
+          settings.dark_mode ? "bg-zinc-800/60" : "bg-zinc-100"
+        )}>
           {(["pt-BR", "en"] as const).map((locale) => (
             <button
               key={locale}
               type="button"
               onClick={() => setSettingsDraft((current) => ({ ...current, language_code: locale }))}
               className={cn(
-                "min-h-12 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center",
+                "flex-1 min-h-10 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors duration-200 flex items-center justify-center text-center",
                 settingsDraft.language_code === locale
-                  ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
-                  : cn(
-                      "shadow-sm",
-                      settings.dark_mode
-                        ? "border-zinc-700 text-zinc-300 hover:border-zinc-600"
-                        : "border-zinc-200 hover:border-zinc-300"
-                    )
+                  ? "bg-[var(--accent-color)] text-white shadow-sm"
+                  : cn(settings.dark_mode ? "text-zinc-400 hover:text-zinc-200" : "text-zinc-500 hover:text-zinc-700")
               )}
             >
               {t(`settings.language.${locale}` as "settings.language.pt-BR" | "settings.language.en")}
@@ -246,22 +246,20 @@ export function SettingsTab() {
         {/* Moeda Padrão */}
         <div className="space-y-3">
           <label className="text-sm font-semibold block">{t("settings.defaultCurrency")}</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className={cn(
+            "inline-flex w-full rounded-xl p-1 gap-1",
+            settings.dark_mode ? "bg-zinc-800/60" : "bg-zinc-100"
+          )}>
             {["BRL", "USD", "EUR"].map((currency) => (
               <button
                 key={currency}
                 type="button"
                 onClick={() => setSettingsDraft((current) => ({ ...current, default_currency: currency }))}
                 className={cn(
-                  "px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 hover:scale-105",
+                  "flex-1 min-h-10 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors duration-200",
                   settingsDraft.default_currency === currency
-                    ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white shadow-lg"
-                    : cn(
-                        "shadow-sm",
-                        settings.dark_mode
-                          ? "border-zinc-700 text-zinc-300 hover:border-zinc-600"
-                          : "border-zinc-200 hover:border-zinc-300"
-                      )
+                    ? "bg-[var(--accent-color)] text-white shadow-sm"
+                    : cn(settings.dark_mode ? "text-zinc-400 hover:text-zinc-200" : "text-zinc-500 hover:text-zinc-700")
                 )}
               >
                 {currency}
@@ -276,7 +274,7 @@ export function SettingsTab() {
         {/* Orçamento da Viagem */}
         <div className="space-y-4">
           <label className="text-sm font-semibold block">{t("settings.budgetLimit")}</label>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <input
               value={maskCurrency(String(Math.round((budgetDraft !== null ? budgetDraft : (tripBudget?.budget_limit || 0)) * 100)), settingsDraft.language_code)}
               onChange={(e) => {
@@ -286,7 +284,7 @@ export function SettingsTab() {
               }}
               placeholder="0,00"
               className={cn(
-                "flex-1 min-w-0 px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
+                "w-full sm:max-w-xs px-4 py-3 rounded-xl border-2 text-sm focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:outline-none transition-all",
                 settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
               )}
             />
@@ -341,7 +339,7 @@ export function SettingsTab() {
 
       {/* ── 2. APARÊNCIA & TEMAS (moved to follow financial section) ── */}
       {trip && (
-        <Card className="space-y-6">
+        <Card className="lg:col-span-2 space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
               <Palette size={20} className="text-white" />
@@ -461,7 +459,7 @@ export function SettingsTab() {
 
       {/* ── 3. CATEGORIAS DE DESPESAS ── */}
       {isAdmin && (
-        <Card className="space-y-6">
+        <Card className="lg:col-span-2 space-y-6">
           <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
             <FileText size={20} className="text-white" />
@@ -507,10 +505,12 @@ export function SettingsTab() {
                 {t("common.add")}
               </button>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-zinc-400 px-1">{t("settings.icon")}</label>
+            <details className="space-y-2">
+              <summary className="cursor-pointer text-xs font-bold uppercase text-zinc-400 px-1 select-none flex items-center gap-1">
+                <span>{t("settings.icon")}</span>
+              </summary>
               <div className={cn(
-                "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
+                "flex flex-wrap gap-2 p-3 mt-2 rounded-xl border-2 max-h-40 overflow-y-auto",
                 settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
               )}>
                 {ACTIVITY_ICONS.map((iconName) => {
@@ -528,7 +528,7 @@ export function SettingsTab() {
                   );
                 })}
               </div>
-            </div>
+            </details>
           </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -708,7 +708,7 @@ export function SettingsTab() {
 
       {/* ── 3. TIPOS DE ATIVIDADE ── */}
       {isAdmin && (
-        <Card className="space-y-6">
+        <Card className="lg:col-span-2 space-y-6">
           <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
             <Plus size={20} className="text-white" />
@@ -754,10 +754,12 @@ export function SettingsTab() {
                 {t("common.add")}
               </button>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-zinc-400 px-1">{t("settings.icon")}</label>
+            <details className="space-y-2">
+              <summary className="cursor-pointer text-xs font-bold uppercase text-zinc-400 px-1 select-none flex items-center gap-1">
+                <span>{t("settings.icon")}</span>
+              </summary>
               <div className={cn(
-                "flex flex-wrap gap-2 p-3 rounded-xl border-2 max-h-40 overflow-y-auto",
+                "flex flex-wrap gap-2 p-3 mt-2 rounded-xl border-2 max-h-40 overflow-y-auto",
                 settings.dark_mode ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-100 bg-zinc-50/50"
               )}>
                 {ACTIVITY_ICONS.map((iconName) => {
@@ -775,7 +777,7 @@ export function SettingsTab() {
                   );
                 })}
               </div>
-            </div>
+            </details>
           </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -951,6 +953,8 @@ export function SettingsTab() {
           </div>
         </Card>
       )}
+
+      </div>
 
       {/* ── 4. GERENCIAR VIAGEM ── */}
       {canManageTrip && trip && (
