@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, CalendarDays, FileText, Lightbulb, Settings, Wallet } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarDays, FileText, Lightbulb, Settings, Users, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { UserSettings } from "../types";
 import { getThemeStyles } from "../utils/theme";
@@ -16,6 +16,7 @@ export function HelpPage({ settings }: { settings?: UserSettings }) {
     { icon: BookOpen, title: t("public.help.section.start.title"), body: t("public.help.section.start.body") },
     { icon: CalendarDays, title: t("public.help.section.itinerary.title"), body: t("public.help.section.itinerary.body") },
     { icon: Wallet, title: t("public.help.section.expenses.title"), body: t("public.help.section.expenses.body") },
+    { icon: Users, title: t("public.help.section.friends.title"), body: t("public.help.section.friends.body") },
     { icon: FileText, title: t("public.help.section.documents.title"), body: t("public.help.section.documents.body") },
     { icon: Lightbulb, title: t("public.help.section.ideas.title"), body: t("public.help.section.ideas.body") },
     { icon: Settings, title: t("public.help.section.settings.title"), body: t("public.help.section.settings.body") },
