@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useUserSettings } from "./hooks/useUserSettings";
+import { getThemeStyles } from "./utils/theme";
 
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
@@ -26,6 +28,35 @@ export default function App() {
   // 2. Pega as configurações do usuário (e toda a lógica relacionada)
   const { userSettings, setUserSettings, handleLanguageChange, handleOnboardingChange } =
     useUserSettings();
+
+  // 3. Aplica o tema globalmente no <html> para que a área segura do iOS
+  //    (status bar / notch) e o fundo do body acompanhem o modo escuro.
+  useEffect(() => {
+    const styles = getThemeStyles(userSettings);
+    const root = document.documentElement;
+
+    Object.entries(styles).forEach(([key, value]) => {
+      if (key.startsWith("--") && typeof value === "string") {
+        root.style.setProperty(key, value);
+      }
+    });
+
+    const bgColor =
+      typeof styles.backgroundColor === "string" ? styles.backgroundColor : undefined;
+    if (bgColor) {
+      root.style.backgroundColor = bgColor;
+
+      let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.name = "theme-color";
+        document.head.appendChild(meta);
+      }
+      meta.content = bgColor;
+    }
+
+    root.style.colorScheme = userSettings.dark_mode ? "dark" : "light";
+  }, [userSettings]);
 
   if (loading) {
     const loadingLabel =
