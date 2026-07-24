@@ -138,7 +138,6 @@ export const THEME_PALETTES: Record<
     darkSidebarHover: "#373F4E",
     darkSidebarActiveBg: "#4E576A",
     darkSidebarActiveText: "#FFFFFF",
-    darkOnly: true,
   },
 };
 
