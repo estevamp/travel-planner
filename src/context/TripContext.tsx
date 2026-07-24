@@ -54,6 +54,7 @@ export interface TripContextValue {
   // ── Ações com efeitos colaterais ──────────────────────────────
   deleteCurrentTrip: () => Promise<boolean>;
   navigateToAbout: () => void;
+  navigateToHelp: () => void;
   reloadTripOptions: () => void;
 }
 
@@ -158,6 +159,7 @@ export function TripProvider({
   };
 
   const navigateToAbout = () => navigate('/about');
+  const navigateToHelp = () => navigate('/help');
 
   const themedStyles = useMemo(() => {
     const effectivePalette = trip?.theme_palette && trip.theme_palette !== 'default'
@@ -233,6 +235,7 @@ export function TripProvider({
     onSettingsChange,
     deleteCurrentTrip,
     navigateToAbout,
+    navigateToHelp,
     reloadTripOptions,
   };
 

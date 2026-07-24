@@ -30,7 +30,7 @@ export function SettingsTab() {
     trip, tripId, currentMember, isAdmin, isSuperuser, settings, onSettingsChange,
     members, categories, setCategories, itineraryTypes, setItineraryTypes,
     tripBudget, setTripBudget, budgetOwnerUserId, budgetCurrency, setBudgetCurrency,
-    userId, deleteCurrentTrip, navigateToAbout, reloadTripOptions, setTrip
+    userId, deleteCurrentTrip, navigateToAbout, navigateToHelp, reloadTripOptions, setTrip
   } = useTripContext();
   const { toast } = useToast();
   const { confirm, ConfirmDialogNode } = useConfirm();
@@ -1046,15 +1046,13 @@ export function SettingsTab() {
       )}
 
       <div className="pt-4 space-y-3">
-        <a
-          href="/help"
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={navigateToHelp}
           className="w-full px-4 py-4 rounded-2xl border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-zinc-600 dark:text-zinc-400 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
         >
           <HelpCircle size={18} />
           {t("settings.howToUse")}
-        </a>
+        </button>
 
         <button
           onClick={navigateToAbout}
