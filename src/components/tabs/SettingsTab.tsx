@@ -355,7 +355,7 @@ export function SettingsTab() {
           {/* Display mode: light / dark / system */}
           <div>
             <label className="text-sm font-semibold mb-3 block">{t("settings.displayMode")}</label>
-            <div className={cn(
+            <div className={cn( 
               "inline-flex w-full rounded-xl p-1 gap-1",
               settings.dark_mode ? "bg-zinc-800/60" : "bg-zinc-100"
             )}>
