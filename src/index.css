@@ -209,31 +209,114 @@
     box-shadow: 0 24px 48px rgba(0, 64, 224, 0.25);
   }
 
-  /* ── Bottom nav: Meta-style premium glass (Instagram/Threads/Facebook) ── */
+  /* ── Bottom nav: Apple-style Liquid Glass (refined, translucent, animated sheen) ── */
+  .bottom-nav-glass,
+  .bottom-nav-glass-dark {
+    position: relative;
+    isolation: isolate;
+  }
+
   .bottom-nav-glass {
-    background: rgba(228, 228, 231, 0.78);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.20);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    background: rgba(236, 236, 240, 0.55);
+    -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
+    backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.05),
+      0 12px 32px rgba(0, 0, 0, 0.10),
+      0 2px 6px rgba(0, 0, 0, 0.05);
   }
 
   .bottom-nav-glass-dark {
-    background: rgba(20, 20, 20, 0.72);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: rgba(28, 28, 32, 0.50);
+    -webkit-backdrop-filter: blur(32px) saturate(190%) brightness(1.15);
+    backdrop-filter: blur(32px) saturate(190%) brightness(1.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.35),
+      0 12px 36px rgba(0, 0, 0, 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Animated specular sheen — a slow diagonal light sweep across the glass */
+  .bottom-nav-glass::before,
+  .bottom-nav-glass-dark::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      100deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.10) 45%,
+      rgba(255, 255, 255, 0.28) 50%,
+      rgba(255, 255, 255, 0.10) 55%,
+      transparent 75%
+    );
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+    animation: liquid-glass-sheen 9s ease-in-out infinite;
+  }
+
+  .bottom-nav-glass-dark::before {
+    background: linear-gradient(
+      100deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.05) 45%,
+      rgba(255, 255, 255, 0.14) 50%,
+      rgba(255, 255, 255, 0.05) 55%,
+      transparent 75%
+    );
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+  }
+
+  @keyframes liquid-glass-sheen {
+    0% { background-position: 200% 0; }
+    60%, 100% { background-position: -100% 0; }
   }
 
   /* Fallback for browsers without backdrop-filter support: solid-ish translucency instead of blur */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .bottom-nav-glass {
-      background: rgba(228, 228, 231, 0.94);
+      background: rgba(236, 236, 240, 0.94);
     }
 
     .bottom-nav-glass-dark {
-      background: rgba(20, 20, 20, 0.92);
+      background: rgba(28, 28, 32, 0.92);
+    }
+  }
+
+  /* Respect reduced transparency: swap to a solid, high-contrast surface */
+  @media (prefers-reduced-transparency: reduce) {
+    .bottom-nav-glass {
+      background: rgba(244, 244, 247, 0.98);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .bottom-nav-glass-dark {
+      background: rgba(24, 24, 27, 0.98);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .bottom-nav-glass::before,
+    .bottom-nav-glass-dark::before {
+      display: none;
+    }
+  }
+
+  /* Respect reduced motion: keep the specular highlight but stop the sweep */
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-nav-glass::before,
+    .bottom-nav-glass-dark::before {
+      animation: none;
+      background-position: 50% 0;
     }
   }
 

@@ -331,7 +331,9 @@ function TripDashboardContent({ session, onOnboardingComplete }: TripDashboardCo
         aria-current={isActive ? "page" : undefined}
         className={cn(
           "relative flex flex-col items-center justify-center gap-1 my-1.5 rounded-2xl transition-all duration-200",
-          isActive ? "bg-[var(--sidebar-active-bg)]/12" : ""
+          isActive
+            ? "bg-[var(--sidebar-active-bg)]/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-white/25 backdrop-blur-sm"
+            : ""
         )}
         style={{ color: isActive ? 'var(--sidebar-active-bg)' : inactiveColor }}
       >
