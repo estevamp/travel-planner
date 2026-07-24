@@ -8,6 +8,7 @@ import type {
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
+  theme_preference: "light",
   dark_mode: false,
   default_currency: "BRL",
   language_code: "pt-BR",
@@ -24,6 +25,7 @@ export async function loadUserSettings(
     .from("profiles")
     .select(`
       theme_palette,
+      theme_preference,
       dark_mode,
       default_currency,
       language_code,
@@ -38,13 +40,27 @@ export async function loadUserSettings(
     return null;
   }
 
+  // Deriva a preferência: usa a coluna nova quando presente; caso contrário
+  // faz fallback para o booleano legado dark_mode.
+  const rawPreference = (data.theme_preference as UserSettings["theme_preference"] | null);
+  const themePreference: UserSettings["theme_preference"] =
+    rawPreference === "light" || rawPreference === "dark" || rawPreference === "system"
+      ? rawPreference
+      : (Boolean(data.dark_mode) ? "dark" : "light");
+
+  const resolvedDarkMode =
+    themePreference === "system"
+      ? (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      : themePreference === "dark";
+
   return {
     theme_palette:
       (data.theme_palette as any)
       || DEFAULT_SETTINGS.theme_palette,
 
-    dark_mode:
-      Boolean(data.dark_mode),
+    theme_preference: themePreference,
+
+    dark_mode: resolvedDarkMode,
 
     default_currency:
       (data.default_currency as string)

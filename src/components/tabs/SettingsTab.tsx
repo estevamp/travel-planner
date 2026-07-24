@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "../../hooks/useToast";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useTripContext } from "../../context/TripContext";
-import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, FileText, Info, Languages, Calendar, HelpCircle, LogOut, Tag } from "lucide-react";
+import { DollarSign, Users, Palette, Settings, Trash2, Plus, Moon, Sun, Monitor, FileText, Info, Languages, Calendar, HelpCircle, LogOut, Tag } from "lucide-react";
 import { supabase } from "../../supabase";
 import { cn, getErrorMessage, maskCurrency, parseCurrencyToNumber } from "../../utils";
 import { getDeterministicColor } from "../../utils/colors";
@@ -76,6 +76,7 @@ export function SettingsTab() {
       return;
     }
     const hasChanges =
+      settingsDraft.theme_preference !== settings.theme_preference ||
       settingsDraft.dark_mode !== settings.dark_mode ||
       settingsDraft.default_currency !== settings.default_currency ||
       settingsDraft.language_code !== settings.language_code;
@@ -91,6 +92,7 @@ export function SettingsTab() {
       const { error } = await supabase
         .from("profiles")
         .update({
+          theme_preference: settingsDraft.theme_preference,
           dark_mode: settingsDraft.dark_mode,
           default_currency: settingsDraft.default_currency,
           language_code: settingsDraft.language_code,
@@ -350,33 +352,43 @@ export function SettingsTab() {
             </div>
           </div>
 
-          {/* Dark Mode */}
+          {/* Display mode: light / dark / system */}
           <div>
             <label className="text-sm font-semibold mb-3 block">{t("settings.displayMode")}</label>
-            <button
-              type="button"
-              onClick={() => setSettingsDraft((current) => ({ ...current, dark_mode: !current.dark_mode }))}
-              className={cn(
-                "w-full px-6 py-4 rounded-2xl border-2 text-sm font-medium flex items-center justify-between gap-3 transition-all duration-200 hover:scale-[1.02]",
-                settingsDraft.dark_mode
-                  ? "border-zinc-700 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white shadow-lg"
-                  : "border-zinc-200 hover:border-zinc-300 shadow-sm"
-              )}
-              style={!settingsDraft.dark_mode ? {
-                background: `linear-gradient(to bottom right, var(--card-bg), var(--card-bg))`
-              } : undefined}
-            >
-              <div className="flex items-center gap-3">
-                {settingsDraft.dark_mode ? <Moon size={20} /> : <Sun size={20} />}
-                <span className="text-base">{settingsDraft.dark_mode ? t("settings.darkMode") : t("settings.lightMode")}</span>
-              </div>
-              <div className={cn(
-                "px-3 py-1 rounded-full text-xs font-bold",
-                settingsDraft.dark_mode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-200 text-zinc-700"
-              )}>
-                {settingsDraft.dark_mode ? t("settings.enabled") : t("settings.disabled")}
-              </div>
-            </button>
+            <div className={cn(
+              "inline-flex w-full rounded-xl p-1 gap-1",
+              settings.dark_mode ? "bg-zinc-800/60" : "bg-zinc-100"
+            )}>
+              {([
+                { value: "light", icon: Sun, label: t("settings.lightMode") },
+                { value: "dark", icon: Moon, label: t("settings.darkMode") },
+                { value: "system", icon: Monitor, label: t("settings.systemMode") },
+              ] as const).map(({ value, icon: Icon, label }) => {
+                const isActive = settingsDraft.theme_preference === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSettingsDraft((current) => ({
+                      ...current,
+                      theme_preference: value,
+                      dark_mode: value === "system"
+                        ? (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+                        : value === "dark",
+                    }))}
+                    className={cn(
+                      "flex-1 min-h-10 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors duration-200 flex items-center justify-center gap-2",
+                      isActive
+                        ? "bg-[var(--accent-color)] text-white shadow-sm"
+                        : cn(settings.dark_mode ? "text-zinc-400 hover:text-zinc-200" : "text-zinc-500 hover:text-zinc-700")
+                    )}
+                  >
+                    <Icon size={18} />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Divider */}

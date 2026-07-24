@@ -20,6 +20,7 @@ const LANGUAGE_STORAGE_KEY =
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme_palette: "default",
+  theme_preference: "light",
   dark_mode: false,
   default_currency: "BRL",
   language_code: "pt-BR",
@@ -107,6 +108,39 @@ export function useUserSettings() {
     }
     return success;
   };
+
+  /**
+   * Resolve o dark_mode efetivo a partir da preferência escolhida.
+   * Quando "system", acompanha a preferência do sistema operacional em
+   * tempo real via matchMedia.
+   */
+  useEffect(() => {
+    const preference = userSettings.theme_preference;
+
+    if (preference !== "system") {
+      const shouldBeDark = preference === "dark";
+      setUserSettings((current) =>
+        current.dark_mode === shouldBeDark
+          ? current
+          : { ...current, dark_mode: shouldBeDark }
+      );
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () =>
+      setUserSettings((current) =>
+        current.dark_mode === mql.matches
+          ? current
+          : { ...current, dark_mode: mql.matches }
+      );
+
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, [userSettings.theme_preference]);
 
   /**
    * Reage a login/logout

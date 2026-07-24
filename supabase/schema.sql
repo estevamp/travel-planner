@@ -134,6 +134,7 @@ create table if not exists public.trip_budgets (
 alter table public.trips add column if not exists created_by_user_id uuid references auth.users(id);
 alter table public.profiles add column if not exists theme_palette text not null default 'default';
 alter table public.profiles add column if not exists dark_mode boolean not null default false;
+alter table public.profiles add column if not exists theme_preference text not null default 'light';
 alter table public.profiles add column if not exists default_currency text not null default 'BRL';
 alter table public.profiles add column if not exists language_code text not null default 'pt-BR';
 alter table public.profiles add column if not exists budget_limit numeric(12,2) not null default 0;

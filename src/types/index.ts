@@ -9,6 +9,7 @@ export type Visibility = "public" | "private";
 export type LanguageCode = "pt-BR" | "en";
 export type SplitType = "equal" | "unequal";
 export type OnboardingStatus = "active" | "skipped" | "completed";
+export type ThemePreference = "light" | "dark" | "system";
 export type ThemePalette =
   | "default"
   | "sunset"
@@ -18,6 +19,7 @@ export type ThemePalette =
 
 export interface UserSettings {
   theme_palette: ThemePalette;
+  theme_preference: ThemePreference;
   dark_mode: boolean;
   default_currency: string;
   language_code: LanguageCode;
