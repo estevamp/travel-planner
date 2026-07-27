@@ -376,14 +376,60 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       .sort((a, b) => b.amount - a.amount);
   }, [visibleExpensesWithSplits, members, convert, settings.default_currency, t]);
 
+  // Grupos de filtro por pessoa — cônjuges com vínculo definido na aba Pessoas
+  // aparecem como uma única opção (mesmo critério usado no resumo de pagamentos).
+  const personFilterGroups = useMemo(() => {
+    const visited = new Set<string>();
+    const groups: { id: string; label: string; memberIds: string[] }[] = [];
+
+    for (const member of members) {
+      if (visited.has(member.id)) continue;
+
+      const spouse = member.spouse_member_id
+        ? members.find((candidate) => candidate.id === member.spouse_member_id)
+        : null;
+
+      const groupMembers = spouse && !visited.has(spouse.id) ? [member, spouse] : [member];
+      groupMembers.forEach((entry) => visited.add(entry.id));
+
+      groups.push({
+        id: member.id,
+        label: groupMembers.map((entry) => entry.display_name || t("expenses.memberFallback")).join(" / "),
+        memberIds: groupMembers.map((entry) => entry.id),
+      });
+    }
+
+    return groups;
+  }, [members, t]);
+
+  const [expensePersonFilter, setExpensePersonFilter] = useState<string>("all");
+
+  const selectedPersonFilterGroup = useMemo(
+    () => personFilterGroups.find((group) => group.id === expensePersonFilter) || null,
+    [personFilterGroups, expensePersonFilter]
+  );
+
   // Totais por categoria — usados no gráfico de despesas por categoria
   const categoryTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     visibleExpensesWithSplits.forEach((exp) => {
       const currency = exp.currency || settings.default_currency;
       const converted = convert(Number(exp.amount) || 0, currency);
+      let amount = converted;
+
+      if (selectedPersonFilterGroup) {
+        const relevantSplits = (exp.splits || []).filter((split) =>
+          selectedPersonFilterGroup.memberIds.includes(split.member_id)
+        );
+        if (relevantSplits.length === 0) return;
+
+        const relevantAmount = relevantSplits.reduce((sum, split) => sum + (Number(split.amount) || 0), 0);
+        const originalAmount = Number(exp.amount) || 0;
+        amount = originalAmount > 0 ? (relevantAmount / originalAmount) * converted : 0;
+      }
+
       const catId = exp.category_id || "__uncategorized__";
-      totals[catId] = (totals[catId] || 0) + converted;
+      totals[catId] = (totals[catId] || 0) + amount;
     });
 
     const categoryMap = new Map(categories.map((cat) => [cat.id, cat]));
@@ -400,7 +446,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
       })
       .filter((entry) => entry.amount > 0)
       .sort((a, b) => b.amount - a.amount);
-  }, [visibleExpensesWithSplits, categories, convert, settings.default_currency, t]);
+  }, [visibleExpensesWithSplits, categories, convert, settings.default_currency, t, selectedPersonFilterGroup]);
 
   const categoryTotalSum = useMemo(
     () => categoryTotals.reduce((sum, entry) => sum + entry.amount, 0),
@@ -1073,10 +1119,39 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
             </Card>
           )}
 
-          {categoryTotals.length > 0 && (
+          {(categoryTotals.length > 0 || expensePersonFilter !== "all") && (
             <Card className="space-y-4">
-              <h3 className="text-sm font-bold">{t("expenses.byCategoryTitle")}</h3>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h3 className="text-sm font-bold">{t("expenses.byCategoryTitle")}</h3>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="expense-person-filter"
+                    className={cn("text-xs font-semibold uppercase whitespace-nowrap", settings.dark_mode ? "text-zinc-400" : "text-zinc-500")}
+                  >
+                    {t("expenses.personFilterLabel")}
+                  </label>
+                  <select
+                    id="expense-person-filter"
+                    value={expensePersonFilter}
+                    onChange={(event) => setExpensePersonFilter(event.target.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl border text-sm",
+                      settings.dark_mode ? "bg-zinc-800 border-zinc-700 text-white" : "bg-white border-zinc-200"
+                    )}
+                  >
+                    <option value="all">{t("expenses.personFilterAll")}</option>
+                    {personFilterGroups.map((group) => (
+                      <option key={group.id} value={group.id}>{group.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div className="space-y-3">
+                {categoryTotals.length === 0 && (
+                  <p className={cn("text-sm text-center", settings.dark_mode ? "text-zinc-500" : "text-zinc-400")}>
+                    {t("expenses.empty")}
+                  </p>
+                )}
                 {categoryTotals.map((entry) => {
                   const pct = categoryTotalSum > 0 ? (entry.amount / categoryTotalSum) * 100 : 0;
                   return (

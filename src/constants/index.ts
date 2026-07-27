@@ -23,7 +23,6 @@ export const THEME_PALETTES: Record<
     darkSidebarHover: string;
     darkSidebarActiveBg: string;
     darkSidebarActiveText: string;
-    darkOnly?: boolean;
   }
 > = {
   // Padrão — azul céu limpo e moderno
@@ -115,28 +114,6 @@ export const THEME_PALETTES: Record<
     darkSidebarText: "#DED6FB",
     darkSidebarHover: "#2A2140",
     darkSidebarActiveBg: "#8B5CF6",
-    darkSidebarActiveText: "#FFFFFF",
-  },
-
-  // Grafite — tons de cinza neutros, disponível apenas no modo escuro
-  graphite: {
-    lightBg: "#F0F1F5",
-    lightCard: "#FFFFFF",
-    lightAccent: "#4E576A",
-    lightSidebarBg: "#FFFFFF",
-    lightSidebarBorder: "#E0E4EB",
-    lightSidebarText: "#373F4E",
-    lightSidebarHover: "#F0F1F5",
-    lightSidebarActiveBg: "#4E576A",
-    lightSidebarActiveText: "#FFFFFF",
-    darkBg: "#0A0E15",
-    darkCard: "#212631",
-    darkAccent: "#667085",
-    darkSidebarBg: "#212631",
-    darkSidebarBorder: "#373F4E",
-    darkSidebarText: "#F0F1F5",
-    darkSidebarHover: "#373F4E",
-    darkSidebarActiveBg: "#4E576A",
     darkSidebarActiveText: "#FFFFFF",
   },
 };
