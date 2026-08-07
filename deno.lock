@@ -1,0 +1,35 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:zod@4": "4.4.3"
+  },
+  "npm": {
+    "zod@4.4.3": {
+      "integrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@supabase/supabase-js@^2.53.0",
+        "npm:@tailwindcss/vite@^4.1.14",
+        "npm:@types/node@^22.14.0",
+        "npm:@types/react@^19.2.14",
+        "npm:@vitejs/plugin-react@^5.0.4",
+        "npm:autoprefixer@^10.4.21",
+        "npm:clsx@^2.1.1",
+        "npm:date-fns@^4.1.0",
+        "npm:jspdf@^4.2.1",
+        "npm:lucide-react@0.546",
+        "npm:motion@^12.23.24",
+        "npm:react-dom@19",
+        "npm:react-router-dom@^7.13.0",
+        "npm:react@19",
+        "npm:tailwind-merge@^3.5.0",
+        "npm:tailwindcss@^4.1.14",
+        "npm:typescript@~5.8.2",
+        "npm:vite@^6.2.0"
+      ]
+    }
+  }
+}

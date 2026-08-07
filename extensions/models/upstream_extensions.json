@@ -1,0 +1,16 @@
+{
+  "@thomas/postgres-admin": {
+    "version": "2026.06.01.1",
+    "pulledAt": "2026-08-06T18:32:30.637Z",
+    "files": [
+      ".swamp/pulled-extensions/@thomas/postgres-admin/models/postgres-admin.ts",
+      ".swamp/bundles/e887585b/postgres-admin.js",
+      ".swamp/pulled-extensions/@thomas/postgres-admin/files/README.md",
+      ".swamp/pulled-extensions/@thomas/postgres-admin/files/LICENSE.txt",
+      ".swamp/pulled-extensions/@thomas/postgres-admin/manifest.yaml"
+    ],
+    "checksum": "f3c1273be1447644b564d4579a97a9b35fadd492ce7a6ac5528670967d7fdad2",
+    "filesChecksum": "f2a5673d9b73354b0fcf69d9dbd9172d4a56f924f3a1ebc9bacf4431a2901b97",
+    "serverUrl": "https://swamp-club.com"
+  }
+}

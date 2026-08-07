@@ -1,0 +1,12 @@
+type: '@estevamp/supabase-admin'
+typeVersion: 2026.08.06.1
+id: e810f2f3-415a-4cb7-9daf-8794ae596fd6
+name: supabase-api-checks
+version: 1
+tags: {}
+globalArguments:
+  projectRef: oaztuckspjyiyixshkns
+  accessToken: ${{ vault.get("travel-planner", "SWAMP") }}
+  apiBaseUrl: https://api.supabase.com
+  requestTimeoutMs: 30000
+methods: {}

@@ -1,0 +1,16 @@
+type: '@thomas/postgres-admin'
+typeVersion: 2026.05.30.1
+id: ed598267-7236-4e33-b36e-80da2806a9d5
+name: supabase-checks
+version: 1
+tags: {}
+globalArguments:
+  host: aws-1-sa-east-1.pooler.supabase.com
+  port: 5432
+  adminUser: postgres.oaztuckspjyiyixshkns
+  adminPassword: ${{ vault.get("travel-planner", "SUPABASE_DB_PASSWORD") }}
+  maintenanceDb: postgres
+  ssl:
+    mode: require
+  statementTimeoutMs: 30000
+methods: {}

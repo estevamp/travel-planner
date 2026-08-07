@@ -1,0 +1,7 @@
+id: a64b55d1-87fd-4cb4-ab7c-b63c7ecd5d58
+name: travel-planner
+type: local_encryption
+config:
+  auto_generate: true
+  base_dir: /mnt/c/src/travel-planner
+createdAt: '2026-08-06T18:33:24.189Z'
