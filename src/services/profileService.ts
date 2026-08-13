@@ -106,6 +106,20 @@ export async function syncProfile(
 
   if (!profileAlreadyExisted) {
 
+    // A first-time user may have accepted an invitation while their profile was
+    // being created. In that case they already have a trip to open, so do not
+    // send them through the "create your first trip" onboarding flow.
+    const { data: membership } = await supabase
+      .from("trip_members")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (membership) {
+      return;
+    }
+
     await supabase
       .from("profiles")
       .update({

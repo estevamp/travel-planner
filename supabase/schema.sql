@@ -547,12 +547,17 @@ begin
     raise exception 'Invite not found';
   end if;
 
-  if v_invite.accepted_at is not null then
-    raise exception 'Invite already accepted';
-  end if;
-
   if lower(v_invite.email) <> v_email then
     raise exception 'Este convite foi emitido para %', v_invite.email;
+  end if;
+
+  -- Retrying the link after a successful acceptance must still open the trip.
+  -- Only the account that accepted it can receive the trip id again.
+  if v_invite.accepted_at is not null then
+    if v_invite.accepted_by_user_id = v_uid then
+      return v_invite.trip_id;
+    end if;
+    raise exception 'Invite already accepted';
   end if;
 
   select tm.id into v_existing_member_id
@@ -575,6 +580,14 @@ begin
   set accepted_at = now(),
       accepted_by_user_id = v_uid
   where id = v_invite.id;
+
+  -- An invited first-time user should arrive at the shared trip, rather than
+  -- being shown the first-trip creation onboarding screen.
+  update public.profiles
+  set onboarding_status = 'completed',
+      onboarding_trip_id = null
+  where user_id = v_uid
+    and onboarding_status = 'active';
 
   return v_invite.trip_id;
 end;

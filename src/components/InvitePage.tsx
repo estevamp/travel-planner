@@ -66,18 +66,16 @@ export function InvitePage({ session }: { session: Session | null }) {
           setError(getErrorMessage(rpcError));
           return;
         }
-        await supabase.auth.refreshSession();
         const acceptedTripId = data as string;
         setTripId(acceptedTripId);
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        window.location.href = `/trip/${acceptedTripId}`;
+        navigate(`/trip/${acceptedTripId}`, { replace: true });
       } finally {
         setLoading(false);
       }
     };
 
     void acceptInvite();
-  }, [session, token, attempted, tripId]);
+  }, [session, token, attempted, tripId, navigate]);
 
   if (!token)
     return (
