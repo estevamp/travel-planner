@@ -16,60 +16,33 @@ export function PayerSelector({
   onSelect,
 }: PayerSelectorProps) {
   const currentUserMember = members.find(m => m.user_id === currentUserId);
-  const otherMembers = members.filter(m => m.user_id !== currentUserId);
-  const isCurrentUserSelected = currentUserMember?.id === selectedPayerId;
-  const isOtherPersonSelected = !isCurrentUserSelected && selectedPayerId !== "";
-
   return (
     <div className="space-y-2">
       <label className="text-sm font-semibold block required-indicator">
         Quem pagou?
       </label>
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        {currentUserMember && (
-          <button
-            type="button"
-            onClick={() => onSelect(currentUserMember.id)}
-            className={`
-              w-full sm:w-auto flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
-              ${
-                isCurrentUserSelected
-                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] shadow-md"
-                  : "bg-[var(--sidebar-hover)] text-zinc-700 dark:text-zinc-300 hover:opacity-80 border border-transparent"
-              }
-            `}
-          >
-            Eu
-          </button>
+      <select
+        value={selectedPayerId}
+        onChange={(e: ChangeEvent<HTMLSelectElement>) => onSelect(e.target.value)}
+        className={cn(
+          "w-full px-3 py-2 rounded-xl border",
+          "text-sm font-medium",
+          "focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20",
+          "transition-all duration-200"
         )}
-
-        <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
-          <span className="text-sm font-semibold block required-indicator whitespace-nowrap">Outra pessoa:</span>
-          <select
-            value={isOtherPersonSelected ? selectedPayerId : ""}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => onSelect(e.target.value)}
-            className={cn(
-              "w-full flex-1 px-3 py-2 rounded-xl border",
-              "text-sm font-medium",
-              "focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-color)]/20",
-              "transition-all duration-200",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              borderColor: 'var(--card-border)',
-              color: 'inherit'
-            }}
-          >
-            <option value="" disabled>Selecione...</option>
-            {otherMembers.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.display_name || "Membro"}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        style={{
+          backgroundColor: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+          color: 'inherit'
+        }}
+      >
+        <option value="" disabled>Selecione...</option>
+        {members.map((member) => (
+          <option key={member.id} value={member.id}>
+            {member.id === currentUserMember?.id ? "Eu" : member.display_name || "Membro"}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

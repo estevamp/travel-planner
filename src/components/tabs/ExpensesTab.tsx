@@ -575,6 +575,19 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     toast(t("expenses.paymentRegistered"), "success");
   };
 
+  const undoExpenseSharePayment = async (expense: ExpenseWithSplits) => {
+    if (!currentMember || !tripId) return;
+    const { error } = await supabase
+      .from("settlements")
+      .delete()
+      .eq("trip_id", tripId)
+      .eq("expense_id", expense.id)
+      .eq("from_member_id", currentMember.id);
+    if (error) { toast(getErrorMessage(error), "error"); return; }
+    await fetchBalanceData();
+    toast(t("expenses.paymentUndone"), "success");
+  };
+
   const paidExpenseSplits = useMemo(() => {
     const paid = new Map<string, Map<string, number>>();
     for (const settlement of settlements) {
@@ -1082,6 +1095,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                         .filter((split) => (paidExpenseSplits.get(exp.id)?.get(split.member_id) ?? 0) >= split.amount - 0.009)
                         .map((split) => split.member_id)}
                       onPaySplit={(expense, amount) => void payExpenseShare(expense, amount)}
+                      onUndoSplitPayment={(expense) => void undoExpenseSharePayment(expense)}
                       savingExpense={savingExpense}
                       categories={categories}
                       members={members}

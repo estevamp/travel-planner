@@ -61,6 +61,7 @@ interface ExpenseListItemProps {
   /** Abre o menu de opções (⋯) do card — usado apenas no layout "card". */
   onOpenMenu?: (exp: Expense, rect: DOMRect) => void;
   onPaySplit?: (expense: ExpenseWithSplits, amount: number) => void;
+  onUndoSplitPayment?: (expense: ExpenseWithSplits) => void;
   paidSplitMemberIds?: string[];
 }
 
@@ -85,6 +86,7 @@ export function ExpenseListItem({
   onDraftChange,
   onOpenMenu,
   onPaySplit,
+  onUndoSplitPayment,
   paidSplitMemberIds = [],
 }: ExpenseListItemProps) {
   const { t } = useI18n();
@@ -477,9 +479,14 @@ export function ExpenseListItem({
                 {mySplit && expWithSplits?.paid_by_member_id !== currentMemberId && (
                   <div className="mt-2">
                     {mySplitPaid ? (
-                      <span className="text-xs font-semibold text-emerald-600">{t("expenses.mySharePaid")}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold dark:bg-emerald-900/30 dark:text-emerald-400">{t("expenses.mySharePaid")}</span>
+                        <button type="button" onClick={() => onUndoSplitPayment?.(expWithSplits!)} className="inline-flex items-center px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-xs font-semibold hover:bg-[var(--sidebar-hover)] transition-colors">
+                          {t("expenses.undoMySharePayment")}
+                        </button>
+                      </div>
                     ) : (
-                      <button type="button" onClick={() => onPaySplit?.(expWithSplits!, mySplit.amount)} className="text-xs font-semibold text-[var(--accent-color)] hover:underline">
+                      <button type="button" onClick={() => onPaySplit?.(expWithSplits!, mySplit.amount)} className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[var(--accent-color)] text-white text-xs font-bold hover:opacity-90 transition-opacity">
                         {t("expenses.payMyShare", { amount: formatCurrency(mySplit.amount, exp.currency || currency) })}
                       </button>
                     )}
