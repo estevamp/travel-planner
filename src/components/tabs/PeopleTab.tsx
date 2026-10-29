@@ -251,18 +251,18 @@ export const PeopleTab = forwardRef<PeopleTabHandle, PeopleTabProps>(function Pe
     toast(t("people.guestAdded", { name }), "success");
   };
 
-  const removeGuest = async (memberId: string, memberName: string) => {
+  const removeMember = async (memberId: string, memberName: string) => {
     const confirmed = await confirm({
-      title: t("people.removeGuestTitle"),
-      message: t("people.removeGuestMessage", { name: memberName }),
+      title: t("people.removeMemberTitle"),
+      message: t("people.removeMemberMessage", { name: memberName }),
       variant: "danger",
       isDark: settings.dark_mode,
     });
     if (!confirmed) return;
-    const { error } = await supabase.rpc("remove_guest_member", { p_trip_id: tripId, p_member_id: memberId });
+    const { error } = await supabase.rpc("remove_trip_member", { p_trip_id: tripId, p_member_id: memberId });
     if (error) { toast(getErrorMessage(error), "error"); return; }
     await reload();
-    toast(t("people.guestRemoved"), "success");
+    toast(t("people.memberRemoved"), "success");
   };
 
   const sendGuestInvite = async (memberId: string) => {
@@ -420,24 +420,24 @@ export const PeopleTab = forwardRef<PeopleTabHandle, PeopleTabProps>(function Pe
                     )}
                   </td>
 
-                  {/* Ações — apenas para guests */}
+                  {/* Ações administrativas do passageiro */}
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
-                      {isGuest && (
+                      {member.id !== currentMember?.id && (
                         <div className="flex items-center justify-end gap-1">
+                          {isGuest && <button
+                              type="button"
+                              onClick={() => { setInvitingGuestId(invitingGuestId === member.id ? null : member.id); setGuestInviteEmail(""); }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                              title={t("people.actions.inviteToApp")}
+                            >
+                              <Mail size={14} />
+                            </button>}
                           <button
                             type="button"
-                            onClick={() => { setInvitingGuestId(invitingGuestId === member.id ? null : member.id); setGuestInviteEmail(""); }}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                            title={t("people.actions.inviteToApp")}
-                          >
-                            <Mail size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeGuest(member.id, member.display_name || t("people.guestFallback"))}
+                            onClick={() => removeMember(member.id, member.display_name || t("people.guestFallback"))}
                             className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                            title={t("people.actions.removeGuest")}
+                            title={t("people.actions.removeMember")}
                           >
                             <Trash2 size={14} />
                           </button>
