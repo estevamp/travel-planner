@@ -312,17 +312,6 @@ export function ExpenseListItem({
                   </span>
                 )}
                 {splitSummary}
-                {mySplit && expWithSplits?.paid_by_member_id !== currentMemberId && (
-                  <div className="mt-2">
-                    {mySplitPaid ? (
-                      <span className="text-xs font-semibold text-emerald-600">{t("expenses.mySharePaid")}</span>
-                    ) : (
-                      <button type="button" onClick={() => onPaySplit?.(expWithSplits!, mySplit.amount)} className="text-xs font-semibold text-[var(--accent-color)] hover:underline">
-                        {t("expenses.payMyShare", { amount: formatCurrency(mySplit.amount, exp.currency || currency) })}
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             </td>
             <td className="px-4 py-3 text-right">
@@ -485,6 +474,17 @@ export function ExpenseListItem({
                   </span>
                 )}
                 {splitSummary}
+                {mySplit && expWithSplits?.paid_by_member_id !== currentMemberId && (
+                  <div className="mt-2">
+                    {mySplitPaid ? (
+                      <span className="text-xs font-semibold text-emerald-600">{t("expenses.mySharePaid")}</span>
+                    ) : (
+                      <button type="button" onClick={() => onPaySplit?.(expWithSplits!, mySplit.amount)} className="text-xs font-semibold text-[var(--accent-color)] hover:underline">
+                        {t("expenses.payMyShare", { amount: formatCurrency(mySplit.amount, exp.currency || currency) })}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             {/* "Público" é o padrão — só sinaliza quando privada/parcialmente privada, como na aba Atividades */}
