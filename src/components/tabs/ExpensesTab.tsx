@@ -558,6 +558,34 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
     toast(t("expenses.paymentUndone"), "success");
   };
 
+  const payExpenseShare = async (expense: ExpenseWithSplits, amount: number) => {
+    if (!currentMember || !expense.paid_by_member_id || !tripId || currentMember.id === expense.paid_by_member_id) return;
+    const { error } = await supabase.from("settlements").insert({
+      trip_id: tripId,
+      from_member_id: currentMember.id,
+      to_member_id: expense.paid_by_member_id,
+      expense_id: expense.id,
+      amount,
+      currency: expense.currency || settings.default_currency,
+      date: new Date().toISOString(),
+      is_confirmed: true,
+    });
+    if (error) { toast(getErrorMessage(error), "error"); return; }
+    await fetchBalanceData();
+    toast(t("expenses.paymentRegistered"), "success");
+  };
+
+  const paidExpenseSplits = useMemo(() => {
+    const paid = new Map<string, Map<string, number>>();
+    for (const settlement of settlements) {
+      if (!settlement.expense_id || !settlement.is_confirmed) continue;
+      const members = paid.get(settlement.expense_id) ?? new Map<string, number>();
+      members.set(settlement.from_member_id, (members.get(settlement.from_member_id) ?? 0) + settlement.amount);
+      paid.set(settlement.expense_id, members);
+    }
+    return paid;
+  }, [settlements]);
+
   const handleExportExpenses = () => {
     if (!trip || !members || !categories || !settings) {
       toast(t("expenses.exportError"), "error");
@@ -1050,6 +1078,10 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                       expenseDraft={expenseDraft}
                       expensesWithSplits={expensesWithSplits}
                       currentMemberId={currentMember?.id || null}
+                      paidSplitMemberIds={exp.splits
+                        .filter((split) => (paidExpenseSplits.get(exp.id)?.get(split.member_id) ?? 0) >= split.amount - 0.009)
+                        .map((split) => split.member_id)}
+                      onPaySplit={(expense, amount) => void payExpenseShare(expense, amount)}
                       savingExpense={savingExpense}
                       categories={categories}
                       members={members}

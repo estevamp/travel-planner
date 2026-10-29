@@ -29,6 +29,7 @@ export interface Settlement {
   trip_id: string;
   from_member_id: string; // Debtor
   to_member_id: string;   // Creditor
+  expense_id?: string | null;
   amount: number;
   currency: string;
   date: string;

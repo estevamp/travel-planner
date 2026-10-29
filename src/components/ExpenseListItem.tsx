@@ -60,6 +60,8 @@ interface ExpenseListItemProps {
   onDraftChange: (draft: Partial<ExpenseDraft>) => void;
   /** Abre o menu de opções (⋯) do card — usado apenas no layout "card". */
   onOpenMenu?: (exp: Expense, rect: DOMRect) => void;
+  onPaySplit?: (expense: ExpenseWithSplits, amount: number) => void;
+  paidSplitMemberIds?: string[];
 }
 
 export function ExpenseListItem({
@@ -82,11 +84,15 @@ export function ExpenseListItem({
   onDelete,
   onDraftChange,
   onOpenMenu,
+  onPaySplit,
+  paidSplitMemberIds = [],
 }: ExpenseListItemProps) {
   const { t } = useI18n();
   const isEditing = editingExpenseId === exp.id;
   const expWithSplits = expensesWithSplits.find((entry) => entry.id === exp.id);
   const hasSplits = Boolean(expWithSplits?.splits?.length);
+  const mySplit = expWithSplits?.splits?.find((split) => split.member_id === currentMemberId);
+  const mySplitPaid = Boolean(currentMemberId && paidSplitMemberIds.includes(currentMemberId));
   const splitParticipantIds = new Set(expWithSplits?.splits?.map((split) => split.member_id) || []);
   const isPartiallyPrivate = hasSplits && splitParticipantIds.size < members.length;
   const canViewAmount = !isPartiallyPrivate || (
@@ -306,6 +312,17 @@ export function ExpenseListItem({
                   </span>
                 )}
                 {splitSummary}
+                {mySplit && expWithSplits?.paid_by_member_id !== currentMemberId && (
+                  <div className="mt-2">
+                    {mySplitPaid ? (
+                      <span className="text-xs font-semibold text-emerald-600">{t("expenses.mySharePaid")}</span>
+                    ) : (
+                      <button type="button" onClick={() => onPaySplit?.(expWithSplits!, mySplit.amount)} className="text-xs font-semibold text-[var(--accent-color)] hover:underline">
+                        {t("expenses.payMyShare", { amount: formatCurrency(mySplit.amount, exp.currency || currency) })}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </td>
             <td className="px-4 py-3 text-right">
