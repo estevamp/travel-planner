@@ -1078,7 +1078,7 @@ export function ExpensesTab({ onOpenModal, onSetActiveTab, onTripUpdate, isOnlin
                       expenseDraft={expenseDraft}
                       expensesWithSplits={expensesWithSplits}
                       currentMemberId={currentMember?.id || null}
-                      paidSplitMemberIds={exp.splits
+                      paidSplitMemberIds={(expensesWithSplits.find((entry) => entry.id === exp.id)?.splits ?? [])
                         .filter((split) => (paidExpenseSplits.get(exp.id)?.get(split.member_id) ?? 0) >= split.amount - 0.009)
                         .map((split) => split.member_id)}
                       onPaySplit={(expense, amount) => void payExpenseShare(expense, amount)}
